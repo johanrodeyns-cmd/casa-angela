@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Casa Angela | Vakantievilla Costa Blanca met verwarmd zwembad</title>
+    <meta name="description" content="Ontdek Casa Angela, een sfeervolle vakantievilla in Gata de Gorgos aan de Costa Blanca. Privé verwarmd zwembad, uitzicht op de Montgó, 18 min van Javea.">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --terracotta: #C4654A;
+            --terracotta-light: #E8A790;
+            --olive: #7A8B5C;
+            --olive-dark: #5A6B3C;
+            --azure: #4A90A4;
+            --azure-light: #A8D4E6;
+            --sand: #F5EBE0;
+            --sand-dark: #E6D5C3;
+            --cream: #FFFBF5;
+            --charcoal: #2C2C2C;
+            --white: #FFFFFF;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        body {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 300;
+            color: var(--charcoal);
+            background-color: var(--cream);
+            line-height: 1.7;
+        }
+        
+        h1, h2, h3 {
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 500;
+        }
+        
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.4), transparent);
+            transition: background 0.3s ease;
+        }
+        
+        nav.scrolled {
+            background: var(--white);
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+        }
+        
+        .logo {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: var(--white);
+            text-decoration: none;
+            letter-spacing: 2px;
+            transition: color 0.3s ease;
+        }
+        
+        nav.scrolled .logo {
+            color: var(--terracotta);
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+        
+        .nav-links a {
+            color: var(--white);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 400;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: color 0.3s ease;
+        }
+        
+        nav.scrolled .nav-links a {
+            color: var(--charcoal);
+        }
+        
+        .nav-links a:hover {
+            color: var(--terracotta-light);
+        }
+        
+        nav.scrolled .nav-links a:hover {
+            color: var(--terracotta);
+        }
+        
+        /* Hero Section */
+        .hero {
+            height: 100vh;
+            min-height: 700px;
+            background: linear-gradient(
+                135deg,
+                rgba(74, 144, 164, 0.3) 0%,
+                rgba(196, 101, 74, 0.2) 100%
+            ),
+            linear-gradient(
+                to bottom,
+                rgba(0,0,0,0.2) 0%,
+                rgba(0,0,0,0.4) 100%
+            ),
+            url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800"><rect fill="%234A90A4" width="1200" height="800"/><rect fill="%23C4654A" x="0" y="600" width="1200" height="200" opacity="0.3"/></svg>');
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color: var(--white);
+            position: relative;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 30% 70%, rgba(74, 144, 164, 0.4) 0%, transparent 50%),
+                radial-gradient(circle at 70% 30%, rgba(196, 101, 74, 0.3) 0%, transparent 50%);
+        }
+        
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 800px;
+            padding: 2rem;
+        }
+        
+        .hero h1 {
+            font-size: 4.5rem;
+            font-weight: 400;
+            letter-spacing: 8px;
+            margin-bottom: 1rem;
+            text-shadow: 2px 4px 20px rgba(0,0,0,0.3);
+        }
+        
+        .hero-tagline {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.5rem;
+            font-style: italic;
+            font-weight: 400;
+            margin-bottom: 2rem;
+            opacity: 0.95;
+        }
+        
+        .hero-location {
+            font-size: 0.9rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 3rem;
+            opacity: 0.9;
+        }
+        
+        .hero-cta {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 1rem 2.5rem;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 500;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: var(--terracotta);
+            color: var(--white);
+        }
+        
+        .btn-primary:hover {
+            background: var(--terracotta-light);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(196, 101, 74, 0.4);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            color: var(--white);
+            border: 2px solid var(--white);
+        }
+        
+        .btn-outline:hover {
+            background: var(--white);
+            color: var(--terracotta);
+        }
+        
+        /* Ratings Bar */
+        .ratings-bar {
+            background: var(--white);
+            padding: 2rem 0;
+            display: flex;
+            justify-content: center;
+            gap: 4rem;
+            flex-wrap: wrap;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        
+        .rating-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .rating-logo {
+            width: 100px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+        }
+        
+        .rating-logo.airbnb {
+            color: #FF5A5F;
+        }
+        
+        .rating-logo.booking {
+            color: #003580;
+        }
+        
+        .rating-score {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .rating-number {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: var(--charcoal);
+        }
+        
+        .rating-stars {
+            color: #FFB400;
+            font-size: 1.2rem;
+        }
+        
+        .rating-text {
+            font-size: 0.75rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        /* Story Section */
+        .story {
+            padding: 6rem 2rem;
+            background: var(--sand);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .story::before {
+            content: '';
+            position: absolute;
+            top: -50px;
+            right: -50px;
+            width: 300px;
+            height: 300px;
+            background: var(--olive);
+            opacity: 0.1;
+            border-radius: 50%;
+        }
+        
+        .story-container {
+            max-width: 900px;
+            margin: 0 auto;
+            text-align: center;
+            position: relative;
+        }
+        
+        .story-icon {
+            font-size: 3rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .story h2 {
+            font-size: 2.8rem;
+            color: var(--terracotta);
+            margin-bottom: 2rem;
+        }
+        
+        .story p {
+            font-size: 1.1rem;
+            line-height: 2;
+            margin-bottom: 1.5rem;
+            color: #444;
+        }
+        
+        .story-signature {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.4rem;
+            font-style: italic;
+            color: var(--terracotta);
+            margin-top: 2rem;
+        }
+        
+        /* Highlights Section */
+        .highlights {
+            padding: 6rem 2rem;
+            background: var(--cream);
+        }
+        
+        .highlights h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            color: var(--charcoal);
+            margin-bottom: 3rem;
+        }
+        
+        .highlights-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+        
+        .highlight-card {
+            background: var(--white);
+            padding: 2.5rem;
+            text-align: center;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .highlight-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.1);
+        }
+        
+        .highlight-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .highlight-card h3 {
+            font-size: 1.4rem;
+            color: var(--charcoal);
+            margin-bottom: 1rem;
+        }
+        
+        .highlight-card p {
+            color: #666;
+            font-size: 0.95rem;
+        }
+        
+        /* Features Section */
+        .features {
+            padding: 6rem 2rem;
+            background: linear-gradient(135deg, var(--azure) 0%, var(--olive-dark) 100%);
+            color: var(--white);
+        }
+        
+        .features h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+        }
+        
+        .features-grid {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .feature-item span {
+            font-size: 1.5rem;
+        }
+        
+        /* Location Section */
+        .location {
+            padding: 6rem 2rem;
+            background: var(--sand);
+        }
+        
+        .location-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+        }
+        
+        .location h2 {
+            font-size: 2.5rem;
+            color: var(--charcoal);
+            margin-bottom: 1.5rem;
+        }
+        
+        .location p {
+            color: #555;
+            margin-bottom: 1rem;
+        }
+        
+        .location-distances {
+            margin-top: 2rem;
+        }
+        
+        .distance-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.8rem 0;
+            border-bottom: 1px solid var(--sand-dark);
+        }
+        
+        .distance-item span:first-child {
+            color: var(--charcoal);
+        }
+        
+        .distance-item span:last-child {
+            color: var(--terracotta);
+            font-weight: 500;
+        }
+        
+        .location-map {
+            background: var(--azure-light);
+            height: 400px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .location-map::before {
+            content: 'Kaart wordt hier getoond';
+            position: absolute;
+            font-size: 1rem;
+            color: var(--azure);
+            bottom: 2rem;
+        }
+        
+        /* Booking Section */
+        .booking {
+            padding: 6rem 2rem;
+            background: var(--cream);
+            text-align: center;
+        }
+        
+        .booking h2 {
+            font-size: 2.5rem;
+            color: var(--charcoal);
+            margin-bottom: 1rem;
+        }
+        
+        .booking-subtitle {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.3rem;
+            font-style: italic;
+            color: #666;
+            margin-bottom: 3rem;
+        }
+        
+        .booking-options {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .booking-card {
+            flex: 1;
+            min-width: 280px;
+            max-width: 350px;
+            background: var(--white);
+            padding: 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease;
+        }
+        
+        .booking-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .booking-card h3 {
+            font-size: 1.5rem;
+            color: var(--charcoal);
+            margin-bottom: 1rem;
+        }
+        
+        .booking-card p {
+            color: #666;
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+        
+        .booking-card .btn {
+            width: 100%;
+            display: block;
+        }
+        
+        .btn-airbnb {
+            background: #FF5A5F;
+            color: var(--white);
+        }
+        
+        .btn-airbnb:hover {
+            background: #FF787C;
+        }
+        
+        .btn-booking {
+            background: #003580;
+            color: var(--white);
+        }
+        
+        .btn-booking:hover {
+            background: #00487A;
+        }
+        
+        /* Footer */
+        footer {
+            background: var(--charcoal);
+            color: var(--white);
+            padding: 4rem 2rem 2rem;
+        }
+        
+        .footer-content {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 3rem;
+        }
+        
+        .footer-section h4 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.4rem;
+            margin-bottom: 1.5rem;
+            color: var(--terracotta-light);
+        }
+        
+        .footer-section p, .footer-section a {
+            color: #aaa;
+            font-size: 0.9rem;
+            line-height: 1.8;
+            text-decoration: none;
+        }
+        
+        .footer-section a:hover {
+            color: var(--white);
+        }
+        
+        .footer-bottom {
+            max-width: 1100px;
+            margin: 3rem auto 0;
+            padding-top: 2rem;
+            border-top: 1px solid #444;
+            text-align: center;
+            color: #666;
+            font-size: 0.85rem;
+        }
+        
+        .footer-bottom span {
+            color: var(--terracotta-light);
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.8rem;
+                letter-spacing: 4px;
+            }
+            
+            .hero-tagline {
+                font-size: 1.2rem;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+            
+            .ratings-bar {
+                gap: 2rem;
+                padding: 1.5rem 1rem;
+            }
+            
+            .location-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .story h2, .highlights h2, .features h2, .location h2, .booking h2 {
+                font-size: 2rem;
+            }
+        }
+        
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .hero-content {
+            animation: fadeInUp 1s ease-out;
+        }
+        
+        .highlight-card {
+            animation: fadeInUp 0.6s ease-out backwards;
+        }
+        
+        .highlight-card:nth-child(1) { animation-delay: 0.1s; }
+        .highlight-card:nth-child(2) { animation-delay: 0.2s; }
+        .highlight-card:nth-child(3) { animation-delay: 0.3s; }
+        .highlight-card:nth-child(4) { animation-delay: 0.4s; }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav id="navbar">
+        <a href="#" class="logo">Casa Angela</a>
+        <ul class="nav-links">
+            <li><a href="#verhaal">Ons Verhaal</a></li>
+            <li><a href="#woning">De Woning</a></li>
+            <li><a href="#omgeving">Omgeving</a></li>
+            <li><a href="#boeken">Boeken</a></li>
+        </ul>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Casa Angela</h1>
+            <p class="hero-tagline">Jullie thuis onder de Spaanse zon</p>
+            <p class="hero-location">Gata de Gorgos · Costa Blanca · España</p>
+            <div class="hero-cta">
+                <a href="#boeken" class="btn btn-primary">Beschikbaarheid bekijken</a>
+                <a href="#woning" class="btn btn-outline">Ontdek de villa</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Ratings Bar -->
+    <div class="ratings-bar">
+        <div class="rating-item">
+            <div class="rating-logo airbnb">airbnb</div>
+            <div class="rating-score">
+                <span class="rating-number">5.0</span>
+                <span class="rating-stars">★★★★★</span>
+            </div>
+            <span class="rating-text">Favoriet van gasten</span>
+        </div>
+        <div class="rating-item">
+            <div class="rating-logo booking">Booking.com</div>
+            <div class="rating-score">
+                <span class="rating-number">10</span>
+            </div>
+            <span class="rating-text">Exceptional</span>
+        </div>
+    </div>
+
+    <!-- Story Section -->
+    <section class="story" id="verhaal">
+        <div class="story-container">
+            <div class="story-icon">🌞</div>
+            <h2>Welkom in ons kleine paradijsje!</h2>
+            <p>
+                Wij zijn Johan en Tinneke. Na de gekke covidperiode vormden we samen met onze kroost een vrolijk samengesteld gezin tussen Brussel en Leuven. Maar tussen werk, school en alle dagelijkse drukte droomden we van iets anders — een plek waar de tijd even stilstaat, waar je 's ochtends wakker wordt met het geluid van vogeltjes en waar de grootste beslissing van de dag is: zwembad of strand?
+            </p>
+            <p>
+                En toen vonden we Casa Angela! Dit huisje heeft ons hart gestolen. Het is vernoemd naar Johan's ongelofelijke mama Angela, die met haar 93 jaar nog altijd het leven viert alsof elke dag een cadeau is. Dat gevoel willen we doorgeven: pure levensvreugde!
+            </p>
+            <p class="story-signature">
+                — Johan & Tinneke
+            </p>
+        </div>
+    </section>
+
+    <!-- Highlights Section -->
+    <section class="highlights" id="woning">
+        <h2>Wat maakt Casa Angela bijzonder?</h2>
+        <div class="highlights-grid">
+            <div class="highlight-card">
+                <div class="highlight-icon">🏊</div>
+                <h3>Verwarmd Zwembad</h3>
+                <p>Ons 9x5 meter zwembad is verwarmd van maart tot november. Met automatische afdekking en een natuurlijk zoutsysteem — heerlijk voor je huid!</p>
+            </div>
+            <div class="highlight-card">
+                <div class="highlight-icon">⛰️</div>
+                <h3>Adembenemend Uitzicht</h3>
+                <p>Vanaf het terras van de master bedroom kijk je uit over de majestueuze Montgó. Bij helder weer zie je zelfs Ibiza aan de horizon!</p>
+            </div>
+            <div class="highlight-card">
+                <div class="highlight-icon">🏡</div>
+                <h3>100% Privacy</h3>
+                <p>Een volledig omheinde villa met privétuin. Jullie eigen oase waar je in alle rust kunt genieten, weg van de drukte.</p>
+            </div>
+            <div class="highlight-card">
+                <div class="highlight-icon">🌴</div>
+                <h3>Perfecte Locatie</h3>
+                <p>Het beste van twee werelden: de rust van het Spaanse binnenland én slechts 18 minuten rijden van de prachtige stranden van Javea.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features">
+        <h2>Alle Voorzieningen</h2>
+        <div class="features-grid">
+            <div class="feature-item">
+                <span>🛏️</span>
+                <div>3 Slaapkamers</div>
+            </div>
+            <div class="feature-item">
+                <span>🚿</span>
+                <div>2 Badkamers</div>
+            </div>
+            <div class="feature-item">
+                <span>👥</span>
+                <div>6 Gasten</div>
+            </div>
+            <div class="feature-item">
+                <span>📶</span>
+                <div>Gratis WiFi</div>
+            </div>
+            <div class="feature-item">
+                <span>❄️</span>
+                <div>Airconditioning</div>
+            </div>
+            <div class="feature-item">
+                <span>🔥</span>
+                <div>Centrale verwarming</div>
+            </div>
+            <div class="feature-item">
+                <span>🅿️</span>
+                <div>Privé parking</div>
+            </div>
+            <div class="feature-item">
+                <span>👔</span>
+                <div>Wasmachine & droger</div>
+            </div>
+            <div class="feature-item">
+                <span>☕</span>
+                <div>Nespresso</div>
+            </div>
+            <div class="feature-item">
+                <span>🍽️</span>
+                <div>Vaatwasser</div>
+            </div>
+            <div class="feature-item">
+                <span>🔥</span>
+                <div>BBQ</div>
+            </div>
+            <div class="feature-item">
+                <span>📺</span>
+                <div>Smart TV</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Location Section -->
+    <section class="location" id="omgeving">
+        <div class="location-container">
+            <div>
+                <h2>De Perfecte Uitvalsbasis</h2>
+                <p>
+                    Casa Angela ligt in de rustige urbanisatie Bolerias, een groene oase aan de voet van de Montgó. Hier ervaar je het authentieke Spanje, ver van de toeristische drukte — maar met alle gemakken binnen handbereik.
+                </p>
+                <p>
+                    Het charmante dorpje Gata de Gorgos staat bekend als de 'Bazaar van de Costa Blanca' met zijn handgemaakte rieten producten en gitaren.
+                </p>
+                
+                <div class="location-distances">
+                    <div class="distance-item">
+                        <span>🏖️ Stranden Javea</span>
+                        <span>18 min</span>
+                    </div>
+                    <div class="distance-item">
+                        <span>🛒 Supermarkt</span>
+                        <span>5 min</span>
+                    </div>
+                    <div class="distance-item">
+                        <span>⛵ Moraira</span>
+                        <span>20 min</span>
+                    </div>
+                    <div class="distance-item">
+                        <span>🏰 Dénia</span>
+                        <span>15 min</span>
+                    </div>
+                    <div class="distance-item">
+                        <span>✈️ Luchthaven Alicante</span>
+                        <span>60 min</span>
+                    </div>
+                    <div class="distance-item">
+                        <span>✈️ Luchthaven Valencia</span>
+                        <span>60 min</span>
+                    </div>
+                </div>
+            </div>
+            <div class="location-map">
+                📍
+            </div>
+        </div>
+    </section>
+
+    <!-- Booking Section -->
+    <section class="booking" id="boeken">
+        <h2>Reserveer Jouw Verblijf</h2>
+        <p class="booking-subtitle">Kies je favoriete platform of neem rechtstreeks contact op</p>
+        
+        <div class="booking-options">
+            <div class="booking-card">
+                <h3>Via Airbnb</h3>
+                <p>Bekijk beschikbaarheid, foto's en boek met de vertrouwde Airbnb garanties.</p>
+                <a href="https://www.airbnb.be/rooms/958534488428061303" target="_blank" class="btn btn-airbnb">
+                    Boek op Airbnb
+                </a>
+            </div>
+            <div class="booking-card">
+                <h3>Via Booking.com</h3>
+                <p>Reserveer via Booking.com en profiteer van Genius kortingen.</p>
+                <a href="https://www.booking.com/hotel/es/casa-angela-gata-de-gorgos.html" target="_blank" class="btn btn-booking">
+                    Boek op Booking.com
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h4>Casa Angela</h4>
+                <p>
+                    Carrer dels Arbocers 2<br>
+                    03740 Gata de Gorgos (Bolerias)<br>
+                    Alicante, España
+                </p>
+                <p style="margin-top: 1rem;">
+                    Licentie: VT/506851/A
+                </p>
+            </div>
+            <div class="footer-section">
+                <h4>Praktisch</h4>
+                <p>
+                    <a href="#woning">De Woning</a><br>
+                    <a href="#omgeving">Omgeving</a><br>
+                    <a href="#boeken">Reserveren</a><br>
+                    <a href="#">Huisregels</a>
+                </p>
+            </div>
+            <div class="footer-section">
+                <h4>Contact</h4>
+                <p>
+                    Vragen over Casa Angela?<br>
+                    Neem contact op via Airbnb of Booking.com, of stuur ons een bericht.
+                </p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>© 2025 Casa Angela · Met <span>♥</span> gemaakt in België</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // Navbar scroll effect
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 100) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+
+        // Smooth scroll for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
