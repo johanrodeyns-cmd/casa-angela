@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Casa Angela — Beheer</title>
+<style>
+  :root {
+    --terracotta: #C4654A;
+    --terracotta-light: #E8A790;
+    --olive: #7A8B5C;
+    --olive-dark: #5A6B3C;
+    --azure: #4A90A4;
+    --azure-light: #A8D4E6;
+    --sand: #F5EBE0;
+    --sand-dark: #E6D5C3;
+    --cream: #FFFBF5;
+    --charcoal: #2C2C2C;
+  }
+  body {
+    margin: 0;
+    background: var(--cream);
+    color: var(--charcoal);
+    font-family: system-ui, sans-serif;
+  }
+  header {
+    background: var(--terracotta);
+    color: var(--cream);
+    padding: 1rem;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 1.25rem;
+  }
+  #version {
+    font-size: 0.85rem;
+    opacity: 0.85;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Casa Angela — Beheer</h1>
+    <span id="version"></span>
+  </header>
+
+  <script src="logic.js"></script>
+  <script>
+    document.getElementById('version').textContent = 'v' + getVersion();
+  </script>
+</body>
+</html>
