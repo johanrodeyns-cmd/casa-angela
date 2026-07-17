@@ -75,7 +75,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
-### US-0.6 ☐ Installeerbare PWA (S)
+### US-0.6 ☑ Installeerbare PWA (S) — v0.6.0
 **Als** gebruiker **wil ik** de app als icoon op mijn GSM-startscherm kunnen zetten **zodat** het aanvoelt als een echte app.
 
 **Acceptatiecriteria:**
