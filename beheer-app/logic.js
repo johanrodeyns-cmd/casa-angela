@@ -1,4 +1,4 @@
-const VERSION = '0.12.0';
+const VERSION = '0.13.0';
 
 function getVersion() {
   return VERSION;
@@ -73,9 +73,18 @@ function validateBooking(booking) {
   return { valid: Object.keys(errors).length === 0, errors };
 }
 
+function overlapsExistingBooking(newBooking, existingBookings, syncedBlocks) {
+  const rangesOverlap = (a, b) => a.dateFrom < b.dateTo && b.dateFrom < a.dateTo;
+  const bookingOverlaps = existingBookings
+    .filter((b) => b.id !== newBooking.id)
+    .filter((b) => rangesOverlap(newBooking, b));
+  const blockOverlaps = (syncedBlocks || []).filter((block) => rangesOverlap(newBooking, block));
+  return [...bookingOverlaps, ...blockOverlaps];
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice,
-    getDateRange, getPreviousYearDate, nightsBetween, validateBooking,
+    getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking,
   };
 }

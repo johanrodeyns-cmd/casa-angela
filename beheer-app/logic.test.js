@@ -1,9 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice, getDateRange, getPreviousYearDate, nightsBetween, validateBooking } = require('./logic.js');
+const { getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice, getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.12.0');
+  assert.equal(getVersion(), '0.13.0');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -196,4 +196,43 @@ test('validateBooking requires a platform', () => {
   const result = validateBooking({ ...VALID_BOOKING, platform: '' });
   assert.equal(result.valid, false);
   assert.ok(result.errors.platform);
+});
+
+const EXISTING_BOOKINGS = [
+  { id: 'a', dateFrom: '2026-07-10', dateTo: '2026-07-14', name: 'Jan' },
+];
+
+test('overlapsExistingBooking returns an empty array when there is no overlap', () => {
+  const result = overlapsExistingBooking({ dateFrom: '2026-07-15', dateTo: '2026-07-18' }, EXISTING_BOOKINGS, []);
+  assert.deepEqual(result, []);
+});
+
+test('overlapsExistingBooking detects a new booking fully inside an existing one', () => {
+  const result = overlapsExistingBooking({ dateFrom: '2026-07-11', dateTo: '2026-07-12' }, EXISTING_BOOKINGS, []);
+  assert.equal(result.length, 1);
+  assert.equal(result[0].id, 'a');
+});
+
+test('overlapsExistingBooking detects a partial overlap', () => {
+  const result = overlapsExistingBooking({ dateFrom: '2026-07-08', dateTo: '2026-07-11' }, EXISTING_BOOKINGS, []);
+  assert.equal(result.length, 1);
+});
+
+test('overlapsExistingBooking treats back-to-back bookings as non-overlapping (checkout day = checkin day)', () => {
+  const beforeResult = overlapsExistingBooking({ dateFrom: '2026-07-06', dateTo: '2026-07-10' }, EXISTING_BOOKINGS, []);
+  const afterResult = overlapsExistingBooking({ dateFrom: '2026-07-14', dateTo: '2026-07-18' }, EXISTING_BOOKINGS, []);
+  assert.deepEqual(beforeResult, []);
+  assert.deepEqual(afterResult, []);
+});
+
+test('overlapsExistingBooking excludes the booking being edited (matching id)', () => {
+  const result = overlapsExistingBooking({ id: 'a', dateFrom: '2026-07-10', dateTo: '2026-07-14' }, EXISTING_BOOKINGS, []);
+  assert.deepEqual(result, []);
+});
+
+test('overlapsExistingBooking also checks synced blocks', () => {
+  const syncedBlocks = [{ dateFrom: '2026-08-01', dateTo: '2026-08-05', source: 'airbnb' }];
+  const result = overlapsExistingBooking({ dateFrom: '2026-08-03', dateTo: '2026-08-06' }, [], syncedBlocks);
+  assert.equal(result.length, 1);
+  assert.equal(result[0].source, 'airbnb');
 });

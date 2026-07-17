@@ -206,6 +206,18 @@
   .error-message.active {
     display: block;
   }
+  .warning-message {
+    display: none;
+    color: var(--charcoal);
+    background: var(--azure-light);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+    font-size: 0.85rem;
+  }
+  .warning-message.active {
+    display: block;
+  }
   button {
     font-size: 1rem;
     padding: 0.75rem 1.5rem;
@@ -712,6 +724,7 @@
     <label for="booking-remark">Opmerking</label>
     <textarea id="booking-remark" rows="2"></textarea>
     <p id="booking-error" class="error-message"></p>
+    <p id="booking-warning" class="warning-message"></p>
     <div class="dialog-actions">
       <button id="booking-cancel" type="button" class="button-secondary">Annuleren</button>
       <button id="booking-save" type="button">Opslaan</button>
@@ -832,6 +845,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.13.0", date: "2026-07-17", description: "Waarschuwing bij overlappende boekingen." },
       { version: "0.12.0", date: "2026-07-17", description: "Boekingen toevoegen, bewerken en verwijderen." },
       { version: "0.11.0", date: "2026-07-17", description: "Prijzen van vorig jaar kopiëren naar een geselecteerde periode." },
       { version: "0.10.0", date: "2026-07-17", description: "Periode selecteren voor bulk-invoer van de Airbnb-prijs." },
@@ -1241,15 +1255,19 @@
     const PLATFORM_LABELS = { airbnb: "Airbnb", booking: "Booking.com", direct: "Rechtstreeks", friends: "Vrienden" };
 
     let bookings = [];
+    let syncedBlocks = []; // populated once iCal-sync (US-2.3) lands
     let editingBookingId = null;
     let deletingBookingId = null;
+    let overlapConfirmed = false;
 
     const bookingsList = document.getElementById("bookings-list");
     const bookingsEmpty = document.getElementById("bookings-empty");
     const bookingDialog = document.getElementById("booking-dialog");
     const bookingDialogTitle = document.getElementById("booking-dialog-title");
     const bookingError = document.getElementById("booking-error");
+    const bookingWarning = document.getElementById("booking-warning");
     const bookingNights = document.getElementById("booking-nights");
+    const bookingSaveButton = document.getElementById("booking-save");
     const bookingFields = {
       dateFrom: document.getElementById("booking-date-from"),
       dateTo: document.getElementById("booking-date-to"),
@@ -1277,8 +1295,13 @@
         bookingNights.textContent = "";
       }
     }
-    bookingFields.dateFrom.addEventListener("input", updateBookingNightsPreview);
-    bookingFields.dateTo.addEventListener("input", updateBookingNightsPreview);
+    function resetOverlapWarning() {
+      overlapConfirmed = false;
+      bookingWarning.classList.remove("active");
+      bookingSaveButton.textContent = "Opslaan";
+    }
+    bookingFields.dateFrom.addEventListener("input", () => { updateBookingNightsPreview(); resetOverlapWarning(); });
+    bookingFields.dateTo.addEventListener("input", () => { updateBookingNightsPreview(); resetOverlapWarning(); });
 
     function renderBookingsList() {
       const sorted = [...bookings].sort((a, b) => a.dateFrom.localeCompare(b.dateFrom));
@@ -1315,6 +1338,7 @@
       editingBookingId = booking ? booking.id : null;
       bookingDialogTitle.textContent = booking ? "Boeking bewerken" : "Nieuwe boeking";
       bookingError.classList.remove("active");
+      resetOverlapWarning();
       bookingFields.dateFrom.value = booking?.dateFrom ?? "";
       bookingFields.dateTo.value = booking?.dateTo ?? "";
       bookingFields.name.value = booking?.name ?? "";
@@ -1351,8 +1375,25 @@
         bookingError.classList.add("active");
         return;
       }
+      bookingError.classList.remove("active");
 
-      const saveButton = document.getElementById("booking-save");
+      if (!overlapConfirmed) {
+        const overlaps = overlapsExistingBooking({ ...formValues, id: editingBookingId }, bookings, syncedBlocks);
+        if (overlaps.length > 0) {
+          const summaries = overlaps.map((o) =>
+            o.name
+              ? `${o.name} (${formatBookingDateRange(o.dateFrom, o.dateTo)})`
+              : `gesynchroniseerd blok (${formatBookingDateRange(o.dateFrom, o.dateTo)})`
+          );
+          bookingWarning.textContent = `Let op: deze periode overlapt met ${summaries.join(", ")}. Klik nogmaals op "Toch opslaan" om door te gaan.`;
+          bookingWarning.classList.add("active");
+          overlapConfirmed = true;
+          bookingSaveButton.textContent = "Toch opslaan";
+          return;
+        }
+      }
+
+      const saveButton = bookingSaveButton;
       saveButton.disabled = true;
       saveButton.innerHTML = '<span class="spinner"></span>Opslaan…';
       try {

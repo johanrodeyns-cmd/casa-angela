@@ -156,7 +156,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
-### US-2.2 ☐ Waarschuwing bij overlappende boeking (S)
+### US-2.2 ☑ Waarschuwing bij overlappende boeking (S) — v0.13.0
 **Als** Johan of Tinneke **wil ik** gewaarschuwd worden als een nieuwe boeking overlapt met een bestaande **zodat** ik geen dubbele verhuur per ongeluk registreer.
 
 **Acceptatiecriteria:**
