@@ -64,7 +64,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
-### US-0.5 ☐ Visueel ontwerp & huisstijl (M)
+### US-0.5 ☑ Visueel ontwerp & huisstijl (M) — v0.5.0
 **Als** gebruiker **wil ik** een app die er verzorgd en herkenbaar uitziet **zodat** het gebruik ervan aangenaam is, zowel op de computer als op mijn GSM.
 
 **Acceptatiecriteria:**

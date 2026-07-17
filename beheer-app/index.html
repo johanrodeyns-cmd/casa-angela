@@ -91,7 +91,7 @@
     flex-direction: column;
     max-width: none;
     margin: 0;
-    padding: 0 0 4.5rem;
+    padding: 0;
     text-align: left;
   }
   .app-topbar {
@@ -101,6 +101,10 @@
     gap: 0.5rem;
     padding: 0.75rem 1rem;
     background: var(--sand);
+  }
+  .app-body {
+    flex: 1;
+    padding-bottom: 4.5rem;
   }
   .tab-panel {
     display: none;
@@ -141,6 +145,64 @@
     font-weight: bold;
     border-top: 3px solid var(--terracotta);
   }
+  @media (min-width: 768px) {
+    .app-body {
+      display: flex;
+      padding-bottom: 0;
+    }
+    #app-nav {
+      position: static;
+      flex-direction: column;
+      width: 200px;
+      flex-shrink: 0;
+      border-top: none;
+      border-right: 1px solid var(--sand-dark);
+    }
+    .nav-item {
+      justify-content: flex-start;
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+      text-align: left;
+    }
+    .nav-item.active {
+      border-top: none;
+      border-left: 3px solid var(--terracotta);
+      background: var(--sand);
+    }
+    .tab-content {
+      flex: 1;
+      max-width: 900px;
+    }
+    .tab-panel {
+      padding: 1.5rem 2rem;
+    }
+  }
+  .spinner {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    vertical-align: -0.15em;
+    margin-right: 0.5em;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  .error-message {
+    display: none;
+    color: var(--terracotta);
+    background: var(--terracotta-light);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+  }
+  .error-message.active {
+    display: block;
+  }
   button {
     font-size: 1rem;
     padding: 0.75rem 1.5rem;
@@ -178,6 +240,7 @@
   <section id="login-screen" class="screen">
     <p>Meld je aan om verder te gaan.</p>
     <button id="login-button" type="button">Inloggen met Google</button>
+    <p id="login-error" class="error-message"></p>
   </section>
 
   <section id="denied-screen" class="screen">
@@ -192,25 +255,29 @@
       <button id="signout-button" type="button">Uitloggen</button>
     </div>
 
-    <div id="tab-kalender" class="tab-panel active">
-      <p>Kalender — binnenkort beschikbaar.</p>
-    </div>
-    <div id="tab-boekingen" class="tab-panel">
-      <p>Boekingen — binnenkort beschikbaar.</p>
-    </div>
-    <div id="tab-checklist-aankomst" class="tab-panel">
-      <p>Checklist aankomst — binnenkort beschikbaar.</p>
-    </div>
-    <div id="tab-checklist-vertrek" class="tab-panel">
-      <p>Checklist vertrek — binnenkort beschikbaar.</p>
-    </div>
+    <div class="app-body">
+      <nav id="app-nav">
+        <button type="button" class="nav-item active" data-tab="tab-kalender">Kalender</button>
+        <button type="button" class="nav-item" data-tab="tab-boekingen">Boekingen</button>
+        <button type="button" class="nav-item" data-tab="tab-checklist-aankomst">Checklist<br>aankomst</button>
+        <button type="button" class="nav-item" data-tab="tab-checklist-vertrek">Checklist<br>vertrek</button>
+      </nav>
 
-    <nav id="app-nav">
-      <button type="button" class="nav-item active" data-tab="tab-kalender">Kalender</button>
-      <button type="button" class="nav-item" data-tab="tab-boekingen">Boekingen</button>
-      <button type="button" class="nav-item" data-tab="tab-checklist-aankomst">Checklist<br>aankomst</button>
-      <button type="button" class="nav-item" data-tab="tab-checklist-vertrek">Checklist<br>vertrek</button>
-    </nav>
+      <div class="tab-content">
+        <div id="tab-kalender" class="tab-panel active">
+          <p>Kalender — binnenkort beschikbaar.</p>
+        </div>
+        <div id="tab-boekingen" class="tab-panel">
+          <p>Boekingen — binnenkort beschikbaar.</p>
+        </div>
+        <div id="tab-checklist-aankomst" class="tab-panel">
+          <p>Checklist aankomst — binnenkort beschikbaar.</p>
+        </div>
+        <div id="tab-checklist-vertrek" class="tab-panel">
+          <p>Checklist vertrek — binnenkort beschikbaar.</p>
+        </div>
+      </div>
+    </div>
   </section>
 
   <script src="logic.js"></script>
@@ -237,6 +304,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.5.0", date: "2026-07-17", description: "Visueel ontwerp afgewerkt: navigatie als zijbalk op breed scherm, laadindicator en foutmelding bij inloggen." },
       { version: "0.4.0", date: "2026-07-17", description: "Vaste navigatiebalk toegevoegd (Kalender, Boekingen, Checklist aankomst/vertrek)." },
       { version: "0.3.0", date: "2026-07-17", description: "Versienummer en changelog zichtbaar in de UI." },
       { version: "0.2.0", date: "2026-07-17", description: "Google-login met toegangscontrole voor Johan en Tinneke." },
@@ -286,9 +354,23 @@
     // stops that from bouncing the user back to the login screen automatically.
     let denied = false;
 
-    document.getElementById("login-button").addEventListener("click", () => {
+    const loginButton = document.getElementById("login-button");
+    const loginError = document.getElementById("login-error");
+
+    document.getElementById("login-button").addEventListener("click", async () => {
       denied = false;
-      signInWithPopup(auth, new GoogleAuthProvider());
+      loginError.classList.remove("active");
+      loginButton.disabled = true;
+      loginButton.innerHTML = '<span class="spinner"></span>Bezig met inloggen…';
+      try {
+        await signInWithPopup(auth, new GoogleAuthProvider());
+      } catch (err) {
+        loginError.textContent = "Inloggen mislukt. Probeer opnieuw.";
+        loginError.classList.add("active");
+      } finally {
+        loginButton.disabled = false;
+        loginButton.textContent = "Inloggen met Google";
+      }
     });
     document.getElementById("logout-button").addEventListener("click", () => {
       denied = false;
