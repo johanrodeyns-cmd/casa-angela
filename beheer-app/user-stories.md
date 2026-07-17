@@ -88,7 +88,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ## Epic 1 — Prijskalender
 
-### US-1.1 ☐ Maandkalender met Airbnb-basisprijs per dag (M)
+### US-1.1 ☑ Maandkalender met Airbnb-basisprijs per dag (M) — v0.7.0
 **Als** Johan of Tinneke **wil ik** in een overzichtelijke maandkalender per dag de Airbnb-prijs ingeven **zodat** ik snel en visueel duidelijk mijn tarieven kan beheren.
 
 **Acceptatiecriteria:**

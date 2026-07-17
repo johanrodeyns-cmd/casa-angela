@@ -222,6 +222,110 @@
   #denied-screen h2 {
     color: var(--terracotta);
   }
+  .calendar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+  }
+  .calendar-header button {
+    min-width: 44px;
+    padding: 0.5rem;
+    font-size: 1.1rem;
+  }
+  .calendar-header h3 {
+    margin: 0;
+    text-transform: capitalize;
+  }
+  .cal-weekdays,
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .cal-weekdays {
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: var(--olive-dark);
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .cal-day {
+    min-height: 52px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
+    border-radius: 6px;
+    background: var(--sand);
+    color: var(--charcoal);
+    font-size: 0.85rem;
+  }
+  .cal-day:hover {
+    background: var(--sand-dark);
+  }
+  .cal-day-empty {
+    background: none;
+    min-height: 52px;
+  }
+  .cal-day-num {
+    font-weight: bold;
+  }
+  .cal-day-price {
+    font-size: 0.75rem;
+    color: var(--olive-dark);
+  }
+  .cal-day-price.empty {
+    color: var(--terracotta);
+    opacity: 0.7;
+  }
+  dialog#price-dialog {
+    border: none;
+    border-radius: 8px;
+    padding: 1.5rem;
+    max-width: 320px;
+    width: 90%;
+    color: var(--charcoal);
+  }
+  dialog#price-dialog::backdrop {
+    background: rgba(44, 44, 44, 0.5);
+  }
+  dialog#price-dialog h2 {
+    margin-top: 0;
+    color: var(--terracotta);
+    font-size: 1.1rem;
+  }
+  dialog#price-dialog h2::first-letter {
+    text-transform: uppercase;
+  }
+  dialog#price-dialog label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+  }
+  dialog#price-dialog input {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 1rem;
+    padding: 0.6rem;
+    min-height: 44px;
+    border: 1px solid var(--sand-dark);
+    border-radius: 6px;
+    margin-bottom: 1rem;
+  }
+  .dialog-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+  }
+  .button-secondary {
+    background: var(--sand);
+    color: var(--charcoal);
+  }
+  .button-secondary:hover {
+    background: var(--sand-dark);
+  }
   #user-email {
     font-size: 0.85rem;
     opacity: 0.85;
@@ -238,6 +342,16 @@
     <h2>Changelog</h2>
     <div id="changelog-list"></div>
     <button id="changelog-close" type="button">Sluiten</button>
+  </dialog>
+
+  <dialog id="price-dialog">
+    <h2 id="price-dialog-date"></h2>
+    <label for="price-input">Airbnb-prijs (€)</label>
+    <input id="price-input" type="number" min="0" step="1" inputmode="decimal">
+    <div class="dialog-actions">
+      <button id="price-cancel" type="button" class="button-secondary">Annuleren</button>
+      <button id="price-save" type="button">Opslaan</button>
+    </div>
   </dialog>
 
   <section id="login-screen" class="screen">
@@ -268,7 +382,15 @@
 
       <div class="tab-content">
         <div id="tab-kalender" class="tab-panel active">
-          <p>Kalender — binnenkort beschikbaar.</p>
+          <div class="calendar-header">
+            <button id="cal-prev" type="button" aria-label="Vorige maand">‹</button>
+            <h3 id="cal-month-label"></h3>
+            <button id="cal-next" type="button" aria-label="Volgende maand">›</button>
+          </div>
+          <div class="cal-weekdays">
+            <span>Ma</span><span>Di</span><span>Wo</span><span>Do</span><span>Vr</span><span>Za</span><span>Zo</span>
+          </div>
+          <div id="cal-grid" class="cal-grid"></div>
         </div>
         <div id="tab-boekingen" class="tab-panel">
           <p>Boekingen — binnenkort beschikbaar.</p>
@@ -293,7 +415,15 @@
       signOut,
       onAuthStateChanged,
     } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
-    import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+    import {
+      getFirestore,
+      collection,
+      doc,
+      setDoc,
+      query,
+      where,
+      getDocs,
+    } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAG08ALUt-fObgOoraUJRsZXrV98JbYnpw",
@@ -307,6 +437,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.7.0", date: "2026-07-17", description: "Prijskalender: Airbnb-basisprijs per dag ingeven, maandnavigatie." },
       { version: "0.6.0", date: "2026-07-17", description: "Installeerbaar als app op het startscherm (PWA)." },
       { version: "0.5.0", date: "2026-07-17", description: "Visueel ontwerp afgewerkt: navigatie als zijbalk op breed scherm, laadindicator en foutmelding bij inloggen." },
       { version: "0.4.0", date: "2026-07-17", description: "Vaste navigatiebalk toegevoegd (Kalender, Boekingen, Checklist aankomst/vertrek)." },
@@ -317,7 +448,7 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    getFirestore(app);
+    const db = getFirestore(app);
 
     document.getElementById("version").textContent = "v" + getVersion();
 
@@ -352,6 +483,113 @@
 
     document.querySelectorAll(".nav-item").forEach((btn) => {
       btn.addEventListener("click", () => showTab(btn.dataset.tab));
+    });
+
+    const MONTH_NAMES = [
+      "januari", "februari", "maart", "april", "mei", "juni",
+      "juli", "augustus", "september", "oktober", "november", "december",
+    ];
+
+    const today = new Date();
+    let calYear = today.getFullYear();
+    let calMonth = today.getMonth() + 1; // 1-12
+    let pricingCache = {}; // date -> airbnbPrice
+
+    const calGrid = document.getElementById("cal-grid");
+    const calMonthLabel = document.getElementById("cal-month-label");
+    const priceDialog = document.getElementById("price-dialog");
+    const priceDialogDate = document.getElementById("price-dialog-date");
+    const priceInput = document.getElementById("price-input");
+    let priceDialogDateValue = null;
+
+    function renderCalendar() {
+      calMonthLabel.textContent = `${MONTH_NAMES[calMonth - 1]} ${calYear}`;
+      const weeks = buildMonthGrid(calYear, calMonth);
+      calGrid.innerHTML = weeks
+        .flat()
+        .map((date) => {
+          if (!date) return '<span class="cal-day cal-day-empty"></span>';
+          const day = Number(date.slice(8, 10));
+          const price = pricingCache[date];
+          const priceLabel = price == null ? "—" : `€${price}`;
+          const priceClass = price == null ? "cal-day-price empty" : "cal-day-price";
+          return `
+            <button type="button" class="cal-day" data-date="${date}">
+              <span class="cal-day-num">${day}</span>
+              <span class="${priceClass}">${priceLabel}</span>
+            </button>
+          `;
+        })
+        .join("");
+
+      calGrid.querySelectorAll(".cal-day").forEach((btn) => {
+        btn.addEventListener("click", () => openPriceDialog(btn.dataset.date));
+      });
+    }
+
+    async function loadPricingForMonth() {
+      const monthStart = `${calYear}-${String(calMonth).padStart(2, "0")}-01`;
+      const daysInMonth = new Date(calYear, calMonth, 0).getDate();
+      const monthEnd = `${calYear}-${String(calMonth).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
+      const q = query(collection(db, "pricing"), where("date", ">=", monthStart), where("date", "<=", monthEnd));
+      const snapshot = await getDocs(q);
+      pricingCache = {};
+      snapshot.forEach((docSnap) => {
+        pricingCache[docSnap.id] = docSnap.data().airbnbPrice;
+      });
+      renderCalendar();
+    }
+
+    function goToMonth(year, month) {
+      calYear = year;
+      calMonth = month;
+      pricingCache = {};
+      renderCalendar();
+      loadPricingForMonth().catch((err) => console.error("Kon prijzen niet laden:", err));
+    }
+
+    function openPriceDialog(date) {
+      priceDialogDateValue = date;
+      const parsedDate = new Date(date + "T00:00:00");
+      priceDialogDate.textContent = parsedDate.toLocaleDateString("nl-BE", {
+        weekday: "long", day: "numeric", month: "long", year: "numeric",
+      });
+      priceInput.value = pricingCache[date] ?? "";
+      priceDialog.showModal();
+      priceInput.focus();
+    }
+
+    renderCalendar();
+
+    document.getElementById("cal-prev").addEventListener("click", () => {
+      const newMonth = calMonth === 1 ? 12 : calMonth - 1;
+      const newYear = calMonth === 1 ? calYear - 1 : calYear;
+      goToMonth(newYear, newMonth);
+    });
+    document.getElementById("cal-next").addEventListener("click", () => {
+      const newMonth = calMonth === 12 ? 1 : calMonth + 1;
+      const newYear = calMonth === 12 ? calYear + 1 : calYear;
+      goToMonth(newYear, newMonth);
+    });
+
+    document.getElementById("price-cancel").addEventListener("click", () => priceDialog.close());
+    document.getElementById("price-save").addEventListener("click", async () => {
+      const value = priceInput.value === "" ? null : Number(priceInput.value);
+      const saveButton = document.getElementById("price-save");
+      saveButton.disabled = true;
+      saveButton.innerHTML = '<span class="spinner"></span>Opslaan…';
+      try {
+        await setDoc(doc(db, "pricing", priceDialogDateValue), {
+          date: priceDialogDateValue,
+          airbnbPrice: value,
+        });
+        pricingCache[priceDialogDateValue] = value;
+        renderCalendar();
+        priceDialog.close();
+      } finally {
+        saveButton.disabled = false;
+        saveButton.textContent = "Opslaan";
+      }
     });
 
     // signOut() after a denied login re-fires onAuthStateChanged(null); this flag
@@ -396,6 +634,7 @@
       }
       document.getElementById("user-email").textContent = user.email;
       showScreen("app-screen");
+      loadPricingForMonth().catch((err) => console.error("Kon prijzen niet laden:", err));
     });
   </script>
 </body>
