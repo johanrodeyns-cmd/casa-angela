@@ -1,4 +1,4 @@
-const VERSION = '0.10.0';
+const VERSION = '0.11.0';
 
 function getVersion() {
   return VERSION;
@@ -50,6 +50,11 @@ function getDateRange(dateA, dateB) {
   return dates;
 }
 
+function getPreviousYearDate(date) {
+  const year = Number(date.slice(0, 4));
+  return `${year - 1}${date.slice(4)}`;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice, getDateRange };
+  module.exports = { getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice, getDateRange, getPreviousYearDate };
 }

@@ -1,9 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice, getDateRange } = require('./logic.js');
+const { getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice, getDateRange, getPreviousYearDate } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.10.0');
+  assert.equal(getVersion(), '0.11.0');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -117,4 +117,17 @@ test('getDateRange handles ranges spanning a month boundary', () => {
     getDateRange('2026-07-30', '2026-08-02'),
     ['2026-07-30', '2026-07-31', '2026-08-01', '2026-08-02']
   );
+});
+
+test('getPreviousYearDate subtracts exactly one year, keeping month and day', () => {
+  assert.equal(getPreviousYearDate('2026-07-15'), '2025-07-15');
+});
+
+test('getPreviousYearDate works at the start and end of the year', () => {
+  assert.equal(getPreviousYearDate('2026-01-01'), '2025-01-01');
+  assert.equal(getPreviousYearDate('2026-12-31'), '2025-12-31');
+});
+
+test('getPreviousYearDate handles a leap day by keeping the same month/day string', () => {
+  assert.equal(getPreviousYearDate('2024-02-29'), '2023-02-29');
 });

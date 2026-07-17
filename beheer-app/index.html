@@ -380,6 +380,29 @@
   .button-secondary:hover {
     background: var(--sand-dark);
   }
+  .dialog-divider {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--charcoal);
+    opacity: 0.6;
+    margin: 1rem 0 0.75rem;
+  }
+  .full-width {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  #copy-feedback {
+    display: none;
+    background: var(--olive);
+    color: var(--cream);
+    border-radius: 6px;
+    padding: 0.6rem 0.9rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.85rem;
+  }
+  #copy-feedback.active {
+    display: block;
+  }
   .cal-toolbar {
     display: flex;
     justify-content: flex-end;
@@ -510,6 +533,8 @@
       <button id="bulk-price-cancel" type="button" class="button-secondary">Annuleren</button>
       <button id="bulk-price-save" type="button"></button>
     </div>
+    <div class="dialog-divider">of</div>
+    <button id="bulk-copy-last-year" type="button" class="button-secondary full-width">📋 Kopieer prijzen van vorig jaar</button>
   </dialog>
 
   <dialog id="formula-dialog">
@@ -580,6 +605,7 @@
           </div>
           <p id="mode-hint">Wijzig via de Airbnb-prijs of pas de formule aan.</p>
           <p id="selection-hint">Tik een startdag en een einddag om een periode te selecteren.</p>
+          <p id="copy-feedback"></p>
           <div class="calendar-header">
             <button id="cal-prev" type="button" aria-label="Vorige maand">‹</button>
             <h3 id="cal-month-label"></h3>
@@ -637,6 +663,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.11.0", date: "2026-07-17", description: "Prijzen van vorig jaar kopiëren naar een geselecteerde periode." },
       { version: "0.10.0", date: "2026-07-17", description: "Periode selecteren voor bulk-invoer van de Airbnb-prijs." },
       { version: "0.9.0", date: "2026-07-17", description: "Schakelen tussen Airbnb/Booking.com/Rechtstreeks/Vrienden in de kalender." },
       { version: "0.8.0", date: "2026-07-17", description: "Instelbare prijsformule voor Booking.com, Rechtstreeks en Vrienden." },
@@ -916,6 +943,58 @@
       } finally {
         bulkPriceSaveButton.disabled = false;
         bulkPriceSaveButton.textContent = originalLabel;
+      }
+    });
+
+    let copyFeedbackTimer = null;
+    function showCopyFeedback(message) {
+      const feedback = document.getElementById("copy-feedback");
+      feedback.textContent = message;
+      feedback.classList.add("active");
+      clearTimeout(copyFeedbackTimer);
+      copyFeedbackTimer = setTimeout(() => feedback.classList.remove("active"), 5000);
+    }
+
+    document.getElementById("bulk-copy-last-year").addEventListener("click", async () => {
+      const copyButton = document.getElementById("bulk-copy-last-year");
+      const originalLabel = copyButton.textContent;
+      copyButton.disabled = true;
+      copyButton.innerHTML = '<span class="spinner"></span>Kopiëren…';
+      try {
+        const prevYearDates = bulkSelectionDates.map(getPreviousYearDate);
+        const q = query(
+          collection(db, "pricing"),
+          where("date", ">=", prevYearDates[0]),
+          where("date", "<=", prevYearDates[prevYearDates.length - 1])
+        );
+        const snapshot = await getDocs(q);
+        const lastYearPrices = {};
+        snapshot.forEach((docSnap) => { lastYearPrices[docSnap.id] = docSnap.data().airbnbPrice; });
+
+        const toCopy = bulkSelectionDates
+          .map((date, i) => ({ date, price: lastYearPrices[prevYearDates[i]] }))
+          .filter((entry) => entry.price != null);
+
+        if (toCopy.length > 0) {
+          const batch = writeBatch(db);
+          toCopy.forEach(({ date, price }) => {
+            batch.set(doc(db, "pricing", date), { date, airbnbPrice: price });
+          });
+          await batch.commit();
+          toCopy.forEach(({ date, price }) => { pricingCache[date] = price; });
+          renderCalendar();
+        }
+
+        const skipped = bulkSelectionDates.length - toCopy.length;
+        const copiedMsg = `${toCopy.length} van de ${bulkSelectionDates.length} dagen gekopieerd van vorig jaar.`;
+        const skippedMsg = skipped > 0 ? ` ${skipped} ${skipped === 1 ? "dag had" : "dagen hadden"} geen prijs vorig jaar.` : "";
+        showCopyFeedback(copiedMsg + skippedMsg);
+
+        bulkPriceDialog.close();
+        exitSelectionMode();
+      } finally {
+        copyButton.disabled = false;
+        copyButton.textContent = originalLabel;
       }
     });
 

@@ -131,7 +131,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
-### US-1.5 ☐ Prijzen kopiëren van vorig jaar (S)
+### US-1.5 ☑ Prijzen kopiëren van vorig jaar (S) — v0.11.0
 **Als** Johan of Tinneke **wil ik** de prijzen van hetzelfde seizoen vorig jaar als startpunt overnemen **zodat** ik niet elk jaar helemaal opnieuw moet beginnen.
 
 **Acceptatiecriteria:**
