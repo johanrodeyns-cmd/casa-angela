@@ -1,0 +1,16 @@
+{
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "logic.test.js",
+      "functions/**",
+      "*.md"
+    ]
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}

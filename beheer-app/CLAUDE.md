@@ -18,9 +18,9 @@ Interne beheer-app (géén publieke website — dat is `../casa-angela-v1.html`,
 
 ## Opslag
 
-- Eigen Firebase-project, **volledig los** van portfolio-tracker-jr / gezondheid-jr / huishouden: voorstel projectnaam `casa-angela-jr` (te bevestigen/aan te passen door Johan)
+- Eigen Firebase-project, **volledig los** van portfolio-tracker-jr / gezondheid-jr / huishouden: `casa-angela-jr`
 - **Geen per-uid data-isolatie** zoals in de andere apps: dit is een gedeelde app voor twee gebruikers. Data leeft in gedeelde top-level collecties (`pricing`, `bookings`, `checklists`, `settings`, `syncedBlocks`), niet onder `users/{uid}/...`
-- Firestore security rules: enkel lezen/schrijven toegestaan als `request.auth.token.email` één van de twee toegelaten adressen is (Johan + Tinneke — **e-mailadres van Tinneke nog aan te vullen**)
+- Firestore security rules: enkel lezen/schrijven toegestaan als `request.auth.token.email` één van de twee toegelaten adressen is (`johan.rodeyns@gmail.com`, `tinbogaerts@gmail.com`)
 - Nooit localStorage, sessionStorage of window.storage gebruiken voor app-data (wel toegestaan voor pure UI-state zoals "laatst bekeken maand")
 
 ## Taal

@@ -27,12 +27,45 @@
     background: var(--terracotta);
     color: var(--cream);
     padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
   header h1 {
     margin: 0;
     font-size: 1.25rem;
   }
   #version {
+    font-size: 0.85rem;
+    opacity: 0.85;
+  }
+  .screen {
+    display: none;
+    max-width: 480px;
+    margin: 3rem auto;
+    padding: 0 1rem;
+    text-align: center;
+  }
+  .screen.active {
+    display: block;
+  }
+  button {
+    font-size: 1rem;
+    padding: 0.75rem 1.5rem;
+    min-height: 44px;
+    border: none;
+    border-radius: 6px;
+    background: var(--terracotta);
+    color: var(--cream);
+    cursor: pointer;
+  }
+  button:hover {
+    background: var(--terracotta-light);
+  }
+  #denied-screen h2 {
+    color: var(--terracotta);
+  }
+  #user-email {
     font-size: 0.85rem;
     opacity: 0.85;
   }
@@ -44,9 +77,86 @@
     <span id="version"></span>
   </header>
 
+  <section id="login-screen" class="screen">
+    <p>Meld je aan om verder te gaan.</p>
+    <button id="login-button" type="button">Inloggen met Google</button>
+  </section>
+
+  <section id="denied-screen" class="screen">
+    <h2>Geen toegang</h2>
+    <p>Dit account heeft geen toegang tot de Casa Angela beheer-app.</p>
+    <button id="logout-button" type="button">Opnieuw inloggen</button>
+  </section>
+
+  <section id="app-screen" class="screen">
+    <p>Ingelogd als <span id="user-email"></span></p>
+    <button id="signout-button" type="button">Uitloggen</button>
+  </section>
+
   <script src="logic.js"></script>
-  <script>
-    document.getElementById('version').textContent = 'v' + getVersion();
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+    import {
+      getAuth,
+      GoogleAuthProvider,
+      signInWithPopup,
+      signOut,
+      onAuthStateChanged,
+    } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+    import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAG08ALUt-fObgOoraUJRsZXrV98JbYnpw",
+      authDomain: "casa-angela-jr.firebaseapp.com",
+      projectId: "casa-angela-jr",
+      storageBucket: "casa-angela-jr.firebasestorage.app",
+      messagingSenderId: "307484035181",
+      appId: "1:307484035181:web:10a806b9278b89222d5764",
+    };
+
+    const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    getFirestore(app);
+
+    document.getElementById("version").textContent = "v" + getVersion();
+
+    function showScreen(id) {
+      document.querySelectorAll(".screen").forEach((el) => {
+        el.classList.toggle("active", el.id === id);
+      });
+    }
+
+    // signOut() after a denied login re-fires onAuthStateChanged(null); this flag
+    // stops that from bouncing the user back to the login screen automatically.
+    let denied = false;
+
+    document.getElementById("login-button").addEventListener("click", () => {
+      denied = false;
+      signInWithPopup(auth, new GoogleAuthProvider());
+    });
+    document.getElementById("logout-button").addEventListener("click", () => {
+      denied = false;
+      showScreen("login-screen");
+      signOut(auth);
+    });
+    document.getElementById("signout-button").addEventListener("click", () => signOut(auth));
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        if (!denied) showScreen("login-screen");
+        return;
+      }
+      if (!isAllowedEmail(user.email, ALLOWED_EMAILS)) {
+        denied = true;
+        signOut(auth);
+        showScreen("denied-screen");
+        return;
+      }
+      document.getElementById("user-email").textContent = user.email;
+      showScreen("app-screen");
+    });
   </script>
 </body>
 </html>

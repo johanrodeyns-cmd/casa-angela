@@ -2,17 +2,19 @@
 
 > Auto-ingeladen via `@ARCHITECTURE.md` in `CLAUDE.md`. Houd deze kaart actueel bij elke structurele wijziging (nieuw bestand, nieuwe/verplaatste functie, gewijzigde laadvolgorde, nieuw Firestore-pad of -veld, nieuwe dependency, nieuwe Cloud Function). Zie de architectuur-verificatieregel in de globale CLAUDE.md.
 
-Vanilla-JS single-page PWA op Firebase Hosting (geen build/bundler): prijskalender, boekingenbeheer, beschikbaarheidskalender en aankomst/vertrek-checklists voor vakantiehuis Casa Angela. **Eigen** Firebase-project (voorstel: `casa-angela-jr`, volledig los van de andere projecten). Gedeelde data tussen twee gebruikers (Johan + Tinneke) i.p.v. per-uid isolatie. iCal-sync met Airbnb/Booking.com in een Cloud Function.
+Vanilla-JS single-page PWA op Firebase Hosting (geen build/bundler): prijskalender, boekingenbeheer, beschikbaarheidskalender en aankomst/vertrek-checklists voor vakantiehuis Casa Angela. **Eigen** Firebase-project `casa-angela-jr`, volledig los van de andere projecten. Gedeelde data tussen twee gebruikers (Johan + Tinneke) i.p.v. per-uid isolatie. iCal-sync met Airbnb/Booking.com in een Cloud Function.
 
 ## Bestanden
 
 | Bestand | Verantwoordelijkheid | Belangrijkste exports/functies | Laadwijze |
 |---|---|---|---|
-| `index.html` | Volledige UI + alle app-JS inline in één `<script type="module">` (login, navigatie, kalender, boekingen, checklists, dialogs), **`CHANGELOG`-array** | render-functies (`renderPrijskalender`, `renderBeschikbaarheid`, `renderBoekingen`, `renderChecklist`), loaders (`loadPricing`, `loadBookings`, `loadSyncedBlocks`, `loadChecklists`, `loadFormulaSettings`), Firestore-CRUD, JPG-export (Canvas API), CF-callable voor sync-trigger | HTML parse → `logic.js` (blocking) → Firebase-module |
-| `logic.js` | **Pure state/validatie/rekenhelpers** (geen Firebase/UI), gedeeld met tests | `computeDerivedPrice(airbnbPrice, formula)`, `computeAllPrices(airbnbPrice, formulaSettings)`, `validateBooking`, `nightsBetween`, `overlapsExistingBooking`, `buildOccupancyMap(bookings, syncedBlocks)`, `dayOccupancyState(date, occupancyMap)` (vrij / halve-dag-aankomst / halve-dag-vertrek / volledig bezet), `parseIcalEvents`, `mergeSyncedBlocks`, `validateChecklistItem`, `reorderChecklistItems`, `toggleChecklistItem`, `resetChecklist`, `getVersion` | klassiek `<script src="logic.js">` (eerst, blocking) → helpers globaal |
+| `index.html` | Volledige UI + alle app-JS inline in één `<script type="module">` (Google-login + whitelist-check, navigatie, kalender, boekingen, checklists, dialogs), **`CHANGELOG`-array** | `onAuthStateChanged`-gestuurde login/denied/app-schermen (`showScreen`), render-functies (`renderPrijskalender`, `renderBeschikbaarheid`, `renderBoekingen`, `renderChecklist`), loaders (`loadPricing`, `loadBookings`, `loadSyncedBlocks`, `loadChecklists`, `loadFormulaSettings`), Firestore-CRUD, JPG-export (Canvas API), CF-callable voor sync-trigger | HTML parse → `logic.js` (blocking) → Firebase-module |
+| `logic.js` | **Pure state/validatie/rekenhelpers** (geen Firebase/UI), gedeeld met tests | `getVersion`, `isAllowedEmail(email, allowedEmails)`, `computeDerivedPrice(airbnbPrice, formula)`, `computeAllPrices(airbnbPrice, formulaSettings)`, `validateBooking`, `nightsBetween`, `overlapsExistingBooking`, `buildOccupancyMap(bookings, syncedBlocks)`, `dayOccupancyState(date, occupancyMap)` (vrij / halve-dag-aankomst / halve-dag-vertrek / volledig bezet), `parseIcalEvents`, `mergeSyncedBlocks`, `validateChecklistItem`, `reorderChecklistItems`, `toggleChecklistItem`, `resetChecklist` | klassiek `<script src="logic.js">` (eerst, blocking) → helpers globaal |
 | `logic.test.js` | Unit-tests voor `logic.js` | `node --test` | niet gedeployed |
 | `functions/index.js` | Cloud Functions (Node 22, ESM): iCal-sync | `syncIcalFeeds` (onSchedule, bv. elke 3u), `syncIcalFeedsNow` (onCall, handmatige trigger vanuit UI) | Node 22 |
 | `firestore.rules` | Toegang beperkt tot de twee toegelaten e-mailadressen (geen per-uid model) | — | — |
+| `firebase.json` | Hosting- + Firestore-rules-config voor `firebase deploy` | — | — |
+| `.firebaserc` | Koppelt de map aan Firebase-project `casa-angela-jr` (default) | — | — |
 | `manifest.json`, `icon-*.png` | PWA (standalone, geen service worker — zoals Gezondheid) | — | — |
 
 Geen losse CSS-bestand nodig voor v1 — CSS inline in `index.html` (CSS-variabelen voor het Casa Angela kleurenpalet, zie onder). Versie-string in `logic.js` (`getVersion()`), met assertie in `logic.test.js`.
@@ -63,7 +65,7 @@ Checklists:     toggle item -> Firestore update (checklists/{aankomst|vertrek}.i
 | `syncedBlocks/{id}` | `{ source: 'airbnb'|'booking', dateFrom, dateTo, icalUid }` — automatisch gesynchroniseerde bezette periodes zonder gastgegevens, apart van `bookings` |
 | `icalFeeds/{airbnb|booking}` | `{ url, lastSyncedAt }` |
 | `checklists/{aankomst|vertrek}` | `{ items: [{ id, text, checked, order }] }` |
-| `meta/allowedUsers` | `{ emails: ['johan.rodeyns@gmail.com', '<tinneke e-mail — nog aan te vullen>'] }` (spiegel van de Firestore-rule, voor UI-weergave "ingelogd als") |
+| `meta/allowedUsers` | `{ emails: ['johan.rodeyns@gmail.com', 'tinbogaerts@gmail.com'] }` (spiegel van de Firestore-rule, voor UI-weergave "ingelogd als") — **nog niet aangemaakt**, whitelist zit voorlopig hardcoded in `firestore.rules` + `index.html` (US-0.2) |
 
 ## Cloud Functions (`functions/`, Node 22)
 

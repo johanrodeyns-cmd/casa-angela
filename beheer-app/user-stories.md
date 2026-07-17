@@ -27,7 +27,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
-### US-0.2 ☐ Firebase-project + Google-login met whitelist (M)
+### US-0.2 ☑ Firebase-project + Google-login met whitelist (M) — v0.2.0
 **Als** Johan of Tinneke **wil ik** inloggen met mijn Google-account **zodat** enkel wij tweeën toegang hebben tot de app.
 
 **Acceptatiecriteria:**
@@ -37,7 +37,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 - Given een geslaagde login met een toegelaten e-mailadres, then krijg ik toegang tot de volledige app.
 - Given de Firestore security rules, then is lezen/schrijven enkel toegestaan als `request.auth.token.email` in de whitelist staat — geen per-uid datamodel zoals in de andere apps.
 
-**Technische notities:** e-mailadres van Tinneke moet nog aangeleverd worden voor de whitelist (zowel in `firestore.rules` als in `meta/allowedUsers`). Firebase via CDN, geen npm in de frontend.
+**Technische notities:** whitelist (`johan.rodeyns@gmail.com`, `tinbogaerts@gmail.com`) staat in `firestore.rules` en client-side in `index.html`; `meta/allowedUsers` volgt later als UI-spiegel. Firebase via CDN, geen npm in de frontend.
 
 ---
 
@@ -265,6 +265,4 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ## Nog te bevestigen / open punten
 
-- **E-mailadres van Tinneke** voor de login-whitelist (US-0.2).
-- **Naam van het Firebase-project**: voorstel `casa-angela-jr` — te bevestigen door Johan.
 - Excel-voorbeeld met bestaande boekingsdata: nog te ontvangen indien gewenst als aanvulling op de hierboven afgesproken velden.
