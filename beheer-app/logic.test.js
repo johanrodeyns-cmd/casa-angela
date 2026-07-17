@@ -1,9 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice, getDateRange, getPreviousYearDate } = require('./logic.js');
+const { getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice, getDateRange, getPreviousYearDate, nightsBetween, validateBooking } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.11.0');
+  assert.equal(getVersion(), '0.12.0');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -130,4 +130,70 @@ test('getPreviousYearDate works at the start and end of the year', () => {
 
 test('getPreviousYearDate handles a leap day by keeping the same month/day string', () => {
   assert.equal(getPreviousYearDate('2024-02-29'), '2023-02-29');
+});
+
+test('nightsBetween counts the number of nights between two dates', () => {
+  assert.equal(nightsBetween('2026-07-10', '2026-07-14'), 4);
+});
+
+test('nightsBetween returns 1 for a single-night stay', () => {
+  assert.equal(nightsBetween('2026-07-10', '2026-07-11'), 1);
+});
+
+test('nightsBetween handles a range spanning a month boundary', () => {
+  assert.equal(nightsBetween('2026-07-30', '2026-08-02'), 3);
+});
+
+const VALID_BOOKING = {
+  dateFrom: '2026-07-10',
+  dateTo: '2026-07-14',
+  name: 'Jan Janssens',
+  language: 'NL',
+  phone: '0470123456',
+  adultsCount: 2,
+  childrenCount: 0,
+  remark: '',
+  platform: 'airbnb',
+  price: 480,
+};
+
+test('validateBooking accepts a fully filled-in booking', () => {
+  const result = validateBooking(VALID_BOOKING);
+  assert.equal(result.valid, true);
+  assert.deepEqual(result.errors, {});
+});
+
+test('validateBooking requires dateFrom', () => {
+  const result = validateBooking({ ...VALID_BOOKING, dateFrom: '' });
+  assert.equal(result.valid, false);
+  assert.ok(result.errors.dateFrom);
+});
+
+test('validateBooking requires dateTo', () => {
+  const result = validateBooking({ ...VALID_BOOKING, dateTo: '' });
+  assert.equal(result.valid, false);
+  assert.ok(result.errors.dateTo);
+});
+
+test('validateBooking rejects a dateTo before dateFrom', () => {
+  const result = validateBooking({ ...VALID_BOOKING, dateFrom: '2026-07-14', dateTo: '2026-07-10' });
+  assert.equal(result.valid, false);
+  assert.ok(result.errors.dateTo);
+});
+
+test('validateBooking rejects a dateTo equal to dateFrom (zero nights)', () => {
+  const result = validateBooking({ ...VALID_BOOKING, dateTo: VALID_BOOKING.dateFrom });
+  assert.equal(result.valid, false);
+  assert.ok(result.errors.dateTo);
+});
+
+test('validateBooking requires a non-blank name', () => {
+  assert.equal(validateBooking({ ...VALID_BOOKING, name: '' }).valid, false);
+  assert.equal(validateBooking({ ...VALID_BOOKING, name: '   ' }).valid, false);
+});
+
+test('validateBooking requires a platform', () => {
+  const result = validateBooking({ ...VALID_BOOKING, platform: '' });
+  assert.equal(result.valid, false);
+  assert.ok(result.errors.platform);
 });

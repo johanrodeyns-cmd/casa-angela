@@ -500,6 +500,106 @@
     font-size: 0.85rem;
     opacity: 0.85;
   }
+  dialog#booking-dialog,
+  dialog#booking-delete-dialog {
+    border: none;
+    border-radius: 8px;
+    padding: 1.5rem;
+    max-width: 480px;
+    width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+    color: var(--charcoal);
+  }
+  dialog#booking-dialog::backdrop,
+  dialog#booking-delete-dialog::backdrop {
+    background: rgba(44, 44, 44, 0.5);
+  }
+  dialog#booking-dialog h2,
+  dialog#booking-delete-dialog h2 {
+    margin-top: 0;
+    color: var(--terracotta);
+    font-size: 1.1rem;
+  }
+  dialog#booking-dialog label {
+    display: block;
+    font-size: 0.85rem;
+    margin: 0.75rem 0 0.25rem;
+  }
+  dialog#booking-dialog input,
+  dialog#booking-dialog select,
+  dialog#booking-dialog textarea {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 1rem;
+    padding: 0.6rem;
+    min-height: 44px;
+    border: 1px solid var(--sand-dark);
+    border-radius: 6px;
+    font-family: inherit;
+  }
+  dialog#booking-dialog textarea {
+    resize: vertical;
+  }
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+  #booking-nights {
+    font-size: 0.85rem;
+    color: var(--olive-dark);
+    font-weight: bold;
+    margin: 0.5rem 0 0;
+  }
+  .empty-state {
+    color: var(--charcoal);
+    opacity: 0.6;
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 1.5rem 0;
+  }
+  .booking-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    background: var(--sand);
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+  .booking-item-main {
+    flex: 1;
+    text-align: left;
+    background: none;
+    color: var(--charcoal);
+    padding: 0;
+    min-height: auto;
+  }
+  .booking-item-main:hover {
+    background: none;
+    text-decoration: underline;
+  }
+  .booking-item-dates {
+    font-weight: bold;
+  }
+  .booking-item-meta {
+    font-size: 0.8rem;
+    color: var(--olive-dark);
+  }
+  .booking-item-delete {
+    background: none;
+    color: var(--terracotta);
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 1.2rem;
+    padding: 0;
+  }
+  .booking-item-delete:hover {
+    background: var(--terracotta-light);
+    border-radius: 6px;
+  }
 </style>
 </head>
 <body>
@@ -565,6 +665,68 @@
     </div>
   </dialog>
 
+  <dialog id="booking-dialog">
+    <h2 id="booking-dialog-title">Nieuwe boeking</h2>
+    <div class="form-row">
+      <div>
+        <label for="booking-date-from">Datum van</label>
+        <input id="booking-date-from" type="date">
+      </div>
+      <div>
+        <label for="booking-date-to">Datum tot</label>
+        <input id="booking-date-to" type="date">
+      </div>
+    </div>
+    <p id="booking-nights"></p>
+    <label for="booking-name">Naam</label>
+    <input id="booking-name" type="text">
+    <div class="form-row">
+      <div>
+        <label for="booking-language">Taal</label>
+        <input id="booking-language" type="text" placeholder="bv. NL">
+      </div>
+      <div>
+        <label for="booking-phone">Telefoonnummer</label>
+        <input id="booking-phone" type="tel">
+      </div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label for="booking-adults">Volwassenen</label>
+        <input id="booking-adults" type="number" min="0" step="1">
+      </div>
+      <div>
+        <label for="booking-children">Kinderen</label>
+        <input id="booking-children" type="number" min="0" step="1">
+      </div>
+    </div>
+    <label for="booking-platform">Platform</label>
+    <select id="booking-platform">
+      <option value="airbnb">Airbnb</option>
+      <option value="booking">Booking.com</option>
+      <option value="direct">Rechtstreeks</option>
+      <option value="friends">Vrienden</option>
+    </select>
+    <label for="booking-price">Prijs (€)</label>
+    <input id="booking-price" type="number" min="0" step="1">
+    <label for="booking-remark">Opmerking</label>
+    <textarea id="booking-remark" rows="2"></textarea>
+    <p id="booking-error" class="error-message"></p>
+    <div class="dialog-actions">
+      <button id="booking-cancel" type="button" class="button-secondary">Annuleren</button>
+      <button id="booking-save" type="button">Opslaan</button>
+    </div>
+  </dialog>
+
+  <dialog id="booking-delete-dialog">
+    <h2>Boeking verwijderen?</h2>
+    <p id="booking-delete-summary"></p>
+    <div class="dialog-actions">
+      <button id="booking-delete-cancel" type="button" class="button-secondary">Annuleren</button>
+      <button id="booking-delete-confirm" type="button">Verwijderen</button>
+    </div>
+  </dialog>
+
   <section id="login-screen" class="screen">
     <p>Meld je aan om verder te gaan.</p>
     <button id="login-button" type="button">Inloggen met Google</button>
@@ -617,7 +779,11 @@
           <div id="cal-grid" class="cal-grid"></div>
         </div>
         <div id="tab-boekingen" class="tab-panel">
-          <p>Boekingen — binnenkort beschikbaar.</p>
+          <div class="cal-toolbar">
+            <button id="booking-new" type="button">+ Nieuwe boeking</button>
+          </div>
+          <div id="bookings-list"></div>
+          <p id="bookings-empty" class="empty-state">Nog geen boekingen.</p>
         </div>
         <div id="tab-checklist-aankomst" class="tab-panel">
           <p>Checklist aankomst — binnenkort beschikbaar.</p>
@@ -649,6 +815,9 @@
       where,
       getDocs,
       writeBatch,
+      addDoc,
+      deleteDoc,
+      serverTimestamp,
     } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -663,6 +832,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.12.0", date: "2026-07-17", description: "Boekingen toevoegen, bewerken en verwijderen." },
       { version: "0.11.0", date: "2026-07-17", description: "Prijzen van vorig jaar kopiëren naar een geselecteerde periode." },
       { version: "0.10.0", date: "2026-07-17", description: "Periode selecteren voor bulk-invoer van de Airbnb-prijs." },
       { version: "0.9.0", date: "2026-07-17", description: "Schakelen tussen Airbnb/Booking.com/Rechtstreeks/Vrienden in de kalender." },
@@ -1068,6 +1238,173 @@
       }
     });
 
+    const PLATFORM_LABELS = { airbnb: "Airbnb", booking: "Booking.com", direct: "Rechtstreeks", friends: "Vrienden" };
+
+    let bookings = [];
+    let editingBookingId = null;
+    let deletingBookingId = null;
+
+    const bookingsList = document.getElementById("bookings-list");
+    const bookingsEmpty = document.getElementById("bookings-empty");
+    const bookingDialog = document.getElementById("booking-dialog");
+    const bookingDialogTitle = document.getElementById("booking-dialog-title");
+    const bookingError = document.getElementById("booking-error");
+    const bookingNights = document.getElementById("booking-nights");
+    const bookingFields = {
+      dateFrom: document.getElementById("booking-date-from"),
+      dateTo: document.getElementById("booking-date-to"),
+      name: document.getElementById("booking-name"),
+      language: document.getElementById("booking-language"),
+      phone: document.getElementById("booking-phone"),
+      adultsCount: document.getElementById("booking-adults"),
+      childrenCount: document.getElementById("booking-children"),
+      platform: document.getElementById("booking-platform"),
+      price: document.getElementById("booking-price"),
+      remark: document.getElementById("booking-remark"),
+    };
+
+    function formatBookingDateRange(dateFrom, dateTo) {
+      const fmt = (iso) => new Date(iso + "T00:00:00").toLocaleDateString("nl-BE", { day: "numeric", month: "short", year: "numeric" });
+      return `${fmt(dateFrom)} – ${fmt(dateTo)}`;
+    }
+
+    function updateBookingNightsPreview() {
+      const { dateFrom, dateTo } = bookingFields;
+      if (dateFrom.value && dateTo.value && dateTo.value > dateFrom.value) {
+        const nights = nightsBetween(dateFrom.value, dateTo.value);
+        bookingNights.textContent = `${nights} ${nights === 1 ? "nacht" : "nachten"}`;
+      } else {
+        bookingNights.textContent = "";
+      }
+    }
+    bookingFields.dateFrom.addEventListener("input", updateBookingNightsPreview);
+    bookingFields.dateTo.addEventListener("input", updateBookingNightsPreview);
+
+    function renderBookingsList() {
+      const sorted = [...bookings].sort((a, b) => a.dateFrom.localeCompare(b.dateFrom));
+      bookingsEmpty.style.display = sorted.length === 0 ? "block" : "none";
+      bookingsList.innerHTML = sorted
+        .map(
+          (b) => `
+            <div class="booking-item">
+              <button type="button" class="booking-item-main" data-id="${b.id}">
+                <div class="booking-item-dates">${formatBookingDateRange(b.dateFrom, b.dateTo)} (${b.nights} ${b.nights === 1 ? "nacht" : "nachten"})</div>
+                <div class="booking-item-meta">${b.name} — ${PLATFORM_LABELS[b.platform] ?? b.platform}${b.price != null ? ` — €${b.price}` : ""}</div>
+              </button>
+              <button type="button" class="booking-item-delete" data-id="${b.id}" aria-label="Verwijderen">🗑</button>
+            </div>
+          `
+        )
+        .join("");
+
+      bookingsList.querySelectorAll(".booking-item-main").forEach((btn) => {
+        btn.addEventListener("click", () => openBookingDialog(bookings.find((b) => b.id === btn.dataset.id)));
+      });
+      bookingsList.querySelectorAll(".booking-item-delete").forEach((btn) => {
+        btn.addEventListener("click", () => openDeleteBookingDialog(btn.dataset.id));
+      });
+    }
+
+    async function loadBookings() {
+      const snapshot = await getDocs(collection(db, "bookings"));
+      bookings = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+      renderBookingsList();
+    }
+
+    function openBookingDialog(booking) {
+      editingBookingId = booking ? booking.id : null;
+      bookingDialogTitle.textContent = booking ? "Boeking bewerken" : "Nieuwe boeking";
+      bookingError.classList.remove("active");
+      bookingFields.dateFrom.value = booking?.dateFrom ?? "";
+      bookingFields.dateTo.value = booking?.dateTo ?? "";
+      bookingFields.name.value = booking?.name ?? "";
+      bookingFields.language.value = booking?.language ?? "";
+      bookingFields.phone.value = booking?.phone ?? "";
+      bookingFields.adultsCount.value = booking?.adultsCount ?? "";
+      bookingFields.childrenCount.value = booking?.childrenCount ?? "";
+      bookingFields.platform.value = booking?.platform ?? "airbnb";
+      bookingFields.price.value = booking?.price ?? "";
+      bookingFields.remark.value = booking?.remark ?? "";
+      updateBookingNightsPreview();
+      bookingDialog.showModal();
+    }
+
+    document.getElementById("booking-new").addEventListener("click", () => openBookingDialog(null));
+    document.getElementById("booking-cancel").addEventListener("click", () => bookingDialog.close());
+    document.getElementById("booking-save").addEventListener("click", async () => {
+      const formValues = {
+        dateFrom: bookingFields.dateFrom.value,
+        dateTo: bookingFields.dateTo.value,
+        name: bookingFields.name.value,
+        language: bookingFields.language.value,
+        phone: bookingFields.phone.value,
+        adultsCount: bookingFields.adultsCount.value === "" ? null : Number(bookingFields.adultsCount.value),
+        childrenCount: bookingFields.childrenCount.value === "" ? null : Number(bookingFields.childrenCount.value),
+        platform: bookingFields.platform.value,
+        price: bookingFields.price.value === "" ? null : Number(bookingFields.price.value),
+        remark: bookingFields.remark.value,
+      };
+
+      const { valid, errors } = validateBooking(formValues);
+      if (!valid) {
+        bookingError.textContent = Object.values(errors).join(" ");
+        bookingError.classList.add("active");
+        return;
+      }
+
+      const saveButton = document.getElementById("booking-save");
+      saveButton.disabled = true;
+      saveButton.innerHTML = '<span class="spinner"></span>Opslaan…';
+      try {
+        const data = { ...formValues, nights: nightsBetween(formValues.dateFrom, formValues.dateTo) };
+        if (editingBookingId) {
+          const existing = bookings.find((b) => b.id === editingBookingId);
+          await setDoc(doc(db, "bookings", editingBookingId), {
+            ...data,
+            createdBy: existing.createdBy,
+            createdAt: existing.createdAt,
+          });
+          const index = bookings.findIndex((b) => b.id === editingBookingId);
+          bookings[index] = { ...bookings[index], ...data };
+        } else {
+          const created = { ...data, createdBy: auth.currentUser.email, createdAt: serverTimestamp() };
+          const ref = await addDoc(collection(db, "bookings"), created);
+          bookings.push({ id: ref.id, ...created });
+        }
+        renderBookingsList();
+        bookingDialog.close();
+      } finally {
+        saveButton.disabled = false;
+        saveButton.textContent = "Opslaan";
+      }
+    });
+
+    const bookingDeleteDialog = document.getElementById("booking-delete-dialog");
+    const bookingDeleteSummary = document.getElementById("booking-delete-summary");
+
+    function openDeleteBookingDialog(id) {
+      deletingBookingId = id;
+      const b = bookings.find((booking) => booking.id === id);
+      bookingDeleteSummary.textContent = `${formatBookingDateRange(b.dateFrom, b.dateTo)} — ${b.name}`;
+      bookingDeleteDialog.showModal();
+    }
+
+    document.getElementById("booking-delete-cancel").addEventListener("click", () => bookingDeleteDialog.close());
+    document.getElementById("booking-delete-confirm").addEventListener("click", async () => {
+      const confirmButton = document.getElementById("booking-delete-confirm");
+      confirmButton.disabled = true;
+      confirmButton.innerHTML = '<span class="spinner"></span>Verwijderen…';
+      try {
+        await deleteDoc(doc(db, "bookings", deletingBookingId));
+        bookings = bookings.filter((b) => b.id !== deletingBookingId);
+        renderBookingsList();
+        bookingDeleteDialog.close();
+      } finally {
+        confirmButton.disabled = false;
+        confirmButton.textContent = "Verwijderen";
+      }
+    });
+
     // signOut() after a denied login re-fires onAuthStateChanged(null); this flag
     // stops that from bouncing the user back to the login screen automatically.
     let denied = false;
@@ -1112,6 +1449,7 @@
       showScreen("app-screen");
       loadPricingForMonth().catch((err) => console.error("Kon prijzen niet laden:", err));
       loadFormulaSettings().catch((err) => console.error("Kon prijsformule niet laden:", err));
+      loadBookings().catch((err) => console.error("Kon boekingen niet laden:", err));
     });
   </script>
 </body>

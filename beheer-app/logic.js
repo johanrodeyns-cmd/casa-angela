@@ -1,4 +1,4 @@
-const VERSION = '0.11.0';
+const VERSION = '0.12.0';
 
 function getVersion() {
   return VERSION;
@@ -55,6 +55,27 @@ function getPreviousYearDate(date) {
   return `${year - 1}${date.slice(4)}`;
 }
 
+function nightsBetween(dateFrom, dateTo) {
+  const from = new Date(dateFrom + 'T00:00:00');
+  const to = new Date(dateTo + 'T00:00:00');
+  return Math.round((to - from) / 86400000);
+}
+
+function validateBooking(booking) {
+  const errors = {};
+  if (!booking.dateFrom) errors.dateFrom = 'Datum van is verplicht.';
+  if (!booking.dateTo) errors.dateTo = 'Datum tot is verplicht.';
+  if (booking.dateFrom && booking.dateTo && booking.dateTo <= booking.dateFrom) {
+    errors.dateTo = 'Datum tot moet na datum van liggen.';
+  }
+  if (!booking.name || !booking.name.trim()) errors.name = 'Naam is verplicht.';
+  if (!booking.platform) errors.platform = 'Platform is verplicht.';
+  return { valid: Object.keys(errors).length === 0, errors };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice, getDateRange, getPreviousYearDate };
+  module.exports = {
+    getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice,
+    getDateRange, getPreviousYearDate, nightsBetween, validateBooking,
+  };
 }
