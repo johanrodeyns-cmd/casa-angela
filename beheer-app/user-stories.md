@@ -122,7 +122,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
-### US-1.4 ☐ Periode selecteren voor bulk-invoer (S)
+### US-1.4 ☑ Periode selecteren voor bulk-invoer (S) — v0.10.0
 **Als** Johan of Tinneke **wil ik** een reeks dagen selecteren en in één keer dezelfde Airbnb-prijs ingeven **zodat** ik niet elke dag apart moet instellen.
 
 **Acceptatiecriteria:**

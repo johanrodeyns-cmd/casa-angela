@@ -1,9 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice } = require('./logic.js');
+const { getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice, getDateRange } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.9.0');
+  assert.equal(getVersion(), '0.10.0');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -92,4 +92,29 @@ test('computeDisplayPrice returns the derived price for the friends mode', () =>
 test('computeDisplayPrice returns null when the Airbnb price is null, regardless of mode', () => {
   assert.equal(computeDisplayPrice('booking', null, SAMPLE_FORMULAS), null);
   assert.equal(computeDisplayPrice('airbnb', null, SAMPLE_FORMULAS), null);
+});
+
+test('getDateRange returns every date between start and end, inclusive', () => {
+  assert.deepEqual(
+    getDateRange('2026-07-05', '2026-07-08'),
+    ['2026-07-05', '2026-07-06', '2026-07-07', '2026-07-08']
+  );
+});
+
+test('getDateRange returns a single date when start equals end', () => {
+  assert.deepEqual(getDateRange('2026-07-05', '2026-07-05'), ['2026-07-05']);
+});
+
+test('getDateRange swaps start and end when given in reverse order', () => {
+  assert.deepEqual(
+    getDateRange('2026-07-08', '2026-07-05'),
+    ['2026-07-05', '2026-07-06', '2026-07-07', '2026-07-08']
+  );
+});
+
+test('getDateRange handles ranges spanning a month boundary', () => {
+  assert.deepEqual(
+    getDateRange('2026-07-30', '2026-08-02'),
+    ['2026-07-30', '2026-07-31', '2026-08-01', '2026-08-02']
+  );
 });

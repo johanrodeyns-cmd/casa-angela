@@ -302,6 +302,10 @@
   .cal-day:hover {
     background: var(--sand-dark);
   }
+  .cal-day.selected {
+    outline: 3px solid var(--terracotta);
+    outline-offset: -3px;
+  }
   .cal-day-empty {
     background: none;
     min-height: 52px;
@@ -317,7 +321,8 @@
     color: var(--terracotta);
     opacity: 0.7;
   }
-  dialog#price-dialog {
+  dialog#price-dialog,
+  dialog#bulk-price-dialog {
     border: none;
     border-radius: 8px;
     padding: 1.5rem;
@@ -325,23 +330,28 @@
     width: 90%;
     color: var(--charcoal);
   }
-  dialog#price-dialog::backdrop {
+  dialog#price-dialog::backdrop,
+  dialog#bulk-price-dialog::backdrop {
     background: rgba(44, 44, 44, 0.5);
   }
-  dialog#price-dialog h2 {
+  dialog#price-dialog h2,
+  dialog#bulk-price-dialog h2 {
     margin-top: 0;
     color: var(--terracotta);
     font-size: 1.1rem;
   }
-  dialog#price-dialog h2::first-letter {
+  dialog#price-dialog h2::first-letter,
+  dialog#bulk-price-dialog h2::first-letter {
     text-transform: uppercase;
   }
-  dialog#price-dialog label {
+  dialog#price-dialog label,
+  dialog#bulk-price-dialog label {
     display: block;
     margin-bottom: 0.5rem;
     font-size: 0.9rem;
   }
-  dialog#price-dialog input {
+  dialog#price-dialog input,
+  dialog#bulk-price-dialog input {
     width: 100%;
     box-sizing: border-box;
     font-size: 1rem;
@@ -350,6 +360,13 @@
     border: 1px solid var(--sand-dark);
     border-radius: 6px;
     margin-bottom: 1rem;
+  }
+  #bulk-price-dialog-count {
+    font-size: 0.85rem;
+    background: var(--sand);
+    border-radius: 6px;
+    padding: 0.6rem 0.75rem;
+    margin: 0 0 1rem;
   }
   .dialog-actions {
     display: flex;
@@ -366,7 +383,9 @@
   .cal-toolbar {
     display: flex;
     justify-content: flex-end;
+    gap: 0.5rem;
     margin-bottom: 0.75rem;
+    flex-wrap: wrap;
   }
   .cal-toolbar button {
     font-size: 0.85rem;
@@ -376,6 +395,27 @@
   }
   .cal-toolbar button:hover {
     background: var(--azure-light);
+  }
+  .cal-toolbar button.active {
+    background: var(--terracotta);
+  }
+  .cal-toolbar button:disabled {
+    background: var(--sand-dark);
+    color: var(--charcoal);
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  #selection-hint {
+    display: none;
+    background: var(--sand);
+    color: var(--charcoal);
+    border-radius: 6px;
+    padding: 0.6rem 0.9rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.85rem;
+  }
+  #selection-hint.active {
+    display: block;
   }
   dialog#formula-dialog {
     border: none;
@@ -461,6 +501,17 @@
     </div>
   </dialog>
 
+  <dialog id="bulk-price-dialog">
+    <h2 id="bulk-price-dialog-range"></h2>
+    <p id="bulk-price-dialog-count"></p>
+    <label for="bulk-price-input">Airbnb-prijs (€)</label>
+    <input id="bulk-price-input" type="number" min="0" step="1" inputmode="decimal">
+    <div class="dialog-actions">
+      <button id="bulk-price-cancel" type="button" class="button-secondary">Annuleren</button>
+      <button id="bulk-price-save" type="button"></button>
+    </div>
+  </dialog>
+
   <dialog id="formula-dialog">
     <h2>Prijsformule</h2>
     <p>Afgeleide prijs = Airbnb-prijs × factor + aftrek/optelling.</p>
@@ -518,6 +569,7 @@
       <div class="tab-content">
         <div id="tab-kalender" class="tab-panel active">
           <div class="cal-toolbar">
+            <button id="period-toggle" type="button">📅 Periode</button>
             <button id="formula-open" type="button">⚙ Prijsformule</button>
           </div>
           <div class="price-mode-toggle">
@@ -527,6 +579,7 @@
             <button type="button" class="price-mode-btn" data-mode="friends">Vrienden</button>
           </div>
           <p id="mode-hint">Wijzig via de Airbnb-prijs of pas de formule aan.</p>
+          <p id="selection-hint">Tik een startdag en een einddag om een periode te selecteren.</p>
           <div class="calendar-header">
             <button id="cal-prev" type="button" aria-label="Vorige maand">‹</button>
             <h3 id="cal-month-label"></h3>
@@ -569,6 +622,7 @@
       query,
       where,
       getDocs,
+      writeBatch,
     } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -583,6 +637,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.10.0", date: "2026-07-17", description: "Periode selecteren voor bulk-invoer van de Airbnb-prijs." },
       { version: "0.9.0", date: "2026-07-17", description: "Schakelen tussen Airbnb/Booking.com/Rechtstreeks/Vrienden in de kalender." },
       { version: "0.8.0", date: "2026-07-17", description: "Instelbare prijsformule voor Booking.com, Rechtstreeks en Vrienden." },
       { version: "0.7.1", date: "2026-07-17", description: "Bugfix: verouderde browsercache kon nieuwe versies verbergen op desktop." },
@@ -644,6 +699,8 @@
     let calMonth = today.getMonth() + 1; // 1-12
     let pricingCache = {}; // date -> airbnbPrice
     let priceMode = "airbnb"; // 'airbnb' | 'booking' | 'direct' | 'friends'
+    let selectionMode = false;
+    let selectionStart = null;
 
     const DEFAULT_FORMULA = { factor: 1, offset: 0 };
     let formulaSettings = {
@@ -670,8 +727,9 @@
           const price = computeDisplayPrice(priceMode, pricingCache[date], formulaSettings);
           const priceLabel = price == null ? "—" : `€${Math.round(price * 100) / 100}`;
           const priceClass = price == null ? "cal-day-price empty" : "cal-day-price";
+          const selectedClass = date === selectionStart ? " selected" : "";
           return `
-            <button type="button" class="cal-day" data-date="${date}">
+            <button type="button" class="cal-day${selectedClass}" data-date="${date}">
               <span class="cal-day-num">${day}</span>
               <span class="${priceClass}">${priceLabel}</span>
             </button>
@@ -681,13 +739,27 @@
 
       calGrid.querySelectorAll(".cal-day").forEach((btn) => {
         btn.addEventListener("click", () => {
-          if (priceMode === "airbnb") {
-            openPriceDialog(btn.dataset.date);
-          } else {
+          if (priceMode !== "airbnb") {
             showModeHint();
+          } else if (selectionMode) {
+            handleSelectionClick(btn.dataset.date);
+          } else {
+            openPriceDialog(btn.dataset.date);
           }
         });
       });
+    }
+
+    function handleSelectionClick(date) {
+      if (!selectionStart) {
+        selectionStart = date;
+        renderCalendar();
+      } else {
+        const range = getDateRange(selectionStart, date);
+        selectionStart = null;
+        renderCalendar();
+        openBulkPriceDialog(range);
+      }
     }
 
     let modeHintTimer = null;
@@ -698,6 +770,16 @@
       modeHintTimer = setTimeout(() => hint.classList.remove("active"), 3000);
     }
 
+    const periodToggleBtn = document.getElementById("period-toggle");
+    const selectionHint = document.getElementById("selection-hint");
+
+    function exitSelectionMode() {
+      selectionMode = false;
+      selectionStart = null;
+      periodToggleBtn.classList.remove("active");
+      selectionHint.classList.remove("active");
+    }
+
     document.querySelectorAll(".price-mode-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         priceMode = btn.dataset.mode;
@@ -705,8 +787,18 @@
           b.classList.toggle("active", b.dataset.mode === priceMode);
         });
         document.getElementById("mode-hint").classList.remove("active");
+        periodToggleBtn.disabled = priceMode !== "airbnb";
+        if (priceMode !== "airbnb") exitSelectionMode();
         renderCalendar();
       });
+    });
+
+    periodToggleBtn.addEventListener("click", () => {
+      selectionMode = !selectionMode;
+      selectionStart = null;
+      periodToggleBtn.classList.toggle("active", selectionMode);
+      selectionHint.classList.toggle("active", selectionMode);
+      renderCalendar();
     });
 
     async function loadPricingForMonth() {
@@ -741,6 +833,37 @@
       priceInput.focus();
     }
 
+    const bulkPriceDialog = document.getElementById("bulk-price-dialog");
+    const bulkPriceDialogRange = document.getElementById("bulk-price-dialog-range");
+    const bulkPriceDialogCount = document.getElementById("bulk-price-dialog-count");
+    const bulkPriceInput = document.getElementById("bulk-price-input");
+    const bulkPriceSaveButton = document.getElementById("bulk-price-save");
+    let bulkSelectionDates = [];
+
+    function formatRangeLabel(range) {
+      const [start, end] = [new Date(range[0] + "T00:00:00"), new Date(range[range.length - 1] + "T00:00:00")];
+      const fmt = (d, opts) => d.toLocaleDateString("nl-BE", opts);
+      if (start.getTime() === end.getTime()) return fmt(start, { day: "numeric", month: "long", year: "numeric" });
+      if (start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()) {
+        return `${start.getDate()} – ${fmt(end, { day: "numeric", month: "long", year: "numeric" })}`;
+      }
+      if (start.getFullYear() === end.getFullYear()) {
+        return `${fmt(start, { day: "numeric", month: "long" })} – ${fmt(end, { day: "numeric", month: "long", year: "numeric" })}`;
+      }
+      return `${fmt(start, { day: "numeric", month: "long", year: "numeric" })} – ${fmt(end, { day: "numeric", month: "long", year: "numeric" })}`;
+    }
+
+    function openBulkPriceDialog(range) {
+      bulkSelectionDates = range;
+      bulkPriceDialogRange.textContent = formatRangeLabel(range);
+      const count = range.length;
+      bulkPriceDialogCount.textContent = `${count} ${count === 1 ? "dag wordt" : "dagen worden"} aangepast naar deze Airbnb-prijs.`;
+      bulkPriceSaveButton.textContent = count === 1 ? "1 dag aanpassen" : `${count} dagen aanpassen`;
+      bulkPriceInput.value = "";
+      bulkPriceDialog.showModal();
+      bulkPriceInput.focus();
+    }
+
     renderCalendar();
 
     document.getElementById("cal-prev").addEventListener("click", () => {
@@ -771,6 +894,28 @@
       } finally {
         saveButton.disabled = false;
         saveButton.textContent = "Opslaan";
+      }
+    });
+
+    document.getElementById("bulk-price-cancel").addEventListener("click", () => bulkPriceDialog.close());
+    document.getElementById("bulk-price-save").addEventListener("click", async () => {
+      const value = bulkPriceInput.value === "" ? null : Number(bulkPriceInput.value);
+      const originalLabel = bulkPriceSaveButton.textContent;
+      bulkPriceSaveButton.disabled = true;
+      bulkPriceSaveButton.innerHTML = '<span class="spinner"></span>Opslaan…';
+      try {
+        const batch = writeBatch(db);
+        bulkSelectionDates.forEach((date) => {
+          batch.set(doc(db, "pricing", date), { date, airbnbPrice: value });
+        });
+        await batch.commit();
+        bulkSelectionDates.forEach((date) => { pricingCache[date] = value; });
+        renderCalendar();
+        bulkPriceDialog.close();
+        exitSelectionMode();
+      } finally {
+        bulkPriceSaveButton.disabled = false;
+        bulkPriceSaveButton.textContent = originalLabel;
       }
     });
 

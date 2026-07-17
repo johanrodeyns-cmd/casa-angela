@@ -1,4 +1,4 @@
-const VERSION = '0.9.0';
+const VERSION = '0.10.0';
 
 function getVersion() {
   return VERSION;
@@ -38,6 +38,18 @@ function computeDisplayPrice(mode, airbnbPrice, formulaSettings) {
   return computeDerivedPrice(airbnbPrice, formulaSettings[mode]);
 }
 
+function getDateRange(dateA, dateB) {
+  const [start, end] = dateA <= dateB ? [dateA, dateB] : [dateB, dateA];
+  const dates = [];
+  const cursor = new Date(start + 'T00:00:00');
+  const endDate = new Date(end + 'T00:00:00');
+  while (cursor <= endDate) {
+    dates.push(toIsoDate(cursor.getFullYear(), cursor.getMonth() + 1, cursor.getDate()));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return dates;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice };
+  module.exports = { getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice, getDateRange };
 }
