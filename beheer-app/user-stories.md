@@ -53,7 +53,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
-### US-0.4 ☐ Vaste navigatiebalk (M)
+### US-0.4 ☑ Vaste navigatiebalk (M) — v0.4.0
 **Als** gebruiker **wil ik** een vaste navigatiebalk **zodat** ik altijd snel tussen Kalender, Boekingen en Checklists kan schakelen.
 
 **Acceptatiecriteria:**

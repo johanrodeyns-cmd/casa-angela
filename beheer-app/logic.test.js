@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const { getVersion, isAllowedEmail } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.3.0');
+  assert.equal(getVersion(), '0.4.0');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {

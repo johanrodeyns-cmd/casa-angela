@@ -86,6 +86,61 @@
   .screen.active {
     display: block;
   }
+  #app-screen.active {
+    display: flex;
+    flex-direction: column;
+    max-width: none;
+    margin: 0;
+    padding: 0 0 4.5rem;
+    text-align: left;
+  }
+  .app-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--sand);
+  }
+  .tab-panel {
+    display: none;
+    padding: 1rem;
+  }
+  .tab-panel.active {
+    display: block;
+  }
+  #app-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    background: var(--cream);
+    border-top: 1px solid var(--sand-dark);
+    z-index: 10;
+  }
+  .nav-item {
+    flex: 1;
+    min-height: 56px;
+    padding: 0.5rem 0.25rem;
+    border-radius: 0;
+    background: none;
+    color: var(--charcoal);
+    font-size: 0.75rem;
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .nav-item:hover {
+    background: var(--sand);
+  }
+  .nav-item.active {
+    color: var(--terracotta);
+    font-weight: bold;
+    border-top: 3px solid var(--terracotta);
+  }
   button {
     font-size: 1rem;
     padding: 0.75rem 1.5rem;
@@ -132,8 +187,30 @@
   </section>
 
   <section id="app-screen" class="screen">
-    <p>Ingelogd als <span id="user-email"></span></p>
-    <button id="signout-button" type="button">Uitloggen</button>
+    <div class="app-topbar">
+      <span>Ingelogd als <span id="user-email"></span></span>
+      <button id="signout-button" type="button">Uitloggen</button>
+    </div>
+
+    <div id="tab-kalender" class="tab-panel active">
+      <p>Kalender — binnenkort beschikbaar.</p>
+    </div>
+    <div id="tab-boekingen" class="tab-panel">
+      <p>Boekingen — binnenkort beschikbaar.</p>
+    </div>
+    <div id="tab-checklist-aankomst" class="tab-panel">
+      <p>Checklist aankomst — binnenkort beschikbaar.</p>
+    </div>
+    <div id="tab-checklist-vertrek" class="tab-panel">
+      <p>Checklist vertrek — binnenkort beschikbaar.</p>
+    </div>
+
+    <nav id="app-nav">
+      <button type="button" class="nav-item active" data-tab="tab-kalender">Kalender</button>
+      <button type="button" class="nav-item" data-tab="tab-boekingen">Boekingen</button>
+      <button type="button" class="nav-item" data-tab="tab-checklist-aankomst">Checklist<br>aankomst</button>
+      <button type="button" class="nav-item" data-tab="tab-checklist-vertrek">Checklist<br>vertrek</button>
+    </nav>
   </section>
 
   <script src="logic.js"></script>
@@ -160,6 +237,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.4.0", date: "2026-07-17", description: "Vaste navigatiebalk toegevoegd (Kalender, Boekingen, Checklist aankomst/vertrek)." },
       { version: "0.3.0", date: "2026-07-17", description: "Versienummer en changelog zichtbaar in de UI." },
       { version: "0.2.0", date: "2026-07-17", description: "Google-login met toegangscontrole voor Johan en Tinneke." },
       { version: "0.1.0", date: "2026-07-17", description: "Initiële versie." },
@@ -190,6 +268,19 @@
         el.classList.toggle("active", el.id === id);
       });
     }
+
+    function showTab(tabId) {
+      document.querySelectorAll(".tab-panel").forEach((el) => {
+        el.classList.toggle("active", el.id === tabId);
+      });
+      document.querySelectorAll(".nav-item").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.tab === tabId);
+      });
+    }
+
+    document.querySelectorAll(".nav-item").forEach((btn) => {
+      btn.addEventListener("click", () => showTab(btn.dataset.tab));
+    });
 
     // signOut() after a denied login re-fires onAuthStateChanged(null); this flag
     // stops that from bouncing the user back to the login screen automatically.
