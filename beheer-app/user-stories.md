@@ -41,7 +41,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
-### US-0.3 ☐ Versienummer en changelog in UI (M)
+### US-0.3 ☑ Versienummer en changelog in UI (M) — v0.3.0
 **Als** gebruiker **wil ik** altijd het huidige versienummer zien en de volledige changelog kunnen openen **zodat** ik weet wat er in welke versie gewijzigd is.
 
 **Acceptatiecriteria:**

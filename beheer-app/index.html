@@ -38,6 +38,43 @@
   #version {
     font-size: 0.85rem;
     opacity: 0.85;
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    padding: 0.25rem;
+    min-height: 44px;
+    min-width: 44px;
+  }
+  #version:hover {
+    text-decoration: underline;
+  }
+  dialog#changelog-dialog {
+    border: none;
+    border-radius: 8px;
+    padding: 1.5rem;
+    max-width: 480px;
+    width: 90%;
+    color: var(--charcoal);
+  }
+  dialog#changelog-dialog::backdrop {
+    background: rgba(44, 44, 44, 0.5);
+  }
+  dialog#changelog-dialog h2 {
+    margin-top: 0;
+    color: var(--terracotta);
+  }
+  .changelog-entry {
+    text-align: left;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--sand-dark);
+  }
+  .changelog-entry:last-child {
+    border-bottom: none;
+  }
+  .changelog-entry .changelog-meta {
+    font-weight: bold;
+    color: var(--olive-dark);
   }
   .screen {
     display: none;
@@ -74,8 +111,14 @@
 <body>
   <header>
     <h1>Casa Angela — Beheer</h1>
-    <span id="version"></span>
+    <button id="version" type="button"></button>
   </header>
+
+  <dialog id="changelog-dialog">
+    <h2>Changelog</h2>
+    <div id="changelog-list"></div>
+    <button id="changelog-close" type="button">Sluiten</button>
+  </dialog>
 
   <section id="login-screen" class="screen">
     <p>Meld je aan om verder te gaan.</p>
@@ -116,11 +159,31 @@
 
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
+    const CHANGELOG = [
+      { version: "0.3.0", date: "2026-07-17", description: "Versienummer en changelog zichtbaar in de UI." },
+      { version: "0.2.0", date: "2026-07-17", description: "Google-login met toegangscontrole voor Johan en Tinneke." },
+      { version: "0.1.0", date: "2026-07-17", description: "Initiële versie." },
+    ];
+
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     getFirestore(app);
 
     document.getElementById("version").textContent = "v" + getVersion();
+
+    const changelogDialog = document.getElementById("changelog-dialog");
+    const changelogList = document.getElementById("changelog-list");
+    changelogList.innerHTML = CHANGELOG.map(
+      (entry) => `
+        <div class="changelog-entry">
+          <div class="changelog-meta">v${entry.version} — ${entry.date}</div>
+          <div>${entry.description}</div>
+        </div>
+      `
+    ).join("");
+
+    document.getElementById("version").addEventListener("click", () => changelogDialog.showModal());
+    document.getElementById("changelog-close").addEventListener("click", () => changelogDialog.close());
 
     function showScreen(id) {
       document.querySelectorAll(".screen").forEach((el) => {
