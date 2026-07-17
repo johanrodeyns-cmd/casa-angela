@@ -1,4 +1,4 @@
-const VERSION = '0.7.1';
+const VERSION = '0.8.0';
 
 function getVersion() {
   return VERSION;
@@ -28,6 +28,11 @@ function buildMonthGrid(year, month) {
   return weeks;
 }
 
+function computeDerivedPrice(airbnbPrice, formula) {
+  if (airbnbPrice == null) return null;
+  return airbnbPrice * formula.factor + formula.offset;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { getVersion, isAllowedEmail, buildMonthGrid };
+  module.exports = { getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice };
 }

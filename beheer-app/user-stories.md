@@ -99,7 +99,8 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
-### US-1.2 ☐ Instelbare formule voor Booking/Rechtstreeks/Vrienden (M)
+### US-1.2 ☑ Instelbare formule voor Booking/Rechtstreeks/Vrienden (M) — v0.8.0
+> Instellingenscherm en persistentie zijn klaar; de live herberekening in de Booking-/Rechtstreeks-/Vrienden-*weergave* wordt zichtbaar zodra US-1.3 (schakelen tussen prijstypes) er is. Tot dan toont de dialog zelf een live rekenvoorbeeld.
 **Als** Johan of Tinneke **wil ik** zelf de rekenregel instellen waarmee de overige 3 prijzen van de Airbnb-prijs worden afgeleid **zodat** ik de verhouding tussen platformen naar wens kan aanpassen zonder elke dag apart te moeten wijzigen.
 
 **Acceptatiecriteria:**

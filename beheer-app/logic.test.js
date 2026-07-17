@@ -1,9 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { getVersion, isAllowedEmail, buildMonthGrid } = require('./logic.js');
+const { getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.7.1');
+  assert.equal(getVersion(), '0.8.0');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -45,4 +45,24 @@ test('buildMonthGrid contains exactly one cell per day of the month, no duplicat
   assert.equal(days.length, 29);
   assert.equal(days[0], '2024-02-01');
   assert.equal(days[days.length - 1], '2024-02-29');
+});
+
+test('computeDerivedPrice multiplies by the factor and adds the offset', () => {
+  assert.equal(computeDerivedPrice(100, { factor: 0.9, offset: -5 }), 85);
+});
+
+test('computeDerivedPrice returns null when the Airbnb price is null', () => {
+  assert.equal(computeDerivedPrice(null, { factor: 1, offset: 10 }), null);
+});
+
+test('computeDerivedPrice returns null when the Airbnb price is undefined', () => {
+  assert.equal(computeDerivedPrice(undefined, { factor: 1, offset: 10 }), null);
+});
+
+test('computeDerivedPrice handles a factor of 0', () => {
+  assert.equal(computeDerivedPrice(100, { factor: 0, offset: 20 }), 20);
+});
+
+test('computeDerivedPrice handles a negative offset', () => {
+  assert.equal(computeDerivedPrice(10, { factor: 1, offset: -50 }), -40);
 });

@@ -326,6 +326,76 @@
   .button-secondary:hover {
     background: var(--sand-dark);
   }
+  .cal-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 0.75rem;
+  }
+  .cal-toolbar button {
+    font-size: 0.85rem;
+    padding: 0.5rem 1rem;
+    min-height: 44px;
+    background: var(--azure);
+  }
+  .cal-toolbar button:hover {
+    background: var(--azure-light);
+  }
+  dialog#formula-dialog {
+    border: none;
+    border-radius: 8px;
+    padding: 1.5rem;
+    max-width: 420px;
+    width: 90%;
+    color: var(--charcoal);
+  }
+  dialog#formula-dialog::backdrop {
+    background: rgba(44, 44, 44, 0.5);
+  }
+  dialog#formula-dialog h2 {
+    margin-top: 0;
+    color: var(--terracotta);
+    font-size: 1.1rem;
+  }
+  dialog#formula-dialog p {
+    font-size: 0.85rem;
+    color: var(--charcoal);
+    opacity: 0.8;
+  }
+  .formula-row {
+    display: grid;
+    grid-template-columns: 1fr 70px 70px;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 0.75rem;
+  }
+  .formula-row-header {
+    display: grid;
+    grid-template-columns: 1fr 70px 70px;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: var(--olive-dark);
+    margin-bottom: 0.25rem;
+  }
+  .formula-row label {
+    font-size: 0.9rem;
+  }
+  .formula-row input {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 0.9rem;
+    padding: 0.5rem;
+    min-height: 44px;
+    border: 1px solid var(--sand-dark);
+    border-radius: 6px;
+  }
+  #formula-preview {
+    font-size: 0.85rem;
+    background: var(--sand);
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin: 0.75rem 0;
+  }
   #user-email {
     font-size: 0.85rem;
     opacity: 0.85;
@@ -351,6 +421,34 @@
     <div class="dialog-actions">
       <button id="price-cancel" type="button" class="button-secondary">Annuleren</button>
       <button id="price-save" type="button">Opslaan</button>
+    </div>
+  </dialog>
+
+  <dialog id="formula-dialog">
+    <h2>Prijsformule</h2>
+    <p>Afgeleide prijs = Airbnb-prijs × factor + aftrek/optelling.</p>
+    <div class="formula-row-header">
+      <span></span><span>× factor</span><span>+/− €</span>
+    </div>
+    <div class="formula-row">
+      <label for="formula-booking-factor">Booking.com</label>
+      <input id="formula-booking-factor" type="number" step="0.01">
+      <input id="formula-booking-offset" type="number" step="1">
+    </div>
+    <div class="formula-row">
+      <label for="formula-direct-factor">Rechtstreeks</label>
+      <input id="formula-direct-factor" type="number" step="0.01">
+      <input id="formula-direct-offset" type="number" step="1">
+    </div>
+    <div class="formula-row">
+      <label for="formula-friends-factor">Vrienden</label>
+      <input id="formula-friends-factor" type="number" step="0.01">
+      <input id="formula-friends-offset" type="number" step="1">
+    </div>
+    <div id="formula-preview"></div>
+    <div class="dialog-actions">
+      <button id="formula-cancel" type="button" class="button-secondary">Annuleren</button>
+      <button id="formula-save" type="button">Opslaan</button>
     </div>
   </dialog>
 
@@ -382,6 +480,9 @@
 
       <div class="tab-content">
         <div id="tab-kalender" class="tab-panel active">
+          <div class="cal-toolbar">
+            <button id="formula-open" type="button">⚙ Prijsformule</button>
+          </div>
           <div class="calendar-header">
             <button id="cal-prev" type="button" aria-label="Vorige maand">‹</button>
             <h3 id="cal-month-label"></h3>
@@ -420,6 +521,7 @@
       collection,
       doc,
       setDoc,
+      getDoc,
       query,
       where,
       getDocs,
@@ -437,6 +539,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.8.0", date: "2026-07-17", description: "Instelbare prijsformule voor Booking.com, Rechtstreeks en Vrienden." },
       { version: "0.7.1", date: "2026-07-17", description: "Bugfix: verouderde browsercache kon nieuwe versies verbergen op desktop." },
       { version: "0.7.0", date: "2026-07-17", description: "Prijskalender: Airbnb-basisprijs per dag ingeven, maandnavigatie." },
       { version: "0.6.0", date: "2026-07-17", description: "Installeerbaar als app op het startscherm (PWA)." },
@@ -593,6 +696,83 @@
       }
     });
 
+    const DEFAULT_FORMULA = { factor: 1, offset: 0 };
+    let formulaSettings = {
+      booking: { ...DEFAULT_FORMULA },
+      direct: { ...DEFAULT_FORMULA },
+      friends: { ...DEFAULT_FORMULA },
+    };
+
+    const formulaDialog = document.getElementById("formula-dialog");
+    const formulaPreview = document.getElementById("formula-preview");
+    const formulaFields = {
+      booking: { factor: document.getElementById("formula-booking-factor"), offset: document.getElementById("formula-booking-offset") },
+      direct: { factor: document.getElementById("formula-direct-factor"), offset: document.getElementById("formula-direct-offset") },
+      friends: { factor: document.getElementById("formula-friends-factor"), offset: document.getElementById("formula-friends-offset") },
+    };
+    const FORMULA_LABELS = { booking: "Booking.com", direct: "Rechtstreeks", friends: "Vrienden" };
+
+    async function loadFormulaSettings() {
+      const snap = await getDoc(doc(db, "settings", "pricingFormula"));
+      if (snap.exists()) {
+        const data = snap.data();
+        formulaSettings = {
+          booking: data.booking ?? { ...DEFAULT_FORMULA },
+          direct: data.direct ?? { ...DEFAULT_FORMULA },
+          friends: data.friends ?? { ...DEFAULT_FORMULA },
+        };
+      }
+    }
+
+    function updateFormulaPreview() {
+      const sampleAirbnbPrice = 100;
+      const lines = Object.keys(formulaFields).map((type) => {
+        const factor = Number(formulaFields[type].factor.value);
+        const offset = Number(formulaFields[type].offset.value);
+        const derived = computeDerivedPrice(sampleAirbnbPrice, { factor, offset });
+        return `${FORMULA_LABELS[type]}: €${derived}`;
+      });
+      formulaPreview.textContent = `Voorbeeld bij €${sampleAirbnbPrice} Airbnb-prijs — ${lines.join(", ")}`;
+    }
+
+    function openFormulaDialog() {
+      Object.keys(formulaFields).forEach((type) => {
+        formulaFields[type].factor.value = formulaSettings[type].factor;
+        formulaFields[type].offset.value = formulaSettings[type].offset;
+      });
+      updateFormulaPreview();
+      formulaDialog.showModal();
+    }
+
+    Object.values(formulaFields).forEach(({ factor, offset }) => {
+      factor.addEventListener("input", updateFormulaPreview);
+      offset.addEventListener("input", updateFormulaPreview);
+    });
+
+    document.getElementById("formula-open").addEventListener("click", openFormulaDialog);
+    document.getElementById("formula-cancel").addEventListener("click", () => formulaDialog.close());
+    document.getElementById("formula-save").addEventListener("click", async () => {
+      const newSettings = {};
+      Object.keys(formulaFields).forEach((type) => {
+        newSettings[type] = {
+          factor: Number(formulaFields[type].factor.value),
+          offset: Number(formulaFields[type].offset.value),
+        };
+      });
+      const saveButton = document.getElementById("formula-save");
+      saveButton.disabled = true;
+      saveButton.innerHTML = '<span class="spinner"></span>Opslaan…';
+      try {
+        await setDoc(doc(db, "settings", "pricingFormula"), newSettings);
+        formulaSettings = newSettings;
+        renderCalendar();
+        formulaDialog.close();
+      } finally {
+        saveButton.disabled = false;
+        saveButton.textContent = "Opslaan";
+      }
+    });
+
     // signOut() after a denied login re-fires onAuthStateChanged(null); this flag
     // stops that from bouncing the user back to the login screen automatically.
     let denied = false;
@@ -636,6 +816,7 @@
       document.getElementById("user-email").textContent = user.email;
       showScreen("app-screen");
       loadPricingForMonth().catch((err) => console.error("Kon prijzen niet laden:", err));
+      loadFormulaSettings().catch((err) => console.error("Kon prijsformule niet laden:", err));
     });
   </script>
 </body>
