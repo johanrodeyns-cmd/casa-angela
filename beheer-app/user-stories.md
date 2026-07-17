@@ -112,7 +112,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
-### US-1.3 ☐ Schakelen tussen de 4 prijstypes (M)
+### US-1.3 ☑ Schakelen tussen de 4 prijstypes (M) — v0.9.0
 **Als** Johan of Tinneke **wil ik** via knoppen bovenaan de kalender schakelen tussen Airbnb / Booking / Rechtstreeks / Vrienden **zodat** ik snel elk prijstype kan controleren.
 
 **Acceptatiecriteria:**

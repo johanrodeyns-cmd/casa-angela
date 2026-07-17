@@ -1,4 +1,4 @@
-const VERSION = '0.8.0';
+const VERSION = '0.9.0';
 
 function getVersion() {
   return VERSION;
@@ -33,6 +33,11 @@ function computeDerivedPrice(airbnbPrice, formula) {
   return airbnbPrice * formula.factor + formula.offset;
 }
 
+function computeDisplayPrice(mode, airbnbPrice, formulaSettings) {
+  if (mode === 'airbnb') return airbnbPrice ?? null;
+  return computeDerivedPrice(airbnbPrice, formulaSettings[mode]);
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice };
+  module.exports = { getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice };
 }

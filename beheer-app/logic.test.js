@@ -1,9 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice } = require('./logic.js');
+const { getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.8.0');
+  assert.equal(getVersion(), '0.9.0');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -65,4 +65,31 @@ test('computeDerivedPrice handles a factor of 0', () => {
 
 test('computeDerivedPrice handles a negative offset', () => {
   assert.equal(computeDerivedPrice(10, { factor: 1, offset: -50 }), -40);
+});
+
+const SAMPLE_FORMULAS = {
+  booking: { factor: 0.9, offset: -5 },
+  direct: { factor: 0.95, offset: 0 },
+  friends: { factor: 0.8, offset: -10 },
+};
+
+test('computeDisplayPrice returns the raw Airbnb price in airbnb mode', () => {
+  assert.equal(computeDisplayPrice('airbnb', 100, SAMPLE_FORMULAS), 100);
+});
+
+test('computeDisplayPrice returns the derived price for the booking mode', () => {
+  assert.equal(computeDisplayPrice('booking', 100, SAMPLE_FORMULAS), 85);
+});
+
+test('computeDisplayPrice returns the derived price for the direct mode', () => {
+  assert.equal(computeDisplayPrice('direct', 100, SAMPLE_FORMULAS), 95);
+});
+
+test('computeDisplayPrice returns the derived price for the friends mode', () => {
+  assert.equal(computeDisplayPrice('friends', 100, SAMPLE_FORMULAS), 70);
+});
+
+test('computeDisplayPrice returns null when the Airbnb price is null, regardless of mode', () => {
+  assert.equal(computeDisplayPrice('booking', null, SAMPLE_FORMULAS), null);
+  assert.equal(computeDisplayPrice('airbnb', null, SAMPLE_FORMULAS), null);
 });

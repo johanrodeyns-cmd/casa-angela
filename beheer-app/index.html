@@ -222,6 +222,43 @@
   #denied-screen h2 {
     color: var(--terracotta);
   }
+  .price-mode-toggle {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.4rem;
+    margin-bottom: 0.75rem;
+  }
+  @media (min-width: 480px) {
+    .price-mode-toggle {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  .price-mode-btn {
+    min-height: 44px;
+    padding: 0.5rem 0.25rem;
+    font-size: 0.8rem;
+    background: var(--sand);
+    color: var(--charcoal);
+  }
+  .price-mode-btn:hover {
+    background: var(--sand-dark);
+  }
+  .price-mode-btn.active {
+    background: var(--terracotta);
+    color: var(--cream);
+  }
+  #mode-hint {
+    display: none;
+    background: var(--azure-light);
+    color: var(--charcoal);
+    border-radius: 6px;
+    padding: 0.6rem 0.9rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.85rem;
+  }
+  #mode-hint.active {
+    display: block;
+  }
   .calendar-header {
     display: flex;
     align-items: center;
@@ -483,6 +520,13 @@
           <div class="cal-toolbar">
             <button id="formula-open" type="button">⚙ Prijsformule</button>
           </div>
+          <div class="price-mode-toggle">
+            <button type="button" class="price-mode-btn active" data-mode="airbnb">Airbnb</button>
+            <button type="button" class="price-mode-btn" data-mode="booking">Booking.com</button>
+            <button type="button" class="price-mode-btn" data-mode="direct">Rechtstreeks</button>
+            <button type="button" class="price-mode-btn" data-mode="friends">Vrienden</button>
+          </div>
+          <p id="mode-hint">Wijzig via de Airbnb-prijs of pas de formule aan.</p>
           <div class="calendar-header">
             <button id="cal-prev" type="button" aria-label="Vorige maand">‹</button>
             <h3 id="cal-month-label"></h3>
@@ -539,6 +583,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.9.0", date: "2026-07-17", description: "Schakelen tussen Airbnb/Booking.com/Rechtstreeks/Vrienden in de kalender." },
       { version: "0.8.0", date: "2026-07-17", description: "Instelbare prijsformule voor Booking.com, Rechtstreeks en Vrienden." },
       { version: "0.7.1", date: "2026-07-17", description: "Bugfix: verouderde browsercache kon nieuwe versies verbergen op desktop." },
       { version: "0.7.0", date: "2026-07-17", description: "Prijskalender: Airbnb-basisprijs per dag ingeven, maandnavigatie." },
@@ -598,6 +643,14 @@
     let calYear = today.getFullYear();
     let calMonth = today.getMonth() + 1; // 1-12
     let pricingCache = {}; // date -> airbnbPrice
+    let priceMode = "airbnb"; // 'airbnb' | 'booking' | 'direct' | 'friends'
+
+    const DEFAULT_FORMULA = { factor: 1, offset: 0 };
+    let formulaSettings = {
+      booking: { ...DEFAULT_FORMULA },
+      direct: { ...DEFAULT_FORMULA },
+      friends: { ...DEFAULT_FORMULA },
+    };
 
     const calGrid = document.getElementById("cal-grid");
     const calMonthLabel = document.getElementById("cal-month-label");
@@ -614,8 +667,8 @@
         .map((date) => {
           if (!date) return '<span class="cal-day cal-day-empty"></span>';
           const day = Number(date.slice(8, 10));
-          const price = pricingCache[date];
-          const priceLabel = price == null ? "—" : `€${price}`;
+          const price = computeDisplayPrice(priceMode, pricingCache[date], formulaSettings);
+          const priceLabel = price == null ? "—" : `€${Math.round(price * 100) / 100}`;
           const priceClass = price == null ? "cal-day-price empty" : "cal-day-price";
           return `
             <button type="button" class="cal-day" data-date="${date}">
@@ -627,9 +680,34 @@
         .join("");
 
       calGrid.querySelectorAll(".cal-day").forEach((btn) => {
-        btn.addEventListener("click", () => openPriceDialog(btn.dataset.date));
+        btn.addEventListener("click", () => {
+          if (priceMode === "airbnb") {
+            openPriceDialog(btn.dataset.date);
+          } else {
+            showModeHint();
+          }
+        });
       });
     }
+
+    let modeHintTimer = null;
+    function showModeHint() {
+      const hint = document.getElementById("mode-hint");
+      hint.classList.add("active");
+      clearTimeout(modeHintTimer);
+      modeHintTimer = setTimeout(() => hint.classList.remove("active"), 3000);
+    }
+
+    document.querySelectorAll(".price-mode-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        priceMode = btn.dataset.mode;
+        document.querySelectorAll(".price-mode-btn").forEach((b) => {
+          b.classList.toggle("active", b.dataset.mode === priceMode);
+        });
+        document.getElementById("mode-hint").classList.remove("active");
+        renderCalendar();
+      });
+    });
 
     async function loadPricingForMonth() {
       const monthStart = `${calYear}-${String(calMonth).padStart(2, "0")}-01`;
@@ -695,13 +773,6 @@
         saveButton.textContent = "Opslaan";
       }
     });
-
-    const DEFAULT_FORMULA = { factor: 1, offset: 0 };
-    let formulaSettings = {
-      booking: { ...DEFAULT_FORMULA },
-      direct: { ...DEFAULT_FORMULA },
-      friends: { ...DEFAULT_FORMULA },
-    };
 
     const formulaDialog = document.getElementById("formula-dialog");
     const formulaPreview = document.getElementById("formula-preview");
