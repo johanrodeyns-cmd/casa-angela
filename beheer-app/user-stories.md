@@ -212,6 +212,19 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
+### US-2.6 ☑ Synchronisatie-overzicht: boekingen verifiëren tegen Airbnb/Booking.com (S) — v0.20.0
+**Als** Johan of Tinneke **wil ik** in één overzicht zien welke boekingen en gesynchroniseerde blokken niet met elkaar overeenkomen **zodat** ik kan controleren of onze eigen boekingen nog kloppen met wat er op Airbnb/Booking.com staat (bv. na een annulering die ik gemist heb).
+
+**Acceptatiecriteria:**
+- Given een knop "Synchronisatie-overzicht" in de Boekingen-tab, when ik erop klik, then toont een dialoog twee lijsten: (1) gesynchroniseerde blokken zonder overeenkomende boeking, (2) boekingen op platform Airbnb/Booking.com waarvan de datums niet exact overeenkomen met een gesynchroniseerd blok van diezelfde bron.
+- Given een item in lijst (1), then kan ik erop klikken om de boeking aan te vullen (hergebruikt dezelfde flow als US-3.3).
+- Given een item in lijst (2), then kan ik erop klikken om de bestaande boeking te bekijken/bewerken/verwijderen (hergebruikt de bestaande boekingsdialoog).
+- Given beide lijsten leeg, then toont de dialoog een duidelijke "Alles komt overeen ✅"-melding i.p.v. twee lege lijstjes.
+
+**Technische notities:** pure functies `findUnmatchedBookings(bookings, syncedBlocks)` en `findUnmatchedSyncedBlocks(bookings, syncedBlocks)` in `logic.js` — matching op exacte `dateFrom`/`dateTo` + platform/source (geen fuzzy-matching). Boekingen op platform `direct`/`friends` worden nooit als "unmatched" getoond, want daar bestaat sowieso geen sync voor.
+
+---
+
 ## Epic 3 — Beschikbaarheidskalender
 
 ### US-3.1 ☑ Beschikbaarheid als 5e kalendermodus (M) — v0.15.0

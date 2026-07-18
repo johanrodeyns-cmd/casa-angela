@@ -1,4 +1,4 @@
-const VERSION = '0.19.0';
+const VERSION = '0.20.0';
 
 function getVersion() {
   return VERSION;
@@ -199,11 +199,31 @@ function formatBookingsListForGardener(bookings, formatDateRange) {
     .join('\n\n');
 }
 
+const SYNCABLE_PLATFORMS = ['airbnb', 'booking'];
+
+function findUnmatchedBookings(bookings, syncedBlocks) {
+  return bookings.filter((b) => {
+    if (!SYNCABLE_PLATFORMS.includes(b.platform)) return false;
+    return !syncedBlocks.some(
+      (block) => block.source === b.platform && block.dateFrom === b.dateFrom && block.dateTo === b.dateTo
+    );
+  });
+}
+
+function findUnmatchedSyncedBlocks(bookings, syncedBlocks) {
+  return syncedBlocks.filter((block) => {
+    return !bookings.some(
+      (b) => b.platform === block.source && b.dateFrom === block.dateFrom && b.dateTo === block.dateTo
+    );
+  });
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice,
     getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking,
     parseIcalEvents, mergeSyncedBlocks, buildOccupancyMap, dayOccupancyState,
     upcomingBookings, formatBookingsListForContact, formatBookingsListForGardener,
+    findUnmatchedBookings, findUnmatchedSyncedBlocks,
   };
 }

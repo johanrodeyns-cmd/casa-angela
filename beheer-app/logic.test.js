@@ -5,10 +5,11 @@ const {
   getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking,
   parseIcalEvents, mergeSyncedBlocks, buildOccupancyMap, dayOccupancyState,
   upcomingBookings, formatBookingsListForContact, formatBookingsListForGardener,
+  findUnmatchedBookings, findUnmatchedSyncedBlocks,
 } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.19.0');
+  assert.equal(getVersion(), '0.20.0');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -519,4 +520,47 @@ test('formatBookingsListForGardener joins multiple bookings with a blank line se
   ];
   const text = formatBookingsListForGardener(bookings, (a, b) => `${a} - ${b}`);
   assert.equal(text.split('\n\n').length, 2);
+});
+
+const SYNC_TEST_BLOCKS = [
+  { id: 'airbnb-x', source: 'airbnb', dateFrom: '2026-07-10', dateTo: '2026-07-14', icalUid: 'x' },
+  { id: 'booking-y', source: 'booking', dateFrom: '2026-08-01', dateTo: '2026-08-05', icalUid: 'y' },
+];
+
+test('findUnmatchedBookings excludes a booking whose platform, dateFrom and dateTo exactly match a synced block', () => {
+  const bookings = [{ id: 'b1', platform: 'airbnb', dateFrom: '2026-07-10', dateTo: '2026-07-14', name: 'Jan' }];
+  assert.deepEqual(findUnmatchedBookings(bookings, SYNC_TEST_BLOCKS), []);
+});
+
+test('findUnmatchedBookings includes an airbnb/booking booking with no matching synced block', () => {
+  const bookings = [{ id: 'b1', platform: 'airbnb', dateFrom: '2026-07-11', dateTo: '2026-07-14', name: 'Jan' }];
+  const result = findUnmatchedBookings(bookings, SYNC_TEST_BLOCKS);
+  assert.equal(result.length, 1);
+  assert.equal(result[0].id, 'b1');
+});
+
+test('findUnmatchedBookings never flags direct/friends bookings, even with no synced blocks at all', () => {
+  const bookings = [
+    { id: 'b1', platform: 'direct', dateFrom: '2026-07-10', dateTo: '2026-07-14', name: 'Jan' },
+    { id: 'b2', platform: 'friends', dateFrom: '2026-07-20', dateTo: '2026-07-22', name: 'Piet' },
+  ];
+  assert.deepEqual(findUnmatchedBookings(bookings, []), []);
+});
+
+test('findUnmatchedBookings does not cross-match a booking against a synced block from a different source', () => {
+  const bookings = [{ id: 'b1', platform: 'booking', dateFrom: '2026-07-10', dateTo: '2026-07-14', name: 'Jan' }];
+  // SYNC_TEST_BLOCKS has an airbnb block with these exact dates, but no booking.com block
+  const result = findUnmatchedBookings(bookings, SYNC_TEST_BLOCKS);
+  assert.equal(result.length, 1);
+});
+
+test('findUnmatchedSyncedBlocks excludes a block with a matching booking', () => {
+  const bookings = [{ id: 'b1', platform: 'airbnb', dateFrom: '2026-07-10', dateTo: '2026-07-14', name: 'Jan' }];
+  const result = findUnmatchedSyncedBlocks(bookings, SYNC_TEST_BLOCKS);
+  assert.deepEqual(result, [SYNC_TEST_BLOCKS[1]]);
+});
+
+test('findUnmatchedSyncedBlocks includes a block with no matching booking at all', () => {
+  const result = findUnmatchedSyncedBlocks([], SYNC_TEST_BLOCKS);
+  assert.equal(result.length, 2);
 });

@@ -542,7 +542,8 @@
   dialog#booking-dialog,
   dialog#booking-delete-dialog,
   dialog#ical-settings-dialog,
-  dialog#day-detail-dialog {
+  dialog#day-detail-dialog,
+  dialog#sync-check-dialog {
     border: none;
     border-radius: 8px;
     padding: 1.5rem;
@@ -555,16 +556,37 @@
   dialog#booking-dialog::backdrop,
   dialog#booking-delete-dialog::backdrop,
   dialog#ical-settings-dialog::backdrop,
-  dialog#day-detail-dialog::backdrop {
+  dialog#day-detail-dialog::backdrop,
+  dialog#sync-check-dialog::backdrop {
     background: rgba(44, 44, 44, 0.5);
   }
   dialog#booking-dialog h2,
   dialog#booking-delete-dialog h2,
   dialog#ical-settings-dialog h2,
-  dialog#day-detail-dialog h2 {
+  dialog#day-detail-dialog h2,
+  dialog#sync-check-dialog h2 {
     margin-top: 0;
     color: var(--terracotta);
     font-size: 1.1rem;
+  }
+  dialog#sync-check-dialog h3 {
+    font-size: 0.9rem;
+    color: var(--olive-dark);
+    margin: 1rem 0 0.5rem;
+  }
+  #sync-check-blocks-section,
+  #sync-check-bookings-section {
+    display: none;
+  }
+  #sync-check-blocks-section.active,
+  #sync-check-bookings-section.active {
+    display: block;
+  }
+  #sync-check-all-ok {
+    display: none;
+  }
+  #sync-check-all-ok.active {
+    display: block;
   }
   #day-detail-title {
     text-transform: capitalize;
@@ -852,6 +874,22 @@
     </div>
   </dialog>
 
+  <dialog id="sync-check-dialog">
+    <h2>Synchronisatie-overzicht</h2>
+    <p id="sync-check-all-ok" class="empty-state"></p>
+    <div id="sync-check-blocks-section">
+      <h3>Gesynchroniseerde blokken zonder boeking</h3>
+      <div id="sync-check-blocks-list"></div>
+    </div>
+    <div id="sync-check-bookings-section">
+      <h3>Boekingen zonder overeenkomend blok</h3>
+      <div id="sync-check-bookings-list"></div>
+    </div>
+    <div class="dialog-actions">
+      <button id="sync-check-close" type="button" class="button-secondary">Sluiten</button>
+    </div>
+  </dialog>
+
   <section id="login-screen" class="screen">
     <p>Meld je aan om verder te gaan.</p>
     <button id="login-button" type="button">Inloggen met Google</button>
@@ -910,6 +948,7 @@
             <button id="copy-contact-open" type="button">📋 Kopieer voor contactpersoon</button>
             <button id="copy-tuinier-open" type="button">🌿 Kopieer voor tuinier</button>
             <button id="ical-settings-open" type="button">🔗 iCal-koppelingen</button>
+            <button id="sync-check-open" type="button">🔍 Synchronisatie-overzicht</button>
           </div>
           <p id="copy-contact-feedback"></p>
           <p id="copy-tuinier-feedback"></p>
@@ -964,6 +1003,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.20.0", date: "2026-07-18", description: "Synchronisatie-overzicht: boekingen verifiëren tegen Airbnb/Booking.com." },
       { version: "0.19.0", date: "2026-07-18", description: "Kopiëren voor contactpersoon vereenvoudigd (geen periode meer nodig) + nieuw: kopiëren voor de tuinier." },
       { version: "0.18.0", date: "2026-07-18", description: "Boekingen kopiëren naar klembord voor de contactpersoon (te plakken in WhatsApp)." },
       { version: "0.17.0", date: "2026-07-18", description: "Doorklikken naar boekingsdetails vanuit de Beschikbaarheidskalender." },
@@ -1537,6 +1577,59 @@
 
       dayDetailDialog.showModal();
     }
+
+    const syncCheckDialog = document.getElementById("sync-check-dialog");
+    const syncCheckAllOk = document.getElementById("sync-check-all-ok");
+    const syncCheckBlocksSection = document.getElementById("sync-check-blocks-section");
+    const syncCheckBlocksList = document.getElementById("sync-check-blocks-list");
+    const syncCheckBookingsSection = document.getElementById("sync-check-bookings-section");
+    const syncCheckBookingsList = document.getElementById("sync-check-bookings-list");
+
+    document.getElementById("sync-check-close").addEventListener("click", () => syncCheckDialog.close());
+
+    document.getElementById("sync-check-open").addEventListener("click", () => {
+      const unmatchedBlocks = findUnmatchedSyncedBlocks(bookings, syncedBlocks);
+      const unmatchedBookings = findUnmatchedBookings(bookings, syncedBlocks);
+
+      syncCheckBlocksSection.classList.toggle("active", unmatchedBlocks.length > 0);
+      syncCheckBookingsSection.classList.toggle("active", unmatchedBookings.length > 0);
+      syncCheckAllOk.textContent = "Alles komt overeen ✅";
+      syncCheckAllOk.classList.toggle("active", unmatchedBlocks.length === 0 && unmatchedBookings.length === 0);
+
+      syncCheckBlocksList.innerHTML = "";
+      unmatchedBlocks.forEach((block) => {
+        const row = document.createElement("button");
+        row.type = "button";
+        row.className = "day-detail-row";
+        row.innerHTML = `
+          <div class="day-detail-row-main">${PLATFORM_LABELS[block.source] ?? block.source}</div>
+          <div class="day-detail-row-meta">${formatBookingDateRange(block.dateFrom, block.dateTo)}</div>
+        `;
+        row.addEventListener("click", () => {
+          syncCheckDialog.close();
+          openBookingDialog({ dateFrom: block.dateFrom, dateTo: block.dateTo, platform: block.source });
+        });
+        syncCheckBlocksList.appendChild(row);
+      });
+
+      syncCheckBookingsList.innerHTML = "";
+      unmatchedBookings.forEach((booking) => {
+        const row = document.createElement("button");
+        row.type = "button";
+        row.className = "day-detail-row";
+        row.innerHTML = `
+          <div class="day-detail-row-main">${booking.name}</div>
+          <div class="day-detail-row-meta">${PLATFORM_LABELS[booking.platform] ?? booking.platform} — ${formatBookingDateRange(booking.dateFrom, booking.dateTo)}</div>
+        `;
+        row.addEventListener("click", () => {
+          syncCheckDialog.close();
+          openBookingDialog(booking);
+        });
+        syncCheckBookingsList.appendChild(row);
+      });
+
+      syncCheckDialog.showModal();
+    });
 
     function isoDateFromDate(d) {
       return toIsoDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
