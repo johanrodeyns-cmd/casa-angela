@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const { getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice, getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.13.0');
+  assert.equal(getVersion(), '0.13.1');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
