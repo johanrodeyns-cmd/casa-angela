@@ -167,7 +167,9 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
-### US-2.3 ☐ Automatische iCal-synchronisatie met Airbnb en Booking.com (S)
+### US-2.3 ☑ Automatische iCal-synchronisatie met Airbnb en Booking.com (S) — v0.14.0
+> De overlap-waarschuwing (US-2.2) houdt nu ook rekening met gesynchroniseerde blokken. De beschikbaarheidskalender zelf (Epic 3) moet nog gebouwd worden — die zal `syncedBlocks` hergebruiken zodra hij er is.
+
 **Als** Johan of Tinneke **wil ik** dat bezette periodes van Airbnb en Booking.com automatisch verschijnen **zodat** ik niet alles dubbel manueel moet ingeven.
 
 **Acceptatiecriteria:**
@@ -176,7 +178,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 - Given een handmatige "Nu synchroniseren"-knop, when ik erop klik, then wordt de sync onmiddellijk uitgevoerd (`syncIcalFeedsNow`).
 - Given gesynchroniseerde blokken, then tellen deze mee in de beschikbaarheidskalender (Epic 3) en in de overlap-waarschuwing (US-2.2).
 
-**Technische notities:** `parseIcalEvents()` + `mergeSyncedBlocks()` als pure functies in `logic.js` (parsing-logica getest op vaste iCal-fixtures), effectieve HTTP-fetch in `functions/index.js` met `node-ical`. Geen officieel partnerschap nodig — dit zijn de standaard, door de gebruiker zelf opgehaalde export-links.
+**Technische notities:** `parseIcalEvents()` + `mergeSyncedBlocks()` als pure functies in `logic.js` (parsing-logica getest op vaste iCal-fixtures). **Afwijking van het oorspronkelijke plan:** geen `node-ical`, maar een eigen minimale, dependency-vrije VEVENT-parser + Node's ingebouwde `fetch()` in `functions/index.js` — `node-ical` sleept `axios` mee, en die hing onherstelbaar vast bij het laden op deze ontwikkelmachine (netwerkschijf), wat `firebase deploy` blokkeerde nog vóór er iets naar de cloud ging. Zonder die dependency is het probleem weg en blijft de functie lichter. Vereiste eenmalige actie van de gebruiker: Firebase-project op het Blaze-plan zetten (nodig voor uitgaande netwerk-requests vanuit Cloud Functions).
 
 ---
 

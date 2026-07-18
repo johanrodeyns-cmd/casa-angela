@@ -1,9 +1,13 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice, getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking } = require('./logic.js');
+const {
+  getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice,
+  getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking,
+  parseIcalEvents, mergeSyncedBlocks,
+} = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.13.1');
+  assert.equal(getVersion(), '0.14.0');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -235,4 +239,108 @@ test('overlapsExistingBooking also checks synced blocks', () => {
   const result = overlapsExistingBooking({ dateFrom: '2026-08-03', dateTo: '2026-08-06' }, [], syncedBlocks);
   assert.equal(result.length, 1);
   assert.equal(result[0].source, 'airbnb');
+});
+
+const SAMPLE_ICAL_TEXT = [
+  'BEGIN:VCALENDAR',
+  'VERSION:2.0',
+  'PRODID:-//Airbnb Inc//Hosting Calendar//EN',
+  'CALSCALE:GREGORIAN',
+  'BEGIN:VEVENT',
+  'DTSTART;VALUE=DATE:20260710',
+  'DTEND;VALUE=DATE:20260714',
+  'DTSTAMP:20260101T000000Z',
+  'UID:evt-1@airbnb.com',
+  'SUMMARY:Reserved',
+  'END:VEVENT',
+  'BEGIN:VEVENT',
+  'DTSTART;VALUE=DATE:20260801',
+  'DTEND;VALUE=DATE:20260805',
+  'DTSTAMP:20260101T000000Z',
+  'UID:evt-2@airbnb.com',
+  'SUMMARY:Airbnb (Not available)',
+  'END:VEVENT',
+  'END:VCALENDAR',
+].join('\r\n');
+
+test('parseIcalEvents extracts every VEVENT block from raw iCal text', () => {
+  const result = parseIcalEvents(SAMPLE_ICAL_TEXT);
+  assert.equal(result.length, 2);
+});
+
+test('parseIcalEvents maps UID/DTSTART/DTEND to uid/dateFrom/dateTo', () => {
+  const result = parseIcalEvents(SAMPLE_ICAL_TEXT);
+  assert.deepEqual(result[0], { uid: 'evt-1@airbnb.com', dateFrom: '2026-07-10', dateTo: '2026-07-14' });
+  assert.deepEqual(result[1], { uid: 'evt-2@airbnb.com', dateFrom: '2026-08-01', dateTo: '2026-08-05' });
+});
+
+test('parseIcalEvents also handles datetime-style DTSTART/DTEND values', () => {
+  const text = [
+    'BEGIN:VCALENDAR',
+    'BEGIN:VEVENT',
+    'DTSTART:20260710T140000Z',
+    'DTEND:20260714T110000Z',
+    'UID:evt-datetime@booking.com',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n');
+  assert.deepEqual(parseIcalEvents(text), [{ uid: 'evt-datetime@booking.com', dateFrom: '2026-07-10', dateTo: '2026-07-14' }]);
+});
+
+test('parseIcalEvents skips VEVENT blocks missing a UID, DTSTART or DTEND', () => {
+  const text = [
+    'BEGIN:VCALENDAR',
+    'BEGIN:VEVENT',
+    'DTSTART;VALUE=DATE:20260710',
+    'DTEND;VALUE=DATE:20260714',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n');
+  assert.deepEqual(parseIcalEvents(text), []);
+});
+
+test('parseIcalEvents ignores non-VEVENT blocks such as VTIMEZONE', () => {
+  const text = [
+    'BEGIN:VCALENDAR',
+    'BEGIN:VTIMEZONE',
+    'TZID:Europe/Madrid',
+    'END:VTIMEZONE',
+    'BEGIN:VEVENT',
+    'DTSTART;VALUE=DATE:20260710',
+    'DTEND;VALUE=DATE:20260714',
+    'UID:evt-1@airbnb.com',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n');
+  assert.deepEqual(parseIcalEvents(text), [{ uid: 'evt-1@airbnb.com', dateFrom: '2026-07-10', dateTo: '2026-07-14' }]);
+});
+
+const EXISTING_SYNCED_BLOCKS = [
+  { id: 'airbnb-old-uid', source: 'airbnb', icalUid: 'old-uid', dateFrom: '2026-06-01', dateTo: '2026-06-05' },
+  { id: 'booking-keep-me', source: 'booking', icalUid: 'keep-me', dateFrom: '2026-07-01', dateTo: '2026-07-03' },
+];
+
+test('mergeSyncedBlocks replaces all blocks for the given source with the freshly parsed events', () => {
+  const parsed = [{ uid: 'new-uid', dateFrom: '2026-09-01', dateTo: '2026-09-04' }];
+  const result = mergeSyncedBlocks(EXISTING_SYNCED_BLOCKS, parsed, 'airbnb');
+  const airbnbBlocks = result.filter((b) => b.source === 'airbnb');
+  assert.equal(airbnbBlocks.length, 1);
+  assert.equal(airbnbBlocks[0].icalUid, 'new-uid');
+});
+
+test('mergeSyncedBlocks leaves blocks from other sources untouched', () => {
+  const result = mergeSyncedBlocks(EXISTING_SYNCED_BLOCKS, [], 'airbnb');
+  const bookingBlocks = result.filter((b) => b.source === 'booking');
+  assert.deepEqual(bookingBlocks, [EXISTING_SYNCED_BLOCKS[1]]);
+});
+
+test('mergeSyncedBlocks assigns a deterministic id per source+uid', () => {
+  const parsed = [{ uid: 'abc', dateFrom: '2026-09-01', dateTo: '2026-09-04' }];
+  const result = mergeSyncedBlocks([], parsed, 'booking');
+  assert.equal(result[0].id, 'booking-abc');
+});
+
+test('mergeSyncedBlocks clears a source entirely when no events are parsed for it', () => {
+  const result = mergeSyncedBlocks(EXISTING_SYNCED_BLOCKS, [], 'booking');
+  assert.deepEqual(result, [EXISTING_SYNCED_BLOCKS[0]]);
 });

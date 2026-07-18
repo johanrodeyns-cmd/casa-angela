@@ -513,7 +513,8 @@
     opacity: 0.85;
   }
   dialog#booking-dialog,
-  dialog#booking-delete-dialog {
+  dialog#booking-delete-dialog,
+  dialog#ical-settings-dialog {
     border: none;
     border-radius: 8px;
     padding: 1.5rem;
@@ -524,23 +525,31 @@
     color: var(--charcoal);
   }
   dialog#booking-dialog::backdrop,
-  dialog#booking-delete-dialog::backdrop {
+  dialog#booking-delete-dialog::backdrop,
+  dialog#ical-settings-dialog::backdrop {
     background: rgba(44, 44, 44, 0.5);
   }
   dialog#booking-dialog h2,
-  dialog#booking-delete-dialog h2 {
+  dialog#booking-delete-dialog h2,
+  dialog#ical-settings-dialog h2 {
     margin-top: 0;
     color: var(--terracotta);
     font-size: 1.1rem;
   }
-  dialog#booking-dialog label {
+  dialog#ical-settings-dialog p {
+    font-size: 0.85rem;
+    opacity: 0.8;
+  }
+  dialog#booking-dialog label,
+  dialog#ical-settings-dialog label {
     display: block;
     font-size: 0.85rem;
     margin: 0.75rem 0 0.25rem;
   }
   dialog#booking-dialog input,
   dialog#booking-dialog select,
-  dialog#booking-dialog textarea {
+  dialog#booking-dialog textarea,
+  dialog#ical-settings-dialog input {
     width: 100%;
     box-sizing: border-box;
     font-size: 1rem;
@@ -552,6 +561,11 @@
   }
   dialog#booking-dialog textarea {
     resize: vertical;
+  }
+  .ical-sync-status {
+    font-size: 0.75rem;
+    color: var(--olive-dark);
+    margin: 0.25rem 0 0;
   }
   .form-row {
     display: grid;
@@ -740,6 +754,23 @@
     </div>
   </dialog>
 
+  <dialog id="ical-settings-dialog">
+    <h2>iCal-koppelingen</h2>
+    <p>Bezette periodes van Airbnb en Booking.com worden automatisch overgenomen als geblokkeerde dagen (geen naam of prijs) — vul hier de exportlinks in.</p>
+    <label for="ical-airbnb-url">Airbnb — iCal-exportlink</label>
+    <input id="ical-airbnb-url" type="url" placeholder="https://www.airbnb.com/calendar/ical/...">
+    <p id="ical-airbnb-status" class="ical-sync-status"></p>
+    <label for="ical-booking-url">Booking.com — iCal-exportlink</label>
+    <input id="ical-booking-url" type="url" placeholder="https://admin.booking.com/.../ical...">
+    <p id="ical-booking-status" class="ical-sync-status"></p>
+    <p id="ical-error" class="error-message"></p>
+    <p id="ical-sync-feedback" class="warning-message"></p>
+    <div class="dialog-actions">
+      <button id="ical-sync-now" type="button" class="button-secondary">🔄 Nu synchroniseren</button>
+      <button id="ical-settings-save" type="button">Opslaan</button>
+    </div>
+  </dialog>
+
   <section id="login-screen" class="screen">
     <p>Meld je aan om verder te gaan.</p>
     <button id="login-button" type="button">Inloggen met Google</button>
@@ -794,6 +825,7 @@
         <div id="tab-boekingen" class="tab-panel">
           <div class="cal-toolbar">
             <button id="booking-new" type="button">+ Nieuwe boeking</button>
+            <button id="ical-settings-open" type="button">🔗 iCal-koppelingen</button>
           </div>
           <div id="bookings-list"></div>
           <p id="bookings-empty" class="empty-state">Nog geen boekingen.</p>
@@ -832,6 +864,7 @@
       deleteDoc,
       serverTimestamp,
     } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-functions.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAG08ALUt-fObgOoraUJRsZXrV98JbYnpw",
@@ -845,6 +878,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.14.0", date: "2026-07-18", description: "Automatische iCal-synchronisatie met Airbnb en Booking.com." },
       { version: "0.13.1", date: "2026-07-18", description: "Boekingsformulier: 'Prijs' hernoemd naar 'Klantprijs'." },
       { version: "0.13.0", date: "2026-07-17", description: "Waarschuwing bij overlappende boekingen." },
       { version: "0.12.0", date: "2026-07-17", description: "Boekingen toevoegen, bewerken en verwijderen." },
@@ -865,6 +899,7 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const functionsClient = getFunctions(app);
 
     document.getElementById("version").textContent = "v" + getVersion();
 
@@ -1447,6 +1482,96 @@
       }
     });
 
+    const icalSettingsDialog = document.getElementById("ical-settings-dialog");
+    const icalError = document.getElementById("ical-error");
+    const icalSyncFeedback = document.getElementById("ical-sync-feedback");
+    const icalFields = {
+      airbnb: { url: document.getElementById("ical-airbnb-url"), status: document.getElementById("ical-airbnb-status") },
+      booking: { url: document.getElementById("ical-booking-url"), status: document.getElementById("ical-booking-status") },
+    };
+
+    function formatSyncStatus(feedData) {
+      if (!feedData || !feedData.lastSyncedAt) return "Nog niet gesynchroniseerd.";
+      const date = feedData.lastSyncedAt.toDate ? feedData.lastSyncedAt.toDate() : new Date(feedData.lastSyncedAt);
+      return `Laatst gesynchroniseerd: ${date.toLocaleString("nl-BE", { dateStyle: "short", timeStyle: "short" })}`;
+    }
+
+    let icalFeedsCache = { airbnb: null, booking: null };
+
+    async function loadSyncedBlocks() {
+      const snapshot = await getDocs(collection(db, "syncedBlocks"));
+      syncedBlocks = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+    }
+
+    async function loadIcalFeeds() {
+      const [airbnbDoc, bookingDoc] = await Promise.all([
+        getDoc(doc(db, "icalFeeds", "airbnb")),
+        getDoc(doc(db, "icalFeeds", "booking")),
+      ]);
+      icalFeedsCache = {
+        airbnb: airbnbDoc.exists() ? airbnbDoc.data() : null,
+        booking: bookingDoc.exists() ? bookingDoc.data() : null,
+      };
+    }
+
+    function renderIcalFeedsIntoDialog() {
+      Object.keys(icalFields).forEach((source) => {
+        const feedData = icalFeedsCache[source];
+        icalFields[source].url.value = feedData?.url ?? "";
+        icalFields[source].status.textContent = formatSyncStatus(feedData);
+      });
+    }
+
+    function openIcalSettingsDialog() {
+      icalError.classList.remove("active");
+      icalSyncFeedback.classList.remove("active");
+      renderIcalFeedsIntoDialog();
+      icalSettingsDialog.showModal();
+    }
+
+    document.getElementById("ical-settings-open").addEventListener("click", openIcalSettingsDialog);
+
+    document.getElementById("ical-settings-save").addEventListener("click", async () => {
+      const saveButton = document.getElementById("ical-settings-save");
+      saveButton.disabled = true;
+      saveButton.innerHTML = '<span class="spinner"></span>Opslaan…';
+      try {
+        await Promise.all(
+          Object.keys(icalFields).map((source) =>
+            setDoc(doc(db, "icalFeeds", source), { url: icalFields[source].url.value.trim() }, { merge: true })
+          )
+        );
+        await loadIcalFeeds();
+        icalSettingsDialog.close();
+      } catch (err) {
+        icalError.textContent = "Opslaan mislukt. Probeer opnieuw.";
+        icalError.classList.add("active");
+      } finally {
+        saveButton.disabled = false;
+        saveButton.textContent = "Opslaan";
+      }
+    });
+
+    document.getElementById("ical-sync-now").addEventListener("click", async () => {
+      const syncButton = document.getElementById("ical-sync-now");
+      icalSyncFeedback.classList.remove("active");
+      syncButton.disabled = true;
+      syncButton.innerHTML = '<span class="spinner"></span>Synchroniseren…';
+      try {
+        await httpsCallable(functionsClient, "syncIcalFeedsNow")();
+        await Promise.all([loadSyncedBlocks(), loadIcalFeeds()]);
+        renderIcalFeedsIntoDialog();
+        icalSyncFeedback.textContent = "Synchronisatie voltooid.";
+        icalSyncFeedback.classList.add("active");
+      } catch (err) {
+        icalSyncFeedback.textContent = "Synchronisatie mislukt. Probeer opnieuw.";
+        icalSyncFeedback.classList.add("active");
+      } finally {
+        syncButton.disabled = false;
+        syncButton.textContent = "🔄 Nu synchroniseren";
+      }
+    });
+
     // signOut() after a denied login re-fires onAuthStateChanged(null); this flag
     // stops that from bouncing the user back to the login screen automatically.
     let denied = false;
@@ -1492,6 +1617,8 @@
       loadPricingForMonth().catch((err) => console.error("Kon prijzen niet laden:", err));
       loadFormulaSettings().catch((err) => console.error("Kon prijsformule niet laden:", err));
       loadBookings().catch((err) => console.error("Kon boekingen niet laden:", err));
+      loadSyncedBlocks().catch((err) => console.error("Kon gesynchroniseerde blokken niet laden:", err));
+      loadIcalFeeds().catch((err) => console.error("Kon iCal-instellingen niet laden:", err));
     });
   </script>
 </body>

@@ -1,4 +1,4 @@
-const VERSION = '0.13.1';
+const VERSION = '0.14.0';
 
 function getVersion() {
   return VERSION;
@@ -82,9 +82,58 @@ function overlapsExistingBooking(newBooking, existingBookings, syncedBlocks) {
   return [...bookingOverlaps, ...blockOverlaps];
 }
 
+function icsDateValueToIso(value) {
+  const digits = value.replace(/[^0-9]/g, '').slice(0, 8);
+  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
+}
+
+// Minimal, dependency-free VEVENT parser (no node-ical/axios — those pulled in
+// a hanging dependency chain that broke Cloud Functions deploy on a slow/network
+// filesystem). functions/index.js keeps its own copy — keep both in sync.
+function parseIcalEvents(icsText) {
+  const lines = icsText.split(/\r\n|\n|\r/);
+  const events = [];
+  let current = null;
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (line === 'BEGIN:VEVENT') {
+      current = {};
+    } else if (line === 'END:VEVENT') {
+      if (current && current.uid && current.dateFrom && current.dateTo) {
+        events.push({ uid: current.uid, dateFrom: current.dateFrom, dateTo: current.dateTo });
+      }
+      current = null;
+    } else if (current) {
+      const separatorIndex = line.indexOf(':');
+      if (separatorIndex === -1) continue;
+      const key = line.slice(0, separatorIndex).split(';')[0];
+      const value = line.slice(separatorIndex + 1);
+      if (key === 'UID') current.uid = value;
+      else if (key === 'DTSTART') current.dateFrom = icsDateValueToIso(value);
+      else if (key === 'DTEND') current.dateTo = icsDateValueToIso(value);
+    }
+  }
+  return events;
+}
+
+// Computes the full desired syncedBlocks list for one source (full replace, not a diff).
+// functions/index.js keeps its own copy of this function — keep both in sync.
+function mergeSyncedBlocks(existingBlocks, parsedEvents, source) {
+  const otherSourceBlocks = existingBlocks.filter((b) => b.source !== source);
+  const newSourceBlocks = parsedEvents.map((e) => ({
+    id: `${source}-${e.uid}`,
+    source,
+    icalUid: e.uid,
+    dateFrom: e.dateFrom,
+    dateTo: e.dateTo,
+  }));
+  return [...otherSourceBlocks, ...newSourceBlocks];
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice,
     getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking,
+    parseIcalEvents, mergeSyncedBlocks,
   };
 }
