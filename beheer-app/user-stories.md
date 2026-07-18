@@ -264,6 +264,21 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
+## Epic 5 — Audit log
+
+### US-5.1 ☐ Audit log van alle CRUD-acties (M)
+**Als** Johan of Tinneke **wil ik** kunnen nagaan wie wat wanneer heeft aangemaakt, gewijzigd of verwijderd **zodat** er een sluitend overzicht is bij twijfel over een prijs, boeking of instelling (bv. "wie heeft die prijs veranderd?").
+
+**Acceptatiecriteria:**
+- Given een schrijf-actie (aanmaken, wijzigen of verwijderen) op eender welke gegevensverzameling (`pricing`, `bookings`, `settings/pricingFormula`, `checklists`, `syncedBlocks`), when die actie wordt uitgevoerd, then wordt een audit-record aangemaakt met minstens: wie (e-mailadres van de ingelogde gebruiker), wat (welke verzameling/document en welk type actie: aanmaken/wijzigen/verwijderen), wanneer (tijdstip) en de betrokken gegevens (nieuwe waarde, en bij wijzigen/verwijderen liefst ook de vorige waarde).
+- Given een audit-record, then wordt het gekoppeld aan het ingelogde account op basis van de servergevalideerde login, niet aan een vrij invoerbaar veld — een gebruiker kan zich niet voordoen als iemand anders.
+- Given de audit-log, then is die enkel-toevoegen (append-only): niemand kan via de app een bestaand audit-record wijzigen of verwijderen, ook niet via de Firestore security rules.
+- Given Johan of Tinneke, then kan de audit-log geraadpleegd worden (minstens ruwe lijst, chronologisch of per document) — het exacte overzichtsscherm is nader te bepalen, de kern van deze story is dat de gegevens sluitend worden vastgelegd.
+
+**Technische notities:** aangezien Firestore-triggers (Cloud Functions) geen betrouwbare "wie"-informatie meekrijgen bij een documentwijziging, ligt de meest praktische aanpak voor deze client-only architectuur bij het wegschrijven van elk audit-record cliëntzijde, in dezelfde `writeBatch` als de eigenlijke data-wijziging (atomisch: of beide slagen, of geen van beide) — voorstel: collectie `auditLog/{id}` met velden `{ collection, docId, action: 'create'|'update'|'delete', email, timestamp: serverTimestamp(), before, after }`. Firestore security rules: `create` toegestaan voor de twee toegelaten e-mailadressen, `update`/`delete` nooit toegestaan (ook niet voor de eigenaar). Raakt in principe elke bestaande en toekomstige save/delete-handler in `index.html` — hoe eerder gebouwd, hoe minder er retroactief moet worden aangepast.
+
+---
+
 ## Nog te bevestigen / open punten
 
 - Excel-voorbeeld met bestaande boekingsdata: nog te ontvangen indien gewenst als aanvulling op de hierboven afgesproken velden.
