@@ -207,7 +207,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 ## Epic 3 — Beschikbaarheidskalender
 
 ### US-3.1 ☑ Beschikbaarheid als 5e kalendermodus (M) — v0.15.0
-> Enkel vrij/bezet per volledige dag (geen halve-dag-splitsing bij aankomst/vertrek — dat is US-3.2). Doorklikken naar boekingsdetails volgt in US-3.3, tot dan is een dag-klik in deze modus een no-op.
+> Halve-dag-splitsing bij aankomst/vertrek volgde meteen in v0.16.0 (US-3.2). Doorklikken naar boekingsdetails volgt in US-3.3, tot dan is een dag-klik in deze modus een no-op.
 **Als** Johan of Tinneke **wil ik** in dezelfde kalender ook kunnen zien wanneer het huis verhuurd is **zodat** ik niet tussen aparte schermen moet wisselen.
 
 **Acceptatiecriteria:**
@@ -216,7 +216,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
-### US-3.2 ☐ Halve-dag weergave voor aankomst/vertrek (M)
+### US-3.2 ☑ Halve-dag weergave voor aankomst/vertrek (M) — v0.16.0
 **Als** Johan of Tinneke **wil ik** visueel duidelijk zien dat een dag van aankomst of vertrek maar half bezet is **zodat** er geen misverstand ontstaat over in- en uitchecktijden.
 
 **Acceptatiecriteria:**

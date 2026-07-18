@@ -1,4 +1,4 @@
-const VERSION = '0.15.0';
+const VERSION = '0.16.0';
 
 function getVersion() {
   return VERSION;
@@ -145,10 +145,25 @@ function buildOccupancyMap(bookings, syncedBlocks) {
   return map;
 }
 
+function dayOccupancyState(date, occupancyMap) {
+  const entries = occupancyMap[date] || [];
+  if (entries.length === 0) return 'vrij';
+
+  const isFullDay = entries.some((e) => e.dateFrom !== date && e.dateTo !== date);
+  if (isFullDay) return 'bezet';
+
+  const hasArrival = entries.some((e) => e.dateFrom === date && e.dateTo !== date);
+  const hasDeparture = entries.some((e) => e.dateTo === date && e.dateFrom !== date);
+  if (hasArrival && hasDeparture) return 'bezet'; // same-day turnover: both halves covered
+  if (hasArrival) return 'aankomst';
+  if (hasDeparture) return 'vertrek';
+  return 'bezet'; // fallback: a same-day dateFrom===dateTo entry
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice,
     getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking,
-    parseIcalEvents, mergeSyncedBlocks, buildOccupancyMap,
+    parseIcalEvents, mergeSyncedBlocks, buildOccupancyMap, dayOccupancyState,
   };
 }

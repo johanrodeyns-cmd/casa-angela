@@ -3,11 +3,11 @@ const assert = require('node:assert/strict');
 const {
   getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice,
   getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking,
-  parseIcalEvents, mergeSyncedBlocks, buildOccupancyMap,
+  parseIcalEvents, mergeSyncedBlocks, buildOccupancyMap, dayOccupancyState,
 } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.15.0');
+  assert.equal(getVersion(), '0.16.0');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -374,4 +374,45 @@ test('buildOccupancyMap lists multiple entries on the same day (e.g. a same-day 
   ];
   const map = buildOccupancyMap(bookings, []);
   assert.equal(map['2026-07-14'].length, 2);
+});
+
+const SINGLE_BOOKING = [{ id: 'b1', dateFrom: '2026-07-10', dateTo: '2026-07-14', name: 'Jan' }];
+const SINGLE_BOOKING_MAP = buildOccupancyMap(SINGLE_BOOKING, []);
+
+test('dayOccupancyState returns vrij for a date with no occupancy entries', () => {
+  assert.equal(dayOccupancyState('2026-07-09', SINGLE_BOOKING_MAP), 'vrij');
+});
+
+test('dayOccupancyState returns aankomst on the check-in day', () => {
+  assert.equal(dayOccupancyState('2026-07-10', SINGLE_BOOKING_MAP), 'aankomst');
+});
+
+test('dayOccupancyState returns bezet for a day strictly between check-in and check-out', () => {
+  assert.equal(dayOccupancyState('2026-07-12', SINGLE_BOOKING_MAP), 'bezet');
+});
+
+test('dayOccupancyState returns vertrek on the check-out day', () => {
+  assert.equal(dayOccupancyState('2026-07-14', SINGLE_BOOKING_MAP), 'vertrek');
+});
+
+test('dayOccupancyState returns bezet on a same-day turnover (departure + arrival both cover the day)', () => {
+  const bookings = [
+    { id: 'b1', dateFrom: '2026-07-10', dateTo: '2026-07-14', name: 'Jan' },
+    { id: 'b2', dateFrom: '2026-07-14', dateTo: '2026-07-18', name: 'Mieke' },
+  ];
+  const map = buildOccupancyMap(bookings, []);
+  assert.equal(dayOccupancyState('2026-07-14', map), 'bezet');
+});
+
+test('dayOccupancyState handles a single-night booking: arrival and departure on consecutive days', () => {
+  const map = buildOccupancyMap([{ id: 'b1', dateFrom: '2026-07-10', dateTo: '2026-07-11', name: 'Jan' }], []);
+  assert.equal(dayOccupancyState('2026-07-10', map), 'aankomst');
+  assert.equal(dayOccupancyState('2026-07-11', map), 'vertrek');
+});
+
+test('dayOccupancyState works correctly at the first and last day of a month', () => {
+  const map = buildOccupancyMap([{ id: 'b1', dateFrom: '2026-06-29', dateTo: '2026-07-01', name: 'Jan' }], []);
+  assert.equal(dayOccupancyState('2026-07-01', map), 'vertrek');
+  const map2 = buildOccupancyMap([{ id: 'b2', dateFrom: '2026-07-31', dateTo: '2026-08-03', name: 'Mieke' }], []);
+  assert.equal(dayOccupancyState('2026-07-31', map2), 'aankomst');
 });

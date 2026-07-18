@@ -263,15 +263,28 @@
     background: var(--azure);
     color: var(--cream);
   }
-  .cal-day.occupied {
+  .cal-day.bezet {
     background: var(--terracotta);
   }
-  .cal-day.occupied .cal-day-num,
-  .cal-day.occupied .cal-day-price {
+  .cal-day.bezet .cal-day-num,
+  .cal-day.bezet .cal-day-price {
     color: var(--cream);
   }
-  .cal-day.free .cal-day-price {
+  .cal-day.vrij .cal-day-price {
     color: var(--olive-dark);
+  }
+  .cal-day.aankomst {
+    background: linear-gradient(135deg, var(--sand) 50%, var(--terracotta) 50%);
+  }
+  .cal-day.vertrek {
+    background: linear-gradient(135deg, var(--terracotta) 50%, var(--sand) 50%);
+  }
+  .cal-day.aankomst .cal-day-num,
+  .cal-day.aankomst .cal-day-price,
+  .cal-day.vertrek .cal-day-num,
+  .cal-day.vertrek .cal-day-price {
+    color: var(--charcoal);
+    text-shadow: 0 0 4px rgba(255, 255, 255, 0.8);
   }
   #mode-hint {
     display: none;
@@ -893,6 +906,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.16.0", date: "2026-07-18", description: "Halve-dag weergave bij aankomst/vertrek in de Beschikbaarheidskalender." },
       { version: "0.15.0", date: "2026-07-18", description: "Beschikbaarheid als 5e kalendermodus: boekingen en gesynchroniseerde blokken zichtbaar." },
       { version: "0.14.1", date: "2026-07-18", description: "Bugfix: 'Nu synchroniseren' sloeg de iCal-URL niet eerst op." },
       { version: "0.14.0", date: "2026-07-18", description: "Automatische iCal-synchronisatie met Airbnb en Booking.com." },
@@ -992,11 +1006,10 @@
           const selectedClass = date === selectionStart ? " selected" : "";
 
           if (priceMode === "availability") {
-            const occupied = (occupancyMap[date] || []).length > 0;
-            const stateClass = occupied ? "occupied" : "free";
-            const stateLabel = occupied ? "Bezet" : "Vrij";
+            const state = dayOccupancyState(date, occupancyMap);
+            const stateLabel = { vrij: "Vrij", bezet: "Bezet", aankomst: "Aank.", vertrek: "Vertr." }[state];
             return `
-              <button type="button" class="cal-day ${stateClass}${selectedClass}" data-date="${date}">
+              <button type="button" class="cal-day ${state}${selectedClass}" data-date="${date}">
                 <span class="cal-day-num">${day}</span>
                 <span class="cal-day-price">${stateLabel}</span>
               </button>
