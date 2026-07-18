@@ -4,11 +4,11 @@ const {
   getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice,
   getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking,
   parseIcalEvents, mergeSyncedBlocks, buildOccupancyMap, dayOccupancyState,
-  bookingsInPeriod, formatBookingsListForContact,
+  upcomingBookings, formatBookingsListForContact, formatBookingsListForGardener,
 } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.18.0');
+  assert.equal(getVersion(), '0.19.0');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -418,33 +418,31 @@ test('dayOccupancyState works correctly at the first and last day of a month', (
   assert.equal(dayOccupancyState('2026-07-31', map2), 'aankomst');
 });
 
-const PERIOD_BOOKINGS = [
-  { id: 'before', dateFrom: '2026-06-01', dateTo: '2026-06-05', name: 'Voor' },
-  { id: 'inside', dateFrom: '2026-07-10', dateTo: '2026-07-14', name: 'Binnen' },
-  { id: 'overlap-start', dateFrom: '2026-06-28', dateTo: '2026-07-02', name: 'OverlapStart' },
-  { id: 'overlap-end', dateFrom: '2026-07-29', dateTo: '2026-08-03', name: 'OverlapEnd' },
-  { id: 'after', dateFrom: '2026-09-01', dateTo: '2026-09-05', name: 'Na' },
+const UPCOMING_BOOKINGS = [
+  { id: 'past', dateFrom: '2026-06-01', dateTo: '2026-06-05', name: 'Voorbij' },
+  { id: 'ongoing', dateFrom: '2026-06-28', dateTo: '2026-07-02', name: 'Lopend' },
+  { id: 'future-1', dateFrom: '2026-08-01', dateTo: '2026-08-05', name: 'Later' },
+  { id: 'future-2', dateFrom: '2026-07-10', dateTo: '2026-07-14', name: 'Eerder' },
 ];
 
-test('bookingsInPeriod keeps bookings fully inside the period', () => {
-  const result = bookingsInPeriod(PERIOD_BOOKINGS, '2026-07-01', '2026-07-31');
-  assert.ok(result.some((b) => b.id === 'inside'));
+test('upcomingBookings excludes bookings that have already fully ended before today', () => {
+  const result = upcomingBookings(UPCOMING_BOOKINGS, '2026-07-01');
+  assert.ok(!result.some((b) => b.id === 'past'));
 });
 
-test('bookingsInPeriod excludes bookings entirely before or after the period', () => {
-  const result = bookingsInPeriod(PERIOD_BOOKINGS, '2026-07-01', '2026-07-31');
-  assert.ok(!result.some((b) => b.id === 'before'));
-  assert.ok(!result.some((b) => b.id === 'after'));
+test('upcomingBookings includes a booking that is still ongoing today (checkout today or later)', () => {
+  const result = upcomingBookings(UPCOMING_BOOKINGS, '2026-07-01');
+  assert.ok(result.some((b) => b.id === 'ongoing'));
 });
 
-test('bookingsInPeriod includes bookings that only partially overlap the period boundaries', () => {
-  const result = bookingsInPeriod(PERIOD_BOOKINGS, '2026-07-01', '2026-07-31');
-  assert.ok(result.some((b) => b.id === 'overlap-start'));
-  assert.ok(result.some((b) => b.id === 'overlap-end'));
+test('upcomingBookings includes all future bookings with no upper bound', () => {
+  const result = upcomingBookings(UPCOMING_BOOKINGS, '2026-07-01');
+  assert.ok(result.some((b) => b.id === 'future-1'));
+  assert.ok(result.some((b) => b.id === 'future-2'));
 });
 
-test('bookingsInPeriod returns results sorted by dateFrom ascending', () => {
-  const result = bookingsInPeriod(PERIOD_BOOKINGS, '2026-01-01', '2026-12-31');
+test('upcomingBookings returns results sorted by dateFrom ascending', () => {
+  const result = upcomingBookings(UPCOMING_BOOKINGS, '2026-07-01');
   const dates = result.map((b) => b.dateFrom);
   assert.deepEqual(dates, [...dates].sort());
 });
@@ -493,4 +491,32 @@ test('formatBookingsListForContact uses singular volwassene/kind for a count of 
   const booking = { dateFrom: '2026-07-10', dateTo: '2026-07-11', name: 'Jan', language: '', phone: '', adultsCount: 1, childrenCount: 1, remark: '' };
   const text = formatBookingsListForContact([booking], (a, b) => `${a} - ${b}`);
   assert.match(text, /1 volwassene, 1 kind\b/);
+});
+
+test('formatBookingsListForGardener returns null when there are no bookings', () => {
+  assert.equal(formatBookingsListForGardener([], (a, b) => `${a} - ${b}`), null);
+});
+
+test('formatBookingsListForGardener includes only date range and name+language', () => {
+  const booking = {
+    dateFrom: '2026-07-10', dateTo: '2026-07-14', name: 'Jan Janssens', language: 'NL',
+    phone: '0470123456', adultsCount: 2, childrenCount: 1, remark: 'late aankomst', price: 480,
+  };
+  const text = formatBookingsListForGardener([booking], (a, b) => `${a} - ${b}`);
+  assert.equal(text, '📅 2026-07-10 - 2026-07-14\n👤 Jan Janssens (NL)');
+});
+
+test('formatBookingsListForGardener omits the language suffix when blank', () => {
+  const booking = { dateFrom: '2026-07-10', dateTo: '2026-07-11', name: 'Jan', language: '' };
+  const text = formatBookingsListForGardener([booking], (a, b) => `${a} - ${b}`);
+  assert.equal(text, '📅 2026-07-10 - 2026-07-11\n👤 Jan');
+});
+
+test('formatBookingsListForGardener joins multiple bookings with a blank line separator', () => {
+  const bookings = [
+    { dateFrom: '2026-07-10', dateTo: '2026-07-11', name: 'Jan', language: '' },
+    { dateFrom: '2026-08-01', dateTo: '2026-08-02', name: 'Mieke', language: '' },
+  ];
+  const text = formatBookingsListForGardener(bookings, (a, b) => `${a} - ${b}`);
+  assert.equal(text.split('\n\n').length, 2);
 });

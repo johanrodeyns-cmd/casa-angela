@@ -183,26 +183,32 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
-### US-2.4 ☑ Kopiëren naar klembord voor de contactpersoon ter plaatse (M) — v0.18.0
+### US-2.4 ☑ Kopiëren naar klembord voor de contactpersoon ter plaatse (M) — v0.19.0
+> Vereenvoudigd t.o.v. de eerste versie (v0.18.0): geen manuele periode-invoer meer. Eén klik kopieert meteen alles vanaf vandaag tot en met de laatste boeking in de toekomst.
+
 **Als** Johan of Tinneke **wil ik** een overzicht van boekingen als tekst naar het klembord kunnen kopiëren **zodat** ik het direct kan plakken in een WhatsApp-bericht naar onze contactpersoon ter plaatse, zonder inzage in prijzen.
 
 **Acceptatiecriteria:**
-- Given een knop "Kopieer voor contactpersoon", when ik erop klik, then wordt een leesbaar geformatteerde tekstlijst naar het klembord gekopieerd (`navigator.clipboard.writeText`) — géén afbeelding, géén download.
+- Given een knop "Kopieer voor contactpersoon", when ik erop klik, then wordt zonder verdere invoer een leesbaar geformatteerde tekstlijst naar het klembord gekopieerd (`navigator.clipboard.writeText`) — géén periode manueel in te geven, géén afbeelding, géén download.
+- Given de gekopieerde tekst, then omvat ze alle boekingen vanaf vandaag tot en met de laatste boeking in de toekomst (een lopende boeking die vandaag nog niet is afgelopen, telt mee).
 - Given die tekst, then bevat ze per boeking: Datum van, Datum tot, aantal nachten, naam, taal, telefoonnummer, aantal volwassenen, aantal kinderen, opmerking — zonder Klantprijs.
 - Given een geslaagde kopieeractie, then toont de app een korte bevestiging (bv. "Gekopieerd naar klembord") zodat duidelijk is dat het gelukt is.
-- Given geen boekingen in de gekozen periode, then toont de app een duidelijke melding i.p.v. een lege of onzinnige kopieeractie.
+- Given geen boekingen vanaf vandaag, then toont de app een duidelijke melding i.p.v. een lege of onzinnige kopieeractie.
 
-**Technische notities:** puur tekst, geen Canvas/JPG en geen Web Share API meer nodig — `navigator.clipboard.writeText()` volstaat (werkt over HTTPS, wat deze app al is via Firebase Hosting). Format zo dat het er verzorgd uitziet als geplakt in een WhatsApp-bericht (duidelijke regel­afbrekingen tussen boekingen, geen rare opmaaktekens die WhatsApp niet ondersteunt).
+**Technische notities:** puur tekst, geen Canvas/JPG en geen Web Share API meer nodig — `navigator.clipboard.writeText()` volstaat (werkt over HTTPS, wat deze app al is via Firebase Hosting). `logic.upcomingBookings(bookings, today)` filtert op `dateTo >= today` en sorteert op `dateFrom` — geen manuele periode-selectie. Format zo dat het er verzorgd uitziet als geplakt in een WhatsApp-bericht.
 
 ---
 
-### US-2.5 ☐ Kopiëren naar klembord voor de tuinier (M)
+### US-2.5 ☑ Kopiëren naar klembord voor de tuinier (M) — v0.19.0
 **Als** Johan of Tinneke **wil ik** een beperktere tekstlijst naar het klembord kunnen kopiëren voor de tuinman **zodat** die enkel weet wanneer het huis bezet is, zonder overbodige of privé-gegevens, en ik dat ook zo in WhatsApp kan plakken.
 
 **Acceptatiecriteria:**
-- Given een knop "Kopieer voor tuinier", when ik erop klik, then wordt een tekstlijst naar het klembord gekopieerd met per boeking enkel: Datum van, Datum tot, naam, taal.
-- Given dezelfde periode-selectie als US-2.4, then gebruikt deze kopieeractie dezelfde geselecteerde periode/boekingen, maar met de beperkte veldenset.
+- Given een knop "Kopieer voor tuinier", when ik erop klik, then wordt zonder verdere invoer een tekstlijst naar het klembord gekopieerd met per boeking enkel: Datum van, Datum tot, naam, taal.
+- Given dezelfde selectie als US-2.4 (alle boekingen vanaf vandaag tot en met de laatste boeking in de toekomst), then gebruikt deze kopieeractie diezelfde set boekingen, maar met de beperkte veldenset.
 - Given een geslaagde kopieeractie, then toont de app dezelfde korte bevestiging als bij US-2.4.
+- Given geen boekingen vanaf vandaag, then toont de app dezelfde duidelijke melding als bij US-2.4.
+
+**Technische notities:** `logic.formatBookingsListForGardener(bookings, formatDateRange)`, zelfde `upcomingBookings()`-selectie als US-2.4, aparte knop en toast-melding.
 
 ---
 

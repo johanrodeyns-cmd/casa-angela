@@ -1,4 +1,4 @@
-const VERSION = '0.18.0';
+const VERSION = '0.19.0';
 
 function getVersion() {
   return VERSION;
@@ -160,9 +160,9 @@ function dayOccupancyState(date, occupancyMap) {
   return 'bezet'; // fallback: a same-day dateFrom===dateTo entry
 }
 
-function bookingsInPeriod(bookings, periodFrom, periodTo) {
+function upcomingBookings(bookings, today) {
   return bookings
-    .filter((b) => b.dateFrom <= periodTo && b.dateTo >= periodFrom)
+    .filter((b) => b.dateTo >= today)
     .sort((a, b) => a.dateFrom.localeCompare(b.dateFrom));
 }
 
@@ -187,11 +187,23 @@ function formatBookingsListForContact(bookings, formatDateRange) {
     .join('\n\n');
 }
 
+// Same date/name-formatting convention as formatBookingsListForContact, but limited to
+// the fields the tuinier (gardener) needs: no phone, guest counts or remark.
+function formatBookingsListForGardener(bookings, formatDateRange) {
+  if (bookings.length === 0) return null;
+  return bookings
+    .map((b) => {
+      const nameLine = b.language ? `👤 ${b.name} (${b.language})` : `👤 ${b.name}`;
+      return [`📅 ${formatDateRange(b.dateFrom, b.dateTo)}`, nameLine].join('\n');
+    })
+    .join('\n\n');
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice,
     getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking,
     parseIcalEvents, mergeSyncedBlocks, buildOccupancyMap, dayOccupancyState,
-    bookingsInPeriod, formatBookingsListForContact,
+    upcomingBookings, formatBookingsListForContact, formatBookingsListForGardener,
   };
 }
