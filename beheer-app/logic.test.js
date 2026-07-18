@@ -5,11 +5,11 @@ const {
   getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking,
   parseIcalEvents, mergeSyncedBlocks, buildOccupancyMap, dayOccupancyState,
   upcomingBookings, formatBookingsListForContact, formatBookingsListForGardener,
-  findUnmatchedBookings, findUnmatchedSyncedBlocks, dayDisplayLabel,
+  findUnmatchedBookings, findUnmatchedSyncedBlocks, dayDisplayLabel, weekdayAbbreviation,
 } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.21.0');
+  assert.equal(getVersion(), '0.21.1');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -588,4 +588,14 @@ test('dayDisplayLabel falls back to Bezet when the day only has a synced block w
 test('dayDisplayLabel joins multiple guest names on a same-day turnover', () => {
   const map = { '2026-07-14': [{ type: 'booking', name: 'Jan' }, { type: 'booking', name: 'Mieke' }] };
   assert.equal(dayDisplayLabel('2026-07-14', map, 'bezet'), 'Jan / Mieke');
+});
+
+test('weekdayAbbreviation matches the app-wide Ma/Di/Wo/Do/Vr/Za/Zo convention', () => {
+  assert.equal(weekdayAbbreviation('2026-07-06'), 'Ma');
+  assert.equal(weekdayAbbreviation('2026-07-07'), 'Di');
+  assert.equal(weekdayAbbreviation('2026-07-08'), 'Wo');
+  assert.equal(weekdayAbbreviation('2026-07-09'), 'Do');
+  assert.equal(weekdayAbbreviation('2026-07-10'), 'Vr');
+  assert.equal(weekdayAbbreviation('2026-07-11'), 'Za');
+  assert.equal(weekdayAbbreviation('2026-07-12'), 'Zo');
 });

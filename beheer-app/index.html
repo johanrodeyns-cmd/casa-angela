@@ -1008,6 +1008,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.21.1", date: "2026-07-18", description: "Weekdag toegevoegd aan datums bij boekingen (bv. 'Do 9 jul 2026')." },
       { version: "0.21.0", date: "2026-07-18", description: "Beschikbaarheidskalender toont nu de gastnaam i.p.v. 'Bezet'." },
       { version: "0.20.0", date: "2026-07-18", description: "Synchronisatie-overzicht: boekingen verifiëren tegen Airbnb/Booking.com." },
       { version: "0.19.0", date: "2026-07-18", description: "Kopiëren voor contactpersoon vereenvoudigd (geen periode meer nodig) + nieuw: kopiëren voor de tuinier." },
@@ -1473,7 +1474,10 @@
     };
 
     function formatBookingDateRange(dateFrom, dateTo) {
-      const fmt = (iso) => new Date(iso + "T00:00:00").toLocaleDateString("nl-BE", { day: "numeric", month: "short", year: "numeric" });
+      const fmt = (iso) => {
+        const rest = new Date(iso + "T00:00:00").toLocaleDateString("nl-BE", { day: "numeric", month: "short", year: "numeric" });
+        return `${weekdayAbbreviation(iso)} ${rest}`;
+      };
       return `${fmt(dateFrom)} – ${fmt(dateTo)}`;
     }
 

@@ -1,4 +1,4 @@
-const VERSION = '0.21.0';
+const VERSION = '0.21.1';
 
 function getVersion() {
   return VERSION;
@@ -226,12 +226,18 @@ function dayDisplayLabel(date, occupancyMap, state) {
   return guestNames.length === 0 ? 'Bezet' : guestNames.join(' / ');
 }
 
+const WEEKDAY_ABBREVIATIONS = ['Zo', 'Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za']; // index = Date#getDay()
+
+function weekdayAbbreviation(date) {
+  return WEEKDAY_ABBREVIATIONS[new Date(date + 'T00:00:00').getDay()];
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice,
     getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking,
     parseIcalEvents, mergeSyncedBlocks, buildOccupancyMap, dayOccupancyState,
     upcomingBookings, formatBookingsListForContact, formatBookingsListForGardener,
-    findUnmatchedBookings, findUnmatchedSyncedBlocks, dayDisplayLabel,
+    findUnmatchedBookings, findUnmatchedSyncedBlocks, dayDisplayLabel, weekdayAbbreviation,
   };
 }

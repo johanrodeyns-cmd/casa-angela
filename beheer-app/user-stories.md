@@ -144,6 +144,8 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 ## Epic 2 — Boekingen
 
 ### US-2.1 ☑ Boeking toevoegen/bewerken/verwijderen (M) — v0.12.0
+> Vervolg in v0.21.1: alle datumweergaves bij boekingen tonen nu ook de weekdag (bv. "Do 9 jul 2026"), via de gedeelde `formatBookingDateRange`-helper.
+
 **Als** Johan of Tinneke **wil ik** boekingen kunnen registreren met alle relevante gegevens **zodat** ik een centraal overzicht heb i.p.v. de huidige Excel.
 
 **Acceptatiecriteria:**
