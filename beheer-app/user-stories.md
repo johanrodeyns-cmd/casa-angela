@@ -227,6 +227,8 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 **Technische notities:** pure functies `findUnmatchedBookings(bookings, syncedBlocks)` en `findUnmatchedSyncedBlocks(bookings, syncedBlocks)` in `logic.js` — matching op exacte `dateFrom`/`dateTo` + platform/source (geen fuzzy-matching). Boekingen op platform `direct`/`friends` worden nooit als "unmatched" getoond, want daar bestaat sowieso geen sync voor.
 
+> Vervolg in v0.23.2: bugfix — `findUnmatchedSyncedBlocks` vereiste ook een exacte platform-match (`booking.platform === block.source`), waardoor een eigen verblijf dat als "Rechtstreeks" was ingevoerd (bv. Tinneke&Johan) tóch als "unmatched" Airbnb-blok verscheen, ook al kwamen de datums exact overeen. Lijst (1) matcht nu enkel nog op datums — een blok telt als "gedekt" zodra er een boeking bestaat met exact dezelfde `dateFrom`/`dateTo`, ongeacht platform. Lijst (2) (`findUnmatchedBookings`) blijft wél platform-gebonden, want die controleert specifiek Airbnb/Booking.com-boekingen tegen hun eigen bron.
+
 ---
 
 ## Epic 3 — Beschikbaarheidskalender

@@ -9,7 +9,7 @@ const {
 } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.23.1');
+  assert.equal(getVersion(), '0.23.2');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -584,6 +584,12 @@ test('findUnmatchedSyncedBlocks excludes a block with a matching booking', () =>
 test('findUnmatchedSyncedBlocks includes a block with no matching booking at all', () => {
   const result = findUnmatchedSyncedBlocks([], SYNC_TEST_BLOCKS);
   assert.equal(result.length, 2);
+});
+
+test('findUnmatchedSyncedBlocks excludes a block whose dates match a booking recorded under a different platform (e.g. eigen verblijf geboekt als "Rechtstreeks")', () => {
+  const bookings = [{ id: 'b1', platform: 'direct', dateFrom: '2026-07-10', dateTo: '2026-07-14', name: 'Tinneke&Johan' }];
+  const result = findUnmatchedSyncedBlocks(bookings, SYNC_TEST_BLOCKS);
+  assert.deepEqual(result, [SYNC_TEST_BLOCKS[1]]);
 });
 
 test('dayDisplayLabel always returns Vrij for a free day, regardless of the occupancy map', () => {

@@ -1,4 +1,4 @@
-const VERSION = '0.23.1';
+const VERSION = '0.23.2';
 
 function getVersion() {
   return VERSION;
@@ -217,10 +217,13 @@ function findUnmatchedBookings(bookings, syncedBlocks) {
 }
 
 function findUnmatchedSyncedBlocks(bookings, syncedBlocks) {
+  // Platform is intentionally NOT part of the match: a stay can be recorded under a
+  // different platform than the one Airbnb/Booking.com's calendar reports it under
+  // (e.g. the owners' own stay, entered as "Rechtstreeks", still shows up as an
+  // Airbnb-blocked range because that's where the host manually blocked the calendar).
+  // What matters here is only whether the date range is already accounted for.
   return syncedBlocks.filter((block) => {
-    return !bookings.some(
-      (b) => b.platform === block.source && b.dateFrom === block.dateFrom && b.dateTo === block.dateTo
-    );
+    return !bookings.some((b) => b.dateFrom === block.dateFrom && b.dateTo === block.dateTo);
   });
 }
 
