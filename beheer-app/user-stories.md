@@ -169,6 +169,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ### US-2.3 ☑ Automatische iCal-synchronisatie met Airbnb en Booking.com (S) — v0.14.0
 > De overlap-waarschuwing (US-2.2) houdt nu ook rekening met gesynchroniseerde blokken. De beschikbaarheidskalender zelf (Epic 3) moet nog gebouwd worden — die zal `syncedBlocks` hergebruiken zodra hij er is.
+> Vervolg in v0.14.1: bugfix — "Nu synchroniseren" sloeg de ingevulde URL niet op vóór het synchroniseren, waardoor de Cloud Function nog de vorige (lege) URL gebruikte en stilzwijgend niets deed.
 
 **Als** Johan of Tinneke **wil ik** dat bezette periodes van Airbnb en Booking.com automatisch verschijnen **zodat** ik niet alles dubbel manueel moet ingeven.
 

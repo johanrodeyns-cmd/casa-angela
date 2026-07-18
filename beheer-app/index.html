@@ -878,6 +878,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.14.1", date: "2026-07-18", description: "Bugfix: 'Nu synchroniseren' sloeg de iCal-URL niet eerst op." },
       { version: "0.14.0", date: "2026-07-18", description: "Automatische iCal-synchronisatie met Airbnb en Booking.com." },
       { version: "0.13.1", date: "2026-07-18", description: "Boekingsformulier: 'Prijs' hernoemd naar 'Klantprijs'." },
       { version: "0.13.0", date: "2026-07-17", description: "Waarschuwing bij overlappende boekingen." },
@@ -1531,17 +1532,21 @@
 
     document.getElementById("ical-settings-open").addEventListener("click", openIcalSettingsDialog);
 
+    async function saveIcalFeedUrls() {
+      await Promise.all(
+        Object.keys(icalFields).map((source) =>
+          setDoc(doc(db, "icalFeeds", source), { url: icalFields[source].url.value.trim() }, { merge: true })
+        )
+      );
+      await loadIcalFeeds();
+    }
+
     document.getElementById("ical-settings-save").addEventListener("click", async () => {
       const saveButton = document.getElementById("ical-settings-save");
       saveButton.disabled = true;
       saveButton.innerHTML = '<span class="spinner"></span>Opslaan…';
       try {
-        await Promise.all(
-          Object.keys(icalFields).map((source) =>
-            setDoc(doc(db, "icalFeeds", source), { url: icalFields[source].url.value.trim() }, { merge: true })
-          )
-        );
-        await loadIcalFeeds();
+        await saveIcalFeedUrls();
         icalSettingsDialog.close();
       } catch (err) {
         icalError.textContent = "Opslaan mislukt. Probeer opnieuw.";
@@ -1555,9 +1560,13 @@
     document.getElementById("ical-sync-now").addEventListener("click", async () => {
       const syncButton = document.getElementById("ical-sync-now");
       icalSyncFeedback.classList.remove("active");
+      icalError.classList.remove("active");
       syncButton.disabled = true;
       syncButton.innerHTML = '<span class="spinner"></span>Synchroniseren…';
       try {
+        // Save first: the Cloud Function reads the URL from Firestore, not from this form —
+        // syncing without saving first would silently sync against the previously saved URL.
+        await saveIcalFeedUrls();
         await httpsCallable(functionsClient, "syncIcalFeedsNow")();
         await Promise.all([loadSyncedBlocks(), loadIcalFeeds()]);
         renderIcalFeedsIntoDialog();
