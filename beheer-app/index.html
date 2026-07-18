@@ -541,7 +541,8 @@
   }
   dialog#booking-dialog,
   dialog#booking-delete-dialog,
-  dialog#ical-settings-dialog {
+  dialog#ical-settings-dialog,
+  dialog#day-detail-dialog {
     border: none;
     border-radius: 8px;
     padding: 1.5rem;
@@ -553,15 +554,44 @@
   }
   dialog#booking-dialog::backdrop,
   dialog#booking-delete-dialog::backdrop,
-  dialog#ical-settings-dialog::backdrop {
+  dialog#ical-settings-dialog::backdrop,
+  dialog#day-detail-dialog::backdrop {
     background: rgba(44, 44, 44, 0.5);
   }
   dialog#booking-dialog h2,
   dialog#booking-delete-dialog h2,
-  dialog#ical-settings-dialog h2 {
+  dialog#ical-settings-dialog h2,
+  dialog#day-detail-dialog h2 {
     margin-top: 0;
     color: var(--terracotta);
     font-size: 1.1rem;
+    text-transform: capitalize;
+  }
+  .day-detail-row {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    text-align: left;
+    background: var(--sand);
+    color: var(--charcoal);
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    min-height: 44px;
+  }
+  .day-detail-row:hover {
+    background: var(--sand-dark);
+  }
+  .day-detail-row-main {
+    font-weight: bold;
+  }
+  .day-detail-row-meta {
+    font-size: 0.8rem;
+    color: var(--olive-dark);
+  }
+  #day-detail-content p {
+    font-size: 0.9rem;
+    margin-bottom: 0.75rem;
   }
   dialog#ical-settings-dialog p {
     font-size: 0.85rem;
@@ -781,6 +811,14 @@
     </div>
   </dialog>
 
+  <dialog id="day-detail-dialog">
+    <h2 id="day-detail-title"></h2>
+    <div id="day-detail-content"></div>
+    <div class="dialog-actions">
+      <button id="day-detail-close" type="button" class="button-secondary">Sluiten</button>
+    </div>
+  </dialog>
+
   <dialog id="ical-settings-dialog">
     <h2>iCal-koppelingen</h2>
     <p>Bezette periodes van Airbnb en Booking.com worden automatisch overgenomen als geblokkeerde dagen (geen naam of prijs) — vul hier de exportlinks in.</p>
@@ -906,6 +944,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.17.0", date: "2026-07-18", description: "Doorklikken naar boekingsdetails vanuit de Beschikbaarheidskalender." },
       { version: "0.16.0", date: "2026-07-18", description: "Halve-dag weergave bij aankomst/vertrek in de Beschikbaarheidskalender." },
       { version: "0.15.0", date: "2026-07-18", description: "Beschikbaarheid als 5e kalendermodus: boekingen en gesynchroniseerde blokken zichtbaar." },
       { version: "0.14.1", date: "2026-07-18", description: "Bugfix: 'Nu synchroniseren' sloeg de iCal-URL niet eerst op." },
@@ -1031,7 +1070,8 @@
       calGrid.querySelectorAll(".cal-day").forEach((btn) => {
         btn.addEventListener("click", () => {
           if (priceMode === "availability") {
-            return; // doorklikken naar boekingsdetails volgt in US-3.3
+            openDayDetailDialog(btn.dataset.date);
+            return;
           }
           if (priceMode !== "airbnb") {
             showModeHint();
@@ -1417,9 +1457,68 @@
       renderBookingsList();
     }
 
+    const dayDetailDialog = document.getElementById("day-detail-dialog");
+    const dayDetailTitle = document.getElementById("day-detail-title");
+    const dayDetailContent = document.getElementById("day-detail-content");
+
+    document.getElementById("day-detail-close").addEventListener("click", () => dayDetailDialog.close());
+
+    function openDayDetailDialog(date) {
+      const entries = buildOccupancyMap(bookings, syncedBlocks)[date] || [];
+      if (entries.length === 0) return; // vrije dag, niets te tonen
+
+      const bookingEntries = entries.filter((e) => e.type === "booking");
+      const blockEntries = entries.filter((e) => e.type === "syncedBlock");
+
+      // Eenvoudig geval: precies één boeking, geen ambiguïteit -> meteen de details tonen.
+      if (bookingEntries.length === 1 && blockEntries.length === 0) {
+        openBookingDialog(bookingEntries[0]);
+        return;
+      }
+
+      dayDetailTitle.textContent = new Date(date + "T00:00:00").toLocaleDateString("nl-BE", {
+        weekday: "long", day: "numeric", month: "long", year: "numeric",
+      });
+      dayDetailContent.innerHTML = "";
+
+      bookingEntries.forEach((entry) => {
+        const row = document.createElement("button");
+        row.type = "button";
+        row.className = "day-detail-row";
+        row.innerHTML = `
+          <div class="day-detail-row-main">${entry.name}</div>
+          <div class="day-detail-row-meta">${PLATFORM_LABELS[entry.platform] ?? entry.platform} — ${formatBookingDateRange(entry.dateFrom, entry.dateTo)}</div>
+        `;
+        row.addEventListener("click", () => {
+          dayDetailDialog.close();
+          openBookingDialog(entry);
+        });
+        dayDetailContent.appendChild(row);
+      });
+
+      if (bookingEntries.length === 0 && blockEntries.length > 0) {
+        const block = blockEntries[0];
+        const message = document.createElement("p");
+        message.textContent = `Gesynchroniseerd via ${PLATFORM_LABELS[block.source] ?? block.source} — nog geen boekingsdetails ingevuld.`;
+        dayDetailContent.appendChild(message);
+
+        const fillInButton = document.createElement("button");
+        fillInButton.type = "button";
+        fillInButton.className = "full-width";
+        fillInButton.textContent = "Boeking aanvullen";
+        fillInButton.addEventListener("click", () => {
+          dayDetailDialog.close();
+          openBookingDialog({ dateFrom: block.dateFrom, dateTo: block.dateTo, platform: block.source });
+        });
+        dayDetailContent.appendChild(fillInButton);
+      }
+
+      dayDetailDialog.showModal();
+    }
+
     function openBookingDialog(booking) {
       editingBookingId = booking ? booking.id : null;
-      bookingDialogTitle.textContent = booking ? "Boeking bewerken" : "Nieuwe boeking";
+      bookingDialogTitle.textContent = editingBookingId ? "Boeking bewerken" : "Nieuwe boeking";
       bookingError.classList.remove("active");
       resetOverlapWarning();
       bookingFields.dateFrom.value = booking?.dateFrom ?? "";

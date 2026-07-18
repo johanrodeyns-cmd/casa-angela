@@ -207,7 +207,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 ## Epic 3 — Beschikbaarheidskalender
 
 ### US-3.1 ☑ Beschikbaarheid als 5e kalendermodus (M) — v0.15.0
-> Halve-dag-splitsing bij aankomst/vertrek volgde meteen in v0.16.0 (US-3.2). Doorklikken naar boekingsdetails volgt in US-3.3, tot dan is een dag-klik in deze modus een no-op.
+> Halve-dag-splitsing (US-3.2) en doorklikken naar boekingsdetails (US-3.3) volgden meteen mee, alle drie op dezelfde dag afgewerkt.
 **Als** Johan of Tinneke **wil ik** in dezelfde kalender ook kunnen zien wanneer het huis verhuurd is **zodat** ik niet tussen aparte schermen moet wisselen.
 
 **Acceptatiecriteria:**
@@ -228,7 +228,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
-### US-3.3 ☐ Doorklikken naar boekingsdetails (M)
+### US-3.3 ☑ Doorklikken naar boekingsdetails (M) — v0.17.0
 **Als** Johan of Tinneke **wil ik** vanuit de beschikbaarheidskalender snel de bijhorende boeking kunnen inkijken **zodat** ik niet apart moet zoeken.
 
 **Acceptatiecriteria:**
