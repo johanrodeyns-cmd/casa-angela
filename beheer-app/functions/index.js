@@ -56,7 +56,32 @@ function mergeSyncedBlocks(existingBlocks, parsedEvents, source) {
   return [...otherSourceBlocks, ...newSourceBlocks];
 }
 
-async function syncSource(source) {
+// Kept in sync by hand with logic.js's diffSyncedBlocks — see that file for why this diff
+// exists at all (a naive per-run create/delete log would flood the audit log every 3 hours,
+// since a sync run always deletes-and-recreates every block for a source).
+function diffSyncedBlocks(before, after) {
+  const beforeById = new Map(before.map((b) => [b.id, b]));
+  const afterById = new Map(after.map((b) => [b.id, b]));
+  const changes = [];
+
+  afterById.forEach((block, id) => {
+    const prior = beforeById.get(id);
+    if (!prior) {
+      changes.push({ docId: id, action: 'create', before: null, after: block });
+    } else if (prior.dateFrom !== block.dateFrom || prior.dateTo !== block.dateTo) {
+      changes.push({ docId: id, action: 'update', before: prior, after: block });
+    }
+  });
+  beforeById.forEach((block, id) => {
+    if (!afterById.has(id)) {
+      changes.push({ docId: id, action: 'delete', before: block, after: null });
+    }
+  });
+
+  return changes;
+}
+
+async function syncSource(source, actorEmail) {
   const feedDoc = await db.collection('icalFeeds').doc(source).get();
   const url = feedDoc.exists ? feedDoc.data().url : null;
   if (!url) return;
@@ -69,22 +94,34 @@ async function syncSource(source) {
   const existingSnapshot = await db.collection('syncedBlocks').where('source', '==', source).get();
   const existingBlocks = existingSnapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
   const merged = mergeSyncedBlocks(existingBlocks, events, source);
+  const changes = diffSyncedBlocks(existingBlocks, merged);
 
   const batch = db.batch();
   existingSnapshot.docs.forEach((d) => batch.delete(d.ref));
   merged.forEach(({ id, ...data }) => batch.set(db.collection('syncedBlocks').doc(id), data));
   batch.set(db.collection('icalFeeds').doc(source), { url, lastSyncedAt: new Date() }, { merge: true });
+  changes.forEach((change) => {
+    batch.set(db.collection('auditLog').doc(), {
+      collection: 'syncedBlocks',
+      docId: change.docId,
+      action: change.action,
+      email: actorEmail,
+      timestamp: new Date(),
+      before: change.before,
+      after: change.after,
+    });
+  });
   await batch.commit();
 }
 
-async function syncAllSources() {
+async function syncAllSources(actorEmail) {
   for (const source of SOURCES) {
-    await syncSource(source);
+    await syncSource(source, actorEmail);
   }
 }
 
 export const syncIcalFeeds = onSchedule('every 3 hours', async () => {
-  await syncAllSources();
+  await syncAllSources('systeem (automatische sync)');
 });
 
 export const syncIcalFeedsNow = onCall(async (request) => {
@@ -92,6 +129,6 @@ export const syncIcalFeedsNow = onCall(async (request) => {
   if (!email || !ALLOWED_EMAILS.includes(email)) {
     throw new HttpsError('permission-denied', 'Geen toegang.');
   }
-  await syncAllSources();
+  await syncAllSources(email);
   return { success: true };
 });

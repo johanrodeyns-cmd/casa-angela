@@ -10,8 +10,23 @@ service cloud.firestore {
         ];
     }
 
-    match /{document=**} {
-      allow read, write: if isAllowedUser();
+    // auditLog is append-only: create is allowed (and only under the caller's own,
+    // server-validated email — a client can't log an entry as someone else), but update
+    // and delete are never allowed, not even for the two whitelisted users. This collection
+    // is listed explicitly, and the fallback below excludes it, so the general "allow write"
+    // rule can't accidentally grant update/delete on top of this stricter one.
+    match /auditLog/{entryId} {
+      allow read: if isAllowedUser();
+      allow create: if isAllowedUser() && request.resource.data.email == request.auth.token.email;
+      allow update, delete: if false;
     }
+
+    match /pricing/{docId} { allow read, write: if isAllowedUser(); }
+    match /bookings/{docId} { allow read, write: if isAllowedUser(); }
+    match /settings/{docId} { allow read, write: if isAllowedUser(); }
+    match /checklists/{docId} { allow read, write: if isAllowedUser(); }
+    match /syncedBlocks/{docId} { allow read, write: if isAllowedUser(); }
+    match /icalFeeds/{docId} { allow read, write: if isAllowedUser(); }
+    match /meta/{docId} { allow read, write: if isAllowedUser(); }
   }
 }

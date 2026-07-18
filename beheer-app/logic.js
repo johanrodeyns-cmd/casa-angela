@@ -1,4 +1,4 @@
-const VERSION = '0.24.0';
+const VERSION = '0.25.0';
 
 function getVersion() {
   return VERSION;
@@ -128,6 +128,33 @@ function mergeSyncedBlocks(existingBlocks, parsedEvents, source) {
     dateTo: e.dateTo,
   }));
   return [...otherSourceBlocks, ...newSourceBlocks];
+}
+
+// Since a sync run always deletes-and-recreates every block for a source (mergeSyncedBlocks
+// is a full replace, not a diff), a naive create/delete audit log per sync run would log every
+// unchanged block too, every 3 hours, forever. This compares before/after by id so only blocks
+// that actually appeared, disappeared, or changed dates produce an audit entry.
+// functions/index.js keeps its own copy — keep both in sync.
+function diffSyncedBlocks(before, after) {
+  const beforeById = new Map(before.map((b) => [b.id, b]));
+  const afterById = new Map(after.map((b) => [b.id, b]));
+  const changes = [];
+
+  afterById.forEach((block, id) => {
+    const prior = beforeById.get(id);
+    if (!prior) {
+      changes.push({ docId: id, action: 'create', before: null, after: block });
+    } else if (prior.dateFrom !== block.dateFrom || prior.dateTo !== block.dateTo) {
+      changes.push({ docId: id, action: 'update', before: prior, after: block });
+    }
+  });
+  beforeById.forEach((block, id) => {
+    if (!afterById.has(id)) {
+      changes.push({ docId: id, action: 'delete', before: block, after: null });
+    }
+  });
+
+  return changes;
 }
 
 function buildOccupancyMap(bookings, syncedBlocks) {
@@ -298,7 +325,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice,
     getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking,
-    parseIcalEvents, mergeSyncedBlocks, buildOccupancyMap, dayOccupancyState,
+    parseIcalEvents, mergeSyncedBlocks, diffSyncedBlocks, buildOccupancyMap, dayOccupancyState,
     upcomingBookings, formatBookingsListForContact, formatBookingsListForGardener,
     findUnmatchedBookings, findUnmatchedSyncedBlocks, dayDisplayLabel, weekdayAbbreviation,
     sortChecklistItems, addChecklistItem, renameChecklistItem, removeChecklistItem,

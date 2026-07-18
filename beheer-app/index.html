@@ -498,6 +498,28 @@
   .boekingen-toolbar-grid button:hover {
     background: var(--azure-light);
   }
+  #audit-log-open {
+    margin-top: 0.5rem;
+  }
+  .audit-log-row {
+    background: var(--sand);
+    border-radius: 6px;
+    padding: 0.6rem 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+  .audit-log-row-main {
+    font-weight: bold;
+  }
+  .audit-log-row-meta {
+    font-size: 0.8rem;
+    color: var(--olive-dark);
+  }
+  .audit-log-row-detail {
+    font-size: 0.75rem;
+    color: var(--charcoal);
+    margin-top: 0.3rem;
+    word-break: break-word;
+  }
   #selection-hint {
     display: none;
     background: var(--sand);
@@ -1030,6 +1052,16 @@
     </div>
   </dialog>
 
+  <dialog id="audit-log-dialog">
+    <h2>Audit-log</h2>
+    <p>Laatste 50 wijzigingen, nieuwste eerst.</p>
+    <p id="audit-log-empty" class="empty-state">Nog geen wijzigingen gelogd.</p>
+    <div id="audit-log-list"></div>
+    <div class="dialog-actions">
+      <button id="audit-log-close" type="button" class="button-secondary">Sluiten</button>
+    </div>
+  </dialog>
+
   <section id="login-screen" class="screen">
     <p>Meld je aan om verder te gaan.</p>
     <button id="login-button" type="button">Inloggen met Google</button>
@@ -1091,6 +1123,7 @@
               <button id="ical-settings-open" type="button">🔗 iCal-koppelingen</button>
               <button id="sync-check-open" type="button">🔍 Synchronisatie-overzicht</button>
             </div>
+            <button id="audit-log-open" type="button" class="button-secondary full-width">📜 Audit-log</button>
           </div>
           <p id="copy-contact-feedback"></p>
           <p id="copy-tuinier-feedback"></p>
@@ -1143,6 +1176,8 @@
       getDoc,
       query,
       where,
+      orderBy,
+      limit,
       getDocs,
       writeBatch,
       addDoc,
@@ -1164,6 +1199,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.25.0", date: "2026-07-18", description: "Audit-log toegevoegd: elke wijziging aan prijzen, boekingen, prijsformule, checklists en gesynchroniseerde blokken wordt vastgelegd (wie, wat, wanneer). Raadpleegbaar via '📜 Audit-log' in de Boekingen-tab." },
       { version: "0.24.0", date: "2026-07-18", description: "Checklist aankomst/vertrek werkt nu volledig: items toevoegen, hernoemen, verwijderen, afvinken, herordenen (▲▼) en de lijst resetten. Wijzigingen zijn meteen zichtbaar bij de andere gebruiker." },
       { version: "0.23.2", date: "2026-07-18", description: "Bugfix Synchronisatie-overzicht: een eigen verblijf ingevoerd als 'Rechtstreeks' (bv. Tinneke&Johan) verscheen tóch als 'unmatched' Airbnb-blok, ook al kwamen de datums exact overeen. Gesynchroniseerde blokken matchen nu enkel nog op datum, niet meer op platform." },
       { version: "0.23.1", date: "2026-07-18", description: "Actieknoppen boven Boekingen ogen rommelig op mobiel opgeruimd: '+ Nieuwe boeking' staat nu als duidelijke hoofdknop bovenaan, de 4 overige knoppen staan eronder netjes even groot in een 2×2-rooster." },
@@ -1202,6 +1238,22 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
     const functionsClient = getFunctions(app);
+
+    // US-5.1: every create/update/delete on an audited collection gets an auditLog entry,
+    // written in the SAME batch as the actual data change (atomic — either both succeed or
+    // neither does). `email` always comes from the logged-in session, never a form field —
+    // Firestore rules additionally enforce it server-side (see firestore.rules).
+    function addAuditEntry(batch, collectionName, docId, action, before, after) {
+      batch.set(doc(collection(db, "auditLog")), {
+        collection: collectionName,
+        docId,
+        action,
+        email: auth.currentUser.email,
+        timestamp: serverTimestamp(),
+        before: before ?? null,
+        after: after ?? null,
+      });
+    }
 
     document.getElementById("version").textContent = "v" + getVersion();
 
@@ -1457,10 +1509,13 @@
       saveButton.disabled = true;
       saveButton.innerHTML = '<span class="spinner"></span>Opslaan…';
       try {
-        await setDoc(doc(db, "pricing", priceDialogDateValue), {
-          date: priceDialogDateValue,
-          airbnbPrice: value,
-        });
+        const afterValue = { date: priceDialogDateValue, airbnbPrice: value };
+        const hadPrice = pricingCache[priceDialogDateValue] !== undefined;
+        const beforeValue = hadPrice ? { date: priceDialogDateValue, airbnbPrice: pricingCache[priceDialogDateValue] } : null;
+        const batch = writeBatch(db);
+        batch.set(doc(db, "pricing", priceDialogDateValue), afterValue);
+        addAuditEntry(batch, "pricing", priceDialogDateValue, hadPrice ? "update" : "create", beforeValue, afterValue);
+        await batch.commit();
         pricingCache[priceDialogDateValue] = value;
         renderCalendar();
         priceDialog.close();
@@ -1479,7 +1534,11 @@
       try {
         const batch = writeBatch(db);
         bulkSelectionDates.forEach((date) => {
-          batch.set(doc(db, "pricing", date), { date, airbnbPrice: value });
+          const afterValue = { date, airbnbPrice: value };
+          const hadPrice = pricingCache[date] !== undefined;
+          const beforeValue = hadPrice ? { date, airbnbPrice: pricingCache[date] } : null;
+          batch.set(doc(db, "pricing", date), afterValue);
+          addAuditEntry(batch, "pricing", date, hadPrice ? "update" : "create", beforeValue, afterValue);
         });
         await batch.commit();
         bulkSelectionDates.forEach((date) => { pricingCache[date] = value; });
@@ -1524,7 +1583,11 @@
         if (toCopy.length > 0) {
           const batch = writeBatch(db);
           toCopy.forEach(({ date, price }) => {
-            batch.set(doc(db, "pricing", date), { date, airbnbPrice: price });
+            const afterValue = { date, airbnbPrice: price };
+            const hadPrice = pricingCache[date] !== undefined;
+            const beforeValue = hadPrice ? { date, airbnbPrice: pricingCache[date] } : null;
+            batch.set(doc(db, "pricing", date), afterValue);
+            addAuditEntry(batch, "pricing", date, hadPrice ? "update" : "create", beforeValue, afterValue);
           });
           await batch.commit();
           toCopy.forEach(({ date, price }) => { pricingCache[date] = price; });
@@ -1604,7 +1667,10 @@
       saveButton.disabled = true;
       saveButton.innerHTML = '<span class="spinner"></span>Opslaan…';
       try {
-        await setDoc(doc(db, "settings", "pricingFormula"), newSettings);
+        const batch = writeBatch(db);
+        batch.set(doc(db, "settings", "pricingFormula"), newSettings);
+        addAuditEntry(batch, "settings", "pricingFormula", "update", formulaSettings, newSettings);
+        await batch.commit();
         formulaSettings = newSettings;
         renderCalendar();
         formulaDialog.close();
@@ -1809,6 +1875,60 @@
       syncCheckDialog.showModal();
     });
 
+    const AUDIT_COLLECTION_LABELS = {
+      pricing: "Prijzen",
+      bookings: "Boekingen",
+      settings: "Instellingen",
+      checklists: "Checklist",
+      syncedBlocks: "Gesynchroniseerd blok",
+    };
+    const AUDIT_ACTION_LABELS = { create: "aangemaakt", update: "gewijzigd", delete: "verwijderd" };
+
+    function formatAuditValue(value) {
+      if (value == null) return "—";
+      try {
+        return JSON.stringify(value);
+      } catch {
+        return String(value);
+      }
+    }
+
+    const auditLogDialog = document.getElementById("audit-log-dialog");
+    const auditLogList = document.getElementById("audit-log-list");
+    const auditLogEmpty = document.getElementById("audit-log-empty");
+
+    document.getElementById("audit-log-close").addEventListener("click", () => auditLogDialog.close());
+    document.getElementById("audit-log-open").addEventListener("click", async () => {
+      auditLogDialog.showModal();
+      auditLogEmpty.classList.remove("active");
+      auditLogList.innerHTML = '<p class="empty-state">Laden…</p>';
+      try {
+        const q = query(collection(db, "auditLog"), orderBy("timestamp", "desc"), limit(50));
+        const snapshot = await getDocs(q);
+        const entries = snapshot.docs.map((d) => d.data());
+        auditLogEmpty.classList.toggle("active", entries.length === 0);
+        auditLogList.innerHTML = entries
+          .map((entry) => {
+            const when = entry.timestamp?.toDate
+              ? entry.timestamp.toDate().toLocaleString("nl-BE", { dateStyle: "short", timeStyle: "short" })
+              : "—";
+            return `
+              <div class="audit-log-row">
+                <div class="audit-log-row-main">${escapeHtml(AUDIT_COLLECTION_LABELS[entry.collection] ?? entry.collection)} — ${escapeHtml(AUDIT_ACTION_LABELS[entry.action] ?? entry.action)}</div>
+                <div class="audit-log-row-meta">${when} — ${escapeHtml(entry.email ?? "?")} — ${escapeHtml(entry.docId ?? "")}</div>
+                <div class="audit-log-row-detail">${escapeHtml(formatAuditValue(entry.before))} → ${escapeHtml(formatAuditValue(entry.after))}</div>
+              </div>
+            `;
+          })
+          .join("");
+      } catch (err) {
+        console.error("Kon audit-log niet laden:", err);
+        auditLogList.innerHTML = '';
+        auditLogEmpty.textContent = "Kon de audit-log niet laden.";
+        auditLogEmpty.classList.add("active");
+      }
+    });
+
     function isoDateFromDate(d) {
       return toIsoDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
     }
@@ -1913,18 +2033,21 @@
       saveButton.innerHTML = '<span class="spinner"></span>Opslaan…';
       try {
         const data = { ...formValues, nights: nightsBetween(formValues.dateFrom, formValues.dateTo) };
+        const batch = writeBatch(db);
         if (editingBookingId) {
           const existing = bookings.find((b) => b.id === editingBookingId);
-          await setDoc(doc(db, "bookings", editingBookingId), {
-            ...data,
-            createdBy: existing.createdBy,
-            createdAt: existing.createdAt,
-          });
+          const afterValue = { ...data, createdBy: existing.createdBy, createdAt: existing.createdAt };
+          batch.set(doc(db, "bookings", editingBookingId), afterValue);
+          addAuditEntry(batch, "bookings", editingBookingId, "update", existing, afterValue);
+          await batch.commit();
           const index = bookings.findIndex((b) => b.id === editingBookingId);
           bookings[index] = { ...bookings[index], ...data };
         } else {
+          const ref = doc(collection(db, "bookings"));
           const created = { ...data, createdBy: auth.currentUser.email, createdAt: serverTimestamp() };
-          const ref = await addDoc(collection(db, "bookings"), created);
+          batch.set(ref, created);
+          addAuditEntry(batch, "bookings", ref.id, "create", null, created);
+          await batch.commit();
           bookings.push({ id: ref.id, ...created });
         }
         renderBookingsList();
@@ -1951,7 +2074,11 @@
       confirmButton.disabled = true;
       confirmButton.innerHTML = '<span class="spinner"></span>Verwijderen…';
       try {
-        await deleteDoc(doc(db, "bookings", deletingBookingId));
+        const existing = bookings.find((b) => b.id === deletingBookingId);
+        const batch = writeBatch(db);
+        batch.delete(doc(db, "bookings", deletingBookingId));
+        addAuditEntry(batch, "bookings", deletingBookingId, "delete", existing, null);
+        await batch.commit();
         bookings = bookings.filter((b) => b.id !== deletingBookingId);
         renderBookingsList();
         bookingDeleteDialog.close();
@@ -2109,7 +2236,10 @@
       }
 
       function writeItems(newItems) {
-        return setDoc(doc(db, "checklists", listId), { items: newItems });
+        const batch = writeBatch(db);
+        batch.set(doc(db, "checklists", listId), { items: newItems });
+        addAuditEntry(batch, "checklists", listId, "update", { items: currentItems }, { items: newItems });
+        return batch.commit();
       }
 
       onSnapshot(

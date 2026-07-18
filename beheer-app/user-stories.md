@@ -312,7 +312,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ## Epic 5 — Audit log
 
-### US-5.1 ☐ Audit log van alle CRUD-acties (M)
+### US-5.1 ☑ Audit log van alle CRUD-acties (M) — v0.25.0
 **Als** Johan of Tinneke **wil ik** kunnen nagaan wie wat wanneer heeft aangemaakt, gewijzigd of verwijderd **zodat** er een sluitend overzicht is bij twijfel over een prijs, boeking of instelling (bv. "wie heeft die prijs veranderd?").
 
 **Acceptatiecriteria:**
@@ -321,7 +321,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 - Given de audit-log, then is die enkel-toevoegen (append-only): niemand kan via de app een bestaand audit-record wijzigen of verwijderen, ook niet via de Firestore security rules.
 - Given Johan of Tinneke, then kan de audit-log geraadpleegd worden (minstens ruwe lijst, chronologisch of per document) — het exacte overzichtsscherm is nader te bepalen, de kern van deze story is dat de gegevens sluitend worden vastgelegd.
 
-**Technische notities:** aangezien Firestore-triggers (Cloud Functions) geen betrouwbare "wie"-informatie meekrijgen bij een documentwijziging, ligt de meest praktische aanpak voor deze client-only architectuur bij het wegschrijven van elk audit-record cliëntzijde, in dezelfde `writeBatch` als de eigenlijke data-wijziging (atomisch: of beide slagen, of geen van beide) — voorstel: collectie `auditLog/{id}` met velden `{ collection, docId, action: 'create'|'update'|'delete', email, timestamp: serverTimestamp(), before, after }`. Firestore security rules: `create` toegestaan voor de twee toegelaten e-mailadressen, `update`/`delete` nooit toegestaan (ook niet voor de eigenaar). Raakt in principe elke bestaande en toekomstige save/delete-handler in `index.html` — hoe eerder gebouwd, hoe minder er retroactief moet worden aangepast.
+**Technische notities:** `addAuditEntry(batch, collectionName, docId, action, before, after)` in `index.html` — elke save/delete-handler (prijs, bulk-prijs, prijzen-vorig-jaar-kopiëren, prijsformule, boeking opslaan/verwijderen, checklist-writeItems) bouwt zelf een `writeBatch` en voegt in dezelfde batch een `auditLog`-record toe (atomisch: of beide slagen, of geen van beide); `email` komt uit `auth.currentUser.email`, nooit uit een formulierveld. `syncedBlocks` wordt server-side gelogd vanuit `functions/index.js` (Admin SDK omzeilt Firestore rules toch, dus moet zelf de audit-plicht respecteren) — via `logic.diffSyncedBlocks`, want een sync-run doet altijd delete+recreate van élk blok voor een bron; zonder diff zou elke 3-uurlijkse sync ook alle ongewijzigde blokken opnieuw als delete+create loggen. Firestore rules herschreven van één blanket wildcard naar expliciete per-collectie `match`-blokken (rules zijn OR over alle matchende blokken, dus een brede wildcard-write zou de append-only-blokkade op `auditLog` ondermijnen): `create` op `auditLog` enkel toegestaan als `request.resource.data.email == request.auth.token.email`, `update`/`delete` altijd `false`. Raadplegen via een nieuwe "📜 Audit-log"-knop (Boekingen-tab): laatste 50 records, nieuwste eerst, ruwe `before → after`-weergave.
 
 ---
 

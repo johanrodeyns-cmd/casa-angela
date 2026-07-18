@@ -7,11 +7,11 @@ const {
   upcomingBookings, formatBookingsListForContact, formatBookingsListForGardener,
   findUnmatchedBookings, findUnmatchedSyncedBlocks, dayDisplayLabel, weekdayAbbreviation,
   sortChecklistItems, addChecklistItem, renameChecklistItem, removeChecklistItem,
-  toggleChecklistItem, resetChecklistItems, moveChecklistItem, escapeHtml,
+  toggleChecklistItem, resetChecklistItems, moveChecklistItem, escapeHtml, diffSyncedBlocks,
 } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.24.0');
+  assert.equal(getVersion(), '0.25.0');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -347,6 +347,31 @@ test('mergeSyncedBlocks assigns a deterministic id per source+uid', () => {
 test('mergeSyncedBlocks clears a source entirely when no events are parsed for it', () => {
   const result = mergeSyncedBlocks(EXISTING_SYNCED_BLOCKS, [], 'booking');
   assert.deepEqual(result, [EXISTING_SYNCED_BLOCKS[0]]);
+});
+
+test('diffSyncedBlocks reports nothing when nothing actually changed, even if ids were recreated', () => {
+  const before = [{ id: 'airbnb-x', source: 'airbnb', dateFrom: '2026-07-10', dateTo: '2026-07-14' }];
+  const after = [{ id: 'airbnb-x', source: 'airbnb', dateFrom: '2026-07-10', dateTo: '2026-07-14' }];
+  assert.deepEqual(diffSyncedBlocks(before, after), []);
+});
+
+test('diffSyncedBlocks reports a create for a block id that did not exist before', () => {
+  const after = [{ id: 'airbnb-new', source: 'airbnb', dateFrom: '2026-07-10', dateTo: '2026-07-14' }];
+  const result = diffSyncedBlocks([], after);
+  assert.deepEqual(result, [{ docId: 'airbnb-new', action: 'create', before: null, after: after[0] }]);
+});
+
+test('diffSyncedBlocks reports a delete for a block id that disappeared', () => {
+  const before = [{ id: 'airbnb-gone', source: 'airbnb', dateFrom: '2026-07-10', dateTo: '2026-07-14' }];
+  const result = diffSyncedBlocks(before, []);
+  assert.deepEqual(result, [{ docId: 'airbnb-gone', action: 'delete', before: before[0], after: null }]);
+});
+
+test('diffSyncedBlocks reports an update when the same id now has different dates', () => {
+  const before = [{ id: 'airbnb-x', source: 'airbnb', dateFrom: '2026-07-10', dateTo: '2026-07-14' }];
+  const after = [{ id: 'airbnb-x', source: 'airbnb', dateFrom: '2026-07-11', dateTo: '2026-07-14' }];
+  const result = diffSyncedBlocks(before, after);
+  assert.deepEqual(result, [{ docId: 'airbnb-x', action: 'update', before: before[0], after: after[0] }]);
 });
 
 test('buildOccupancyMap returns an empty map when there are no bookings or synced blocks', () => {
