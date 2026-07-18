@@ -1,4 +1,4 @@
-const VERSION = '0.23.2';
+const VERSION = '0.24.0';
 
 function getVersion() {
   return VERSION;
@@ -247,6 +247,53 @@ function weekdayAbbreviation(date) {
   return WEEKDAY_ABBREVIATIONS[new Date(date + 'T00:00:00').getDay()];
 }
 
+function sortChecklistItems(items) {
+  return [...items].sort((a, b) => a.order - b.order);
+}
+
+function addChecklistItem(items, id, text) {
+  const nextOrder = items.reduce((max, item) => Math.max(max, item.order), -1) + 1;
+  return [...items, { id, text, checked: false, order: nextOrder }];
+}
+
+function renameChecklistItem(items, id, text) {
+  return items.map((item) => (item.id === id ? { ...item, text } : item));
+}
+
+function removeChecklistItem(items, id) {
+  return items.filter((item) => item.id !== id);
+}
+
+function toggleChecklistItem(items, id) {
+  return items.map((item) => (item.id === id ? { ...item, checked: !item.checked } : item));
+}
+
+function resetChecklistItems(items) {
+  return items.map((item) => ({ ...item, checked: false }));
+}
+
+// direction: 'up' | 'down'. Swaps `order` with the adjacent item; a no-op at either end.
+function moveChecklistItem(items, id, direction) {
+  const sorted = sortChecklistItems(items);
+  const index = sorted.findIndex((item) => item.id === id);
+  const swapIndex = index + (direction === 'up' ? -1 : 1);
+  if (index === -1 || swapIndex < 0 || swapIndex >= sorted.length) return items;
+
+  const current = sorted[index];
+  const swapWith = sorted[swapIndex];
+  return items.map((item) => {
+    if (item.id === current.id) return { ...item, order: swapWith.order };
+    if (item.id === swapWith.id) return { ...item, order: current.order };
+    return item;
+  });
+}
+
+const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+
+function escapeHtml(str) {
+  return str.replace(/[&<>"']/g, (char) => HTML_ESCAPES[char]);
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice,
@@ -254,5 +301,7 @@ if (typeof module !== 'undefined' && module.exports) {
     parseIcalEvents, mergeSyncedBlocks, buildOccupancyMap, dayOccupancyState,
     upcomingBookings, formatBookingsListForContact, formatBookingsListForGardener,
     findUnmatchedBookings, findUnmatchedSyncedBlocks, dayDisplayLabel, weekdayAbbreviation,
+    sortChecklistItems, addChecklistItem, renameChecklistItem, removeChecklistItem,
+    toggleChecklistItem, resetChecklistItems, moveChecklistItem, escapeHtml,
   };
 }

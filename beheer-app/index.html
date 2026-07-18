@@ -752,6 +752,106 @@
     background: var(--terracotta-light);
     border-radius: 6px;
   }
+  .checklist-form-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .checklist-form-input {
+    flex: 1;
+    min-width: 140px;
+    box-sizing: border-box;
+    font-size: 1rem;
+    padding: 0.6rem;
+    min-height: 44px;
+    border: 1px solid var(--sand-dark);
+    border-radius: 6px;
+  }
+  .checklist-form-cancel {
+    display: none;
+  }
+  .checklist-form-row.editing .checklist-form-cancel {
+    display: inline-block;
+  }
+  .checklist-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--sand);
+    border-radius: 6px;
+    padding: 0.4rem;
+    margin-bottom: 0.5rem;
+  }
+  .checklist-item-check {
+    min-width: 44px;
+    min-height: 44px;
+    background: none;
+    color: var(--olive);
+    font-size: 1.4rem;
+    padding: 0;
+  }
+  .checklist-item.checked .checklist-item-check {
+    color: var(--terracotta);
+  }
+  .checklist-item-text {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+    background: none;
+    color: var(--charcoal);
+    padding: 0.4rem;
+    min-height: 44px;
+    font-size: 0.9rem;
+    word-break: break-word;
+    white-space: normal;
+  }
+  .checklist-item-text:hover {
+    background: none;
+    text-decoration: underline;
+  }
+  .checklist-item.checked .checklist-item-text {
+    text-decoration: line-through;
+    opacity: 0.6;
+  }
+  .checklist-item-moves {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+  .checklist-item-move {
+    min-width: 36px;
+    min-height: 30px;
+    background: none;
+    color: var(--azure);
+    font-size: 0.8rem;
+    padding: 0;
+  }
+  .checklist-item-move:disabled {
+    opacity: 0.2;
+    cursor: default;
+  }
+  .checklist-item-delete {
+    background: none;
+    color: var(--terracotta);
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 1.1rem;
+    padding: 0;
+  }
+  .checklist-item-delete:hover {
+    background: var(--terracotta-light);
+    border-radius: 6px;
+  }
+  .checklist-empty {
+    display: none;
+  }
+  .checklist-empty.active {
+    display: block;
+  }
+  .checklist-reset {
+    margin-top: 0.5rem;
+  }
 </style>
 </head>
 <body>
@@ -880,6 +980,15 @@
     </div>
   </dialog>
 
+  <dialog id="checklist-reset-dialog">
+    <h2>Lijst resetten?</h2>
+    <p>Alle items worden terug niet-afgevinkt. De items zelf blijven staan.</p>
+    <div class="dialog-actions">
+      <button id="checklist-reset-cancel" type="button" class="button-secondary">Annuleren</button>
+      <button id="checklist-reset-confirm" type="button">Resetten</button>
+    </div>
+  </dialog>
+
   <dialog id="day-detail-dialog">
     <h2 id="day-detail-title"></h2>
     <div id="day-detail-content"></div>
@@ -989,10 +1098,28 @@
           <p id="bookings-empty" class="empty-state">Nog geen boekingen.</p>
         </div>
         <div id="tab-checklist-aankomst" class="tab-panel">
-          <p>Checklist aankomst — binnenkort beschikbaar.</p>
+          <div class="checklist" data-list-id="aankomst">
+            <div class="checklist-form-row">
+              <input type="text" class="checklist-form-input" placeholder="Nieuw item toevoegen...">
+              <button type="button" class="checklist-form-save">+ Toevoegen</button>
+              <button type="button" class="checklist-form-cancel button-secondary">Annuleren</button>
+            </div>
+            <div class="checklist-items"></div>
+            <p class="checklist-empty empty-state">Nog geen items — voeg er hierboven een toe.</p>
+            <button type="button" class="checklist-reset button-secondary full-width">Reset lijst</button>
+          </div>
         </div>
         <div id="tab-checklist-vertrek" class="tab-panel">
-          <p>Checklist vertrek — binnenkort beschikbaar.</p>
+          <div class="checklist" data-list-id="vertrek">
+            <div class="checklist-form-row">
+              <input type="text" class="checklist-form-input" placeholder="Nieuw item toevoegen...">
+              <button type="button" class="checklist-form-save">+ Toevoegen</button>
+              <button type="button" class="checklist-form-cancel button-secondary">Annuleren</button>
+            </div>
+            <div class="checklist-items"></div>
+            <p class="checklist-empty empty-state">Nog geen items — voeg er hierboven een toe.</p>
+            <button type="button" class="checklist-reset button-secondary full-width">Reset lijst</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1021,6 +1148,7 @@
       addDoc,
       deleteDoc,
       serverTimestamp,
+      onSnapshot,
     } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
     import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-functions.js";
 
@@ -1036,6 +1164,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.24.0", date: "2026-07-18", description: "Checklist aankomst/vertrek werkt nu volledig: items toevoegen, hernoemen, verwijderen, afvinken, herordenen (▲▼) en de lijst resetten. Wijzigingen zijn meteen zichtbaar bij de andere gebruiker." },
       { version: "0.23.2", date: "2026-07-18", description: "Bugfix Synchronisatie-overzicht: een eigen verblijf ingevoerd als 'Rechtstreeks' (bv. Tinneke&Johan) verscheen tóch als 'unmatched' Airbnb-blok, ook al kwamen de datums exact overeen. Gesynchroniseerde blokken matchen nu enkel nog op datum, niet meer op platform." },
       { version: "0.23.1", date: "2026-07-18", description: "Actieknoppen boven Boekingen ogen rommelig op mobiel opgeruimd: '+ Nieuwe boeking' staat nu als duidelijke hoofdknop bovenaan, de 4 overige knoppen staan eronder netjes even groot in een 2×2-rooster." },
       { version: "0.23.0", date: "2026-07-18", description: "De 5 kalenders tonen kleuring/namen nu enkel op basis van boekingen uit de app, niet meer van gesynchroniseerde iCal-blokken. Zo kan verouderde syncdata de kalender niet meer vervuilen. Mismatches check je manueel via het Synchronisatie-overzicht; tikken op een dag toont een niet-gekoppeld blok nog steeds." },
@@ -1930,6 +2059,128 @@
       }
     });
 
+    const checklistResetDialog = document.getElementById("checklist-reset-dialog");
+    let pendingChecklistReset = null;
+
+    document.getElementById("checklist-reset-cancel").addEventListener("click", () => checklistResetDialog.close());
+    document.getElementById("checklist-reset-confirm").addEventListener("click", () => {
+      if (pendingChecklistReset) pendingChecklistReset();
+      checklistResetDialog.close();
+    });
+
+    function setupChecklist(listId) {
+      const root = document.querySelector(`.checklist[data-list-id="${listId}"]`);
+      const itemsEl = root.querySelector(".checklist-items");
+      const emptyEl = root.querySelector(".checklist-empty");
+      const formRow = root.querySelector(".checklist-form-row");
+      const input = root.querySelector(".checklist-form-input");
+      const saveBtn = root.querySelector(".checklist-form-save");
+      const cancelBtn = root.querySelector(".checklist-form-cancel");
+      const resetBtn = root.querySelector(".checklist-reset");
+
+      let currentItems = [];
+      let editingId = null;
+
+      function exitEditMode() {
+        editingId = null;
+        input.value = "";
+        saveBtn.textContent = "+ Toevoegen";
+        formRow.classList.remove("editing");
+      }
+
+      function render() {
+        const sorted = sortChecklistItems(currentItems);
+        emptyEl.classList.toggle("active", sorted.length === 0);
+        itemsEl.innerHTML = sorted
+          .map(
+            (item, index) => `
+              <div class="checklist-item${item.checked ? " checked" : ""}" data-id="${item.id}">
+                <button type="button" class="checklist-item-check" data-action="toggle" aria-label="Afvinken">${item.checked ? "☑" : "☐"}</button>
+                <button type="button" class="checklist-item-text" data-action="edit">${escapeHtml(item.text)}</button>
+                <div class="checklist-item-moves">
+                  <button type="button" class="checklist-item-move" data-action="up" aria-label="Omhoog" ${index === 0 ? "disabled" : ""}>▲</button>
+                  <button type="button" class="checklist-item-move" data-action="down" aria-label="Omlaag" ${index === sorted.length - 1 ? "disabled" : ""}>▼</button>
+                </div>
+                <button type="button" class="checklist-item-delete" data-action="delete" aria-label="Verwijderen">🗑</button>
+              </div>
+            `
+          )
+          .join("");
+      }
+
+      function writeItems(newItems) {
+        return setDoc(doc(db, "checklists", listId), { items: newItems });
+      }
+
+      onSnapshot(
+        doc(db, "checklists", listId),
+        (snap) => {
+          currentItems = snap.exists() ? snap.data().items || [] : [];
+          render();
+        },
+        (err) => console.error(`Kon checklist ${listId} niet laden:`, err)
+      );
+
+      itemsEl.addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-action]");
+        if (!btn) return;
+        const id = btn.closest(".checklist-item").dataset.id;
+        const action = btn.dataset.action;
+        if (action === "toggle") {
+          writeItems(toggleChecklistItem(currentItems, id)).catch((err) => console.error("Kon item niet afvinken:", err));
+        } else if (action === "delete") {
+          if (editingId === id) exitEditMode();
+          writeItems(removeChecklistItem(currentItems, id)).catch((err) => console.error("Kon item niet verwijderen:", err));
+        } else if (action === "up" || action === "down") {
+          writeItems(moveChecklistItem(currentItems, id, action)).catch((err) => console.error("Kon item niet verplaatsen:", err));
+        } else if (action === "edit") {
+          const item = currentItems.find((i) => i.id === id);
+          if (!item) return;
+          editingId = id;
+          input.value = item.text;
+          saveBtn.textContent = "Opslaan";
+          formRow.classList.add("editing");
+          input.focus();
+        }
+      });
+
+      saveBtn.addEventListener("click", () => {
+        const text = input.value.trim();
+        if (!text) return;
+        const write = editingId
+          ? writeItems(renameChecklistItem(currentItems, editingId, text))
+          : writeItems(addChecklistItem(currentItems, crypto.randomUUID(), text));
+        write.catch((err) => console.error("Kon item niet opslaan:", err));
+        exitEditMode();
+      });
+
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          saveBtn.click();
+        } else if (e.key === "Escape") {
+          exitEditMode();
+        }
+      });
+
+      cancelBtn.addEventListener("click", exitEditMode);
+
+      resetBtn.addEventListener("click", () => {
+        pendingChecklistReset = () => {
+          writeItems(resetChecklistItems(currentItems)).catch((err) => console.error("Kon lijst niet resetten:", err));
+        };
+        checklistResetDialog.showModal();
+      });
+    }
+
+    let checklistsStarted = false;
+    function startChecklists() {
+      if (checklistsStarted) return;
+      checklistsStarted = true;
+      setupChecklist("aankomst");
+      setupChecklist("vertrek");
+    }
+
     // signOut() after a denied login re-fires onAuthStateChanged(null); this flag
     // stops that from bouncing the user back to the login screen automatically.
     let denied = false;
@@ -1977,6 +2228,7 @@
       loadBookings().catch((err) => console.error("Kon boekingen niet laden:", err));
       loadSyncedBlocks().catch((err) => console.error("Kon gesynchroniseerde blokken niet laden:", err));
       loadIcalFeeds().catch((err) => console.error("Kon iCal-instellingen niet laden:", err));
+      startChecklists();
     });
   </script>
 </body>

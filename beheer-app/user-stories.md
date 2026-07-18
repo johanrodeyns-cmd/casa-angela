@@ -273,7 +273,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ## Epic 4 — Checklists
 
-### US-4.1 ☐ Checklist-items beheren (CRUD) (M)
+### US-4.1 ☑ Checklist-items beheren (CRUD) (M) — v0.24.0
 **Als** Johan of Tinneke **wil ik** zelf to-do's toevoegen, hernoemen en verwijderen in een aankomst- en een vertrek-checklist **zodat** de lijst aan onze eigen gewoontes aangepast blijft.
 
 **Acceptatiecriteria:**
@@ -281,9 +281,11 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 - Given een gedeelde checklist (niet per persoon), then zien Johan en Tinneke exact dezelfde lijst en status.
 - Given een wijziging door één van beiden, then is deze meteen zichtbaar voor de andere (Firestore realtime).
 
+**Technische notities:** één gedeelde `setupChecklist(listId)` in `index.html` voor beide lijsten, `onSnapshot` op `checklists/{aankomst|vertrek}` voor de realtime-sync (i.p.v. de eenmalige `getDocs` die de rest van de app gebruikt). Toevoegen/hernoemen delen één invoerveld bovenaan de lijst (tikken op een item schakelt naar 'bewerk'-modus) i.p.v. een aparte dialoog per item. Pure functies in `logic.js`: `sortChecklistItems`, `addChecklistItem`, `renameChecklistItem`, `removeChecklistItem`, `escapeHtml` (voorkomt HTML/XSS via de vrije tekstinvoer).
+
 ---
 
-### US-4.2 ☐ Afvinken en resetten (M)
+### US-4.2 ☑ Afvinken en resetten (M) — v0.24.0
 **Als** Johan of Tinneke **wil ik** items kunnen afvinken via mijn GSM en de lijst kunnen resetten voor een volgend bezoek **zodat** ik telkens opnieuw met een lege lijst start.
 
 **Acceptatiecriteria:**
@@ -291,14 +293,20 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 - Given een knop "Reset", when ik erop klik (met bevestiging), then worden alle items in die checklist teruggezet naar niet-afgevinkt, zonder de items zelf te verwijderen.
 - Given een smal (mobiel) scherm, then zijn de vink-tapgebieden groot genoeg om vlot af te vinken zonder verkeerde items te raken.
 
+**Technische notities:** `logic.toggleChecklistItem`/`logic.resetChecklistItems`, vink-tapgebied 44×44px. Reset gebruikt een bevestigingsdialoog (`#checklist-reset-dialog`), zelfde patroon als het verwijderen van een boeking.
+
 ---
 
-### US-4.3 ☐ Items herordenen (S)
+### US-4.3 ☑ Items herordenen (S) — v0.24.0
 **Als** Johan of Tinneke **wil ik** de volgorde van checklist-items kunnen aanpassen **zodat** de lijst de logische volgorde van onze routine volgt (bv. eerst zwembad, dan luiken).
 
 **Acceptatiecriteria:**
 - Given een checklist, then kan ik items herordenen (slepen, of pijltjes omhoog/omlaag als drag-and-drop op mobiel lastig blijkt).
 - Given een nieuwe volgorde, then wordt deze opgeslagen in het `order`-veld per item en blijft behouden na herladen.
+
+**Technische notities:** pijltjes omhoog/omlaag (geen drag-and-drop — betrouwbaarder op mobiel), `logic.moveChecklistItem(items, id, 'up'|'down')` wisselt het `order`-veld met de buur in sorteervolgorde, uitgeschakeld aan de randen van de lijst.
+
+> US-4.1, 4.2 en 4.3 zijn samen als één geheel gebouwd en opgeleverd (niet los deploybaar — een lijst zonder toevoegen heeft niets om af te vinken), vandaar alle drie dezelfde versie.
 
 ---
 

@@ -6,10 +6,12 @@ const {
   parseIcalEvents, mergeSyncedBlocks, buildOccupancyMap, dayOccupancyState,
   upcomingBookings, formatBookingsListForContact, formatBookingsListForGardener,
   findUnmatchedBookings, findUnmatchedSyncedBlocks, dayDisplayLabel, weekdayAbbreviation,
+  sortChecklistItems, addChecklistItem, renameChecklistItem, removeChecklistItem,
+  toggleChecklistItem, resetChecklistItems, moveChecklistItem, escapeHtml,
 } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.23.2');
+  assert.equal(getVersion(), '0.24.0');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -652,4 +654,120 @@ test('weekdayAbbreviation matches the app-wide Ma/Di/Wo/Do/Vr/Za/Zo convention',
   assert.equal(weekdayAbbreviation('2026-07-10'), 'Vr');
   assert.equal(weekdayAbbreviation('2026-07-11'), 'Za');
   assert.equal(weekdayAbbreviation('2026-07-12'), 'Zo');
+});
+
+test('sortChecklistItems returns items ordered by the order field ascending', () => {
+  const items = [
+    { id: 'b', text: 'Beddengoed', checked: false, order: 2 },
+    { id: 'a', text: 'Zwembad', checked: false, order: 0 },
+    { id: 'c', text: 'Luiken', checked: false, order: 1 },
+  ];
+  assert.deepEqual(sortChecklistItems(items).map((i) => i.id), ['a', 'c', 'b']);
+});
+
+test('sortChecklistItems does not mutate the original array', () => {
+  const items = [{ id: 'a', text: 'X', checked: false, order: 1 }, { id: 'b', text: 'Y', checked: false, order: 0 }];
+  const original = items.map((i) => ({ ...i }));
+  sortChecklistItems(items);
+  assert.deepEqual(items, original);
+});
+
+test('addChecklistItem appends a new unchecked item with the next order value', () => {
+  const items = [{ id: 'a', text: 'Zwembad', checked: false, order: 0 }];
+  const result = addChecklistItem(items, 'b', 'Luiken sluiten');
+  assert.equal(result.length, 2);
+  assert.deepEqual(result[1], { id: 'b', text: 'Luiken sluiten', checked: false, order: 1 });
+});
+
+test('addChecklistItem starts order at 0 for the first item in an empty list', () => {
+  assert.deepEqual(addChecklistItem([], 'a', 'Zwembad checken'), [
+    { id: 'a', text: 'Zwembad checken', checked: false, order: 0 },
+  ]);
+});
+
+test('addChecklistItem does not mutate the original items array', () => {
+  const items = [{ id: 'a', text: 'X', checked: false, order: 0 }];
+  addChecklistItem(items, 'b', 'Y');
+  assert.equal(items.length, 1);
+});
+
+test('renameChecklistItem updates only the matching item text, leaving others untouched', () => {
+  const items = [
+    { id: 'a', text: 'Zwembad', checked: false, order: 0 },
+    { id: 'b', text: 'Luiken', checked: true, order: 1 },
+  ];
+  const result = renameChecklistItem(items, 'b', 'Luiken sluiten');
+  assert.equal(result[0].text, 'Zwembad');
+  assert.equal(result[1].text, 'Luiken sluiten');
+  assert.equal(result[1].checked, true);
+});
+
+test('removeChecklistItem drops the matching item and keeps the rest', () => {
+  const items = [
+    { id: 'a', text: 'Zwembad', checked: false, order: 0 },
+    { id: 'b', text: 'Luiken', checked: false, order: 1 },
+  ];
+  assert.deepEqual(removeChecklistItem(items, 'a').map((i) => i.id), ['b']);
+});
+
+test('toggleChecklistItem flips checked on the matching item only, and flips back the second time', () => {
+  const items = [
+    { id: 'a', text: 'Zwembad', checked: false, order: 0 },
+    { id: 'b', text: 'Luiken', checked: false, order: 1 },
+  ];
+  const toggled = toggleChecklistItem(items, 'a');
+  assert.equal(toggled[0].checked, true);
+  assert.equal(toggled[1].checked, false);
+  assert.equal(toggleChecklistItem(toggled, 'a')[0].checked, false);
+});
+
+test('resetChecklistItems sets checked to false on every item without removing any', () => {
+  const items = [
+    { id: 'a', text: 'Zwembad', checked: true, order: 0 },
+    { id: 'b', text: 'Luiken', checked: true, order: 1 },
+  ];
+  const result = resetChecklistItems(items);
+  assert.equal(result.length, 2);
+  assert.ok(result.every((i) => i.checked === false));
+});
+
+test('moveChecklistItem swaps order with the previous item when moving up', () => {
+  const items = [
+    { id: 'a', text: 'Zwembad', checked: false, order: 0 },
+    { id: 'b', text: 'Luiken', checked: false, order: 1 },
+  ];
+  const result = sortChecklistItems(moveChecklistItem(items, 'b', 'up'));
+  assert.deepEqual(result.map((i) => i.id), ['b', 'a']);
+});
+
+test('moveChecklistItem swaps order with the next item when moving down', () => {
+  const items = [
+    { id: 'a', text: 'Zwembad', checked: false, order: 0 },
+    { id: 'b', text: 'Luiken', checked: false, order: 1 },
+  ];
+  const result = sortChecklistItems(moveChecklistItem(items, 'a', 'down'));
+  assert.deepEqual(result.map((i) => i.id), ['b', 'a']);
+});
+
+test('moveChecklistItem is a no-op when the item is already at the top and moving up', () => {
+  const items = [
+    { id: 'a', text: 'Zwembad', checked: false, order: 0 },
+    { id: 'b', text: 'Luiken', checked: false, order: 1 },
+  ];
+  assert.deepEqual(moveChecklistItem(items, 'a', 'up'), items);
+});
+
+test('moveChecklistItem is a no-op when the item is already at the bottom and moving down', () => {
+  const items = [
+    { id: 'a', text: 'Zwembad', checked: false, order: 0 },
+    { id: 'b', text: 'Luiken', checked: false, order: 1 },
+  ];
+  assert.deepEqual(moveChecklistItem(items, 'b', 'down'), items);
+});
+
+test('escapeHtml escapes the 5 HTML-sensitive characters', () => {
+  assert.equal(
+    escapeHtml(`<script>alert("x")</script> & 'quotes'`),
+    '&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt; &amp; &#39;quotes&#39;'
+  );
 });
