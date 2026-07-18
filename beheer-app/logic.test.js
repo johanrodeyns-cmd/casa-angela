@@ -9,7 +9,7 @@ const {
 } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.22.0');
+  assert.equal(getVersion(), '0.22.1');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -417,6 +417,27 @@ test('dayOccupancyState works correctly at the first and last day of a month', (
   assert.equal(dayOccupancyState('2026-07-01', map), 'vertrek');
   const map2 = buildOccupancyMap([{ id: 'b2', dateFrom: '2026-07-31', dateTo: '2026-08-03', name: 'Mieke' }], []);
   assert.equal(dayOccupancyState('2026-07-31', map2), 'aankomst');
+});
+
+test("dayOccupancyState lets a booking's own boundary win over a stale synced block covering the same range", () => {
+  const bookings = [
+    { id: 'b1', dateFrom: '2026-07-09', dateTo: '2026-07-19', name: 'Paul Collier' },
+    { id: 'b2', dateFrom: '2026-07-20', dateTo: '2026-07-25', name: 'Klakel Boras' },
+  ];
+  // Stale synced block from an earlier sync (e.g. host later changed the Airbnb calendar);
+  // it no longer matches either booking but still overlaps their boundary days.
+  const syncedBlocks = [{ id: 'airbnb-stale', source: 'airbnb', dateFrom: '2026-07-16', dateTo: '2026-07-20' }];
+  const map = buildOccupancyMap(bookings, syncedBlocks);
+  assert.equal(dayOccupancyState('2026-07-19', map), 'vertrek');
+  assert.equal(dayOccupancyState('2026-07-20', map), 'aankomst');
+});
+
+test('dayOccupancyState still classifies an unmatched synced block on its own when no booking covers that date', () => {
+  const syncedBlocks = [{ id: 'airbnb-x', source: 'airbnb', dateFrom: '2026-08-01', dateTo: '2026-08-05' }];
+  const map = buildOccupancyMap([], syncedBlocks);
+  assert.equal(dayOccupancyState('2026-08-01', map), 'aankomst');
+  assert.equal(dayOccupancyState('2026-08-03', map), 'bezet');
+  assert.equal(dayOccupancyState('2026-08-05', map), 'vertrek');
 });
 
 const UPCOMING_BOOKINGS = [

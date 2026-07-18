@@ -252,6 +252,8 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 **Technische notities:** `dayOccupancyState(date, occupancyMap)` in `logic.js` retourneert een van `'vrij' | 'aankomst' | 'vertrek' | 'bezet'`, puur en getest op grensgevallen (eerste/laatste dag van de maand, opeenvolgende boekingen).
 
+> Vervolg in v0.22.1: bugfix — een verouderd/niet-gekoppeld gesynchroniseerd blok (bv. stale Airbnb-sync) kon de aankomst/vertrek-classificatie van een echte boeking overschrijven zodra hun datums overlapten. `dayOccupancyState` geeft nu voorrang aan `booking`-entries op een dag; `syncedBlock`-entries tellen alleen mee als er géén boeking die dag dekt.
+
 ---
 
 ### US-3.3 ☑ Doorklikken naar boekingsdetails (M) — v0.17.0

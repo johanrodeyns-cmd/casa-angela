@@ -1,4 +1,4 @@
-const VERSION = '0.22.0';
+const VERSION = '0.22.1';
 
 function getVersion() {
   return VERSION;
@@ -149,11 +149,17 @@ function dayOccupancyState(date, occupancyMap) {
   const entries = occupancyMap[date] || [];
   if (entries.length === 0) return 'vrij';
 
-  const isFullDay = entries.some((e) => e.dateFrom !== date && e.dateTo !== date);
+  // Bookings are manually verified and authoritative; a synced block can be stale
+  // (host changed the external calendar since the last sync) so it must never override
+  // a booking's own boundary classification for a date the booking already covers.
+  const bookingEntries = entries.filter((e) => e.type === 'booking');
+  const relevantEntries = bookingEntries.length > 0 ? bookingEntries : entries;
+
+  const isFullDay = relevantEntries.some((e) => e.dateFrom !== date && e.dateTo !== date);
   if (isFullDay) return 'bezet';
 
-  const hasArrival = entries.some((e) => e.dateFrom === date && e.dateTo !== date);
-  const hasDeparture = entries.some((e) => e.dateTo === date && e.dateFrom !== date);
+  const hasArrival = relevantEntries.some((e) => e.dateFrom === date && e.dateTo !== date);
+  const hasDeparture = relevantEntries.some((e) => e.dateTo === date && e.dateFrom !== date);
   if (hasArrival && hasDeparture) return 'bezet'; // same-day turnover: both halves covered
   if (hasArrival) return 'aankomst';
   if (hasDeparture) return 'vertrek';
