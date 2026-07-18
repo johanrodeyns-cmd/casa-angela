@@ -183,7 +183,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
-### US-2.4 ☐ Kopiëren naar klembord voor de contactpersoon ter plaatse (M)
+### US-2.4 ☑ Kopiëren naar klembord voor de contactpersoon ter plaatse (M) — v0.18.0
 **Als** Johan of Tinneke **wil ik** een overzicht van boekingen als tekst naar het klembord kunnen kopiëren **zodat** ik het direct kan plakken in een WhatsApp-bericht naar onze contactpersoon ter plaatse, zonder inzage in prijzen.
 
 **Acceptatiecriteria:**

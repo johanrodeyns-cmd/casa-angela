@@ -542,7 +542,8 @@
   dialog#booking-dialog,
   dialog#booking-delete-dialog,
   dialog#ical-settings-dialog,
-  dialog#day-detail-dialog {
+  dialog#day-detail-dialog,
+  dialog#copy-contact-dialog {
     border: none;
     border-radius: 8px;
     padding: 1.5rem;
@@ -555,17 +556,46 @@
   dialog#booking-dialog::backdrop,
   dialog#booking-delete-dialog::backdrop,
   dialog#ical-settings-dialog::backdrop,
-  dialog#day-detail-dialog::backdrop {
+  dialog#day-detail-dialog::backdrop,
+  dialog#copy-contact-dialog::backdrop {
     background: rgba(44, 44, 44, 0.5);
   }
   dialog#booking-dialog h2,
   dialog#booking-delete-dialog h2,
   dialog#ical-settings-dialog h2,
-  dialog#day-detail-dialog h2 {
+  dialog#day-detail-dialog h2,
+  dialog#copy-contact-dialog h2 {
     margin-top: 0;
     color: var(--terracotta);
     font-size: 1.1rem;
+  }
+  #day-detail-title {
     text-transform: capitalize;
+  }
+  dialog#copy-contact-dialog p {
+    font-size: 0.85rem;
+    opacity: 0.8;
+  }
+  dialog#copy-contact-dialog label {
+    display: block;
+    font-size: 0.85rem;
+    margin: 0.75rem 0 0.25rem;
+  }
+  dialog#copy-contact-dialog input {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 1rem;
+    padding: 0.6rem;
+    min-height: 44px;
+    border: 1px solid var(--sand-dark);
+    border-radius: 6px;
+    font-family: inherit;
+  }
+  #copy-contact-empty {
+    display: none;
+  }
+  #copy-contact-empty.active {
+    display: block;
   }
   .day-detail-row {
     display: block;
@@ -819,6 +849,27 @@
     </div>
   </dialog>
 
+  <dialog id="copy-contact-dialog">
+    <h2>Kopiëren voor contactpersoon</h2>
+    <p>Kopieert datum, nachten, naam, taal, telefoon, aantal personen en opmerking — zonder klantprijs.</p>
+    <div class="form-row">
+      <div>
+        <label for="copy-contact-from">Van</label>
+        <input id="copy-contact-from" type="date">
+      </div>
+      <div>
+        <label for="copy-contact-to">Tot</label>
+        <input id="copy-contact-to" type="date">
+      </div>
+    </div>
+    <p id="copy-contact-empty" class="empty-state"></p>
+    <p id="copy-contact-feedback" class="warning-message"></p>
+    <div class="dialog-actions">
+      <button id="copy-contact-cancel" type="button" class="button-secondary">Annuleren</button>
+      <button id="copy-contact-copy" type="button">📋 Kopieer</button>
+    </div>
+  </dialog>
+
   <dialog id="ical-settings-dialog">
     <h2>iCal-koppelingen</h2>
     <p>Bezette periodes van Airbnb en Booking.com worden automatisch overgenomen als geblokkeerde dagen (geen naam of prijs) — vul hier de exportlinks in.</p>
@@ -891,6 +942,7 @@
         <div id="tab-boekingen" class="tab-panel">
           <div class="cal-toolbar">
             <button id="booking-new" type="button">+ Nieuwe boeking</button>
+            <button id="copy-contact-open" type="button">📋 Kopieer voor contactpersoon</button>
             <button id="ical-settings-open" type="button">🔗 iCal-koppelingen</button>
           </div>
           <div id="bookings-list"></div>
@@ -944,6 +996,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.18.0", date: "2026-07-18", description: "Boekingen kopiëren naar klembord voor de contactpersoon (te plakken in WhatsApp)." },
       { version: "0.17.0", date: "2026-07-18", description: "Doorklikken naar boekingsdetails vanuit de Beschikbaarheidskalender." },
       { version: "0.16.0", date: "2026-07-18", description: "Halve-dag weergave bij aankomst/vertrek in de Beschikbaarheidskalender." },
       { version: "0.15.0", date: "2026-07-18", description: "Beschikbaarheid als 5e kalendermodus: boekingen en gesynchroniseerde blokken zichtbaar." },
@@ -1515,6 +1568,58 @@
 
       dayDetailDialog.showModal();
     }
+
+    function isoDateFromDate(d) {
+      return toIsoDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
+    }
+
+    const copyContactDialog = document.getElementById("copy-contact-dialog");
+    const copyContactFrom = document.getElementById("copy-contact-from");
+    const copyContactTo = document.getElementById("copy-contact-to");
+    const copyContactEmpty = document.getElementById("copy-contact-empty");
+    const copyContactFeedback = document.getElementById("copy-contact-feedback");
+    const copyContactButton = document.getElementById("copy-contact-copy");
+
+    document.getElementById("copy-contact-open").addEventListener("click", () => {
+      const today = new Date();
+      const future = new Date(today);
+      future.setDate(future.getDate() + 90);
+      copyContactFrom.value = isoDateFromDate(today);
+      copyContactTo.value = isoDateFromDate(future);
+      copyContactEmpty.classList.remove("active");
+      copyContactFeedback.classList.remove("active");
+      copyContactDialog.showModal();
+    });
+
+    document.getElementById("copy-contact-cancel").addEventListener("click", () => copyContactDialog.close());
+
+    copyContactButton.addEventListener("click", async () => {
+      copyContactEmpty.classList.remove("active");
+      copyContactFeedback.classList.remove("active");
+
+      const filtered = bookingsInPeriod(bookings, copyContactFrom.value, copyContactTo.value);
+      const text = formatBookingsListForContact(filtered, formatBookingDateRange);
+      if (text === null) {
+        copyContactEmpty.textContent = "Geen boekingen in deze periode.";
+        copyContactEmpty.classList.add("active");
+        return;
+      }
+
+      copyContactButton.disabled = true;
+      copyContactButton.innerHTML = '<span class="spinner"></span>Kopiëren…';
+      try {
+        const header = `📋 Boekingen Casa Angela (${formatBookingDateRange(copyContactFrom.value, copyContactTo.value)})`;
+        await navigator.clipboard.writeText(`${header}\n\n${text}`);
+        copyContactFeedback.textContent = "Gekopieerd naar klembord.";
+        copyContactFeedback.classList.add("active");
+      } catch (err) {
+        copyContactFeedback.textContent = "Kopiëren mislukt. Probeer opnieuw.";
+        copyContactFeedback.classList.add("active");
+      } finally {
+        copyContactButton.disabled = false;
+        copyContactButton.textContent = "📋 Kopieer";
+      }
+    });
 
     function openBookingDialog(booking) {
       editingBookingId = booking ? booking.id : null;

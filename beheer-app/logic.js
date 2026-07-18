@@ -1,4 +1,4 @@
-const VERSION = '0.17.0';
+const VERSION = '0.18.0';
 
 function getVersion() {
   return VERSION;
@@ -160,10 +160,38 @@ function dayOccupancyState(date, occupancyMap) {
   return 'bezet'; // fallback: a same-day dateFrom===dateTo entry
 }
 
+function bookingsInPeriod(bookings, periodFrom, periodTo) {
+  return bookings
+    .filter((b) => b.dateFrom <= periodTo && b.dateTo >= periodFrom)
+    .sort((a, b) => a.dateFrom.localeCompare(b.dateFrom));
+}
+
+// formatDateRange(dateFrom, dateTo) is injected so this stays locale-agnostic —
+// the caller (index.html) supplies the actual nl-BE date formatting.
+function formatBookingsListForContact(bookings, formatDateRange) {
+  if (bookings.length === 0) return null;
+  return bookings
+    .map((b) => {
+      const nights = nightsBetween(b.dateFrom, b.dateTo);
+      const nameLine = b.language ? `👤 ${b.name} (${b.language})` : `👤 ${b.name}`;
+      const adults = b.adultsCount ?? 0;
+      const children = b.childrenCount ?? 0;
+      return [
+        `📅 ${formatDateRange(b.dateFrom, b.dateTo)} (${nights} ${nights === 1 ? 'nacht' : 'nachten'})`,
+        nameLine,
+        `📞 ${b.phone || '—'}`,
+        `👥 ${adults} ${adults === 1 ? 'volwassene' : 'volwassenen'}, ${children} ${children === 1 ? 'kind' : 'kinderen'}`,
+        `📝 ${b.remark || '—'}`,
+      ].join('\n');
+    })
+    .join('\n\n');
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice,
     getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking,
     parseIcalEvents, mergeSyncedBlocks, buildOccupancyMap, dayOccupancyState,
+    bookingsInPeriod, formatBookingsListForContact,
   };
 }
