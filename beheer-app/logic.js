@@ -1,4 +1,4 @@
-const VERSION = '0.14.1';
+const VERSION = '0.15.0';
 
 function getVersion() {
   return VERSION;
@@ -130,10 +130,25 @@ function mergeSyncedBlocks(existingBlocks, parsedEvents, source) {
   return [...otherSourceBlocks, ...newSourceBlocks];
 }
 
+function buildOccupancyMap(bookings, syncedBlocks) {
+  const map = {};
+  const addEntries = (items, type) => {
+    items.forEach((item) => {
+      getDateRange(item.dateFrom, item.dateTo).forEach((date) => {
+        if (!map[date]) map[date] = [];
+        map[date].push({ type, ...item });
+      });
+    });
+  };
+  addEntries(bookings, 'booking');
+  addEntries(syncedBlocks, 'syncedBlock');
+  return map;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice,
     getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking,
-    parseIcalEvents, mergeSyncedBlocks,
+    parseIcalEvents, mergeSyncedBlocks, buildOccupancyMap,
   };
 }

@@ -242,7 +242,7 @@
   }
   @media (min-width: 480px) {
     .price-mode-toggle {
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(5, 1fr);
     }
   }
   .price-mode-btn {
@@ -258,6 +258,20 @@
   .price-mode-btn.active {
     background: var(--terracotta);
     color: var(--cream);
+  }
+  .price-mode-btn[data-mode="availability"].active {
+    background: var(--azure);
+    color: var(--cream);
+  }
+  .cal-day.occupied {
+    background: var(--terracotta);
+  }
+  .cal-day.occupied .cal-day-num,
+  .cal-day.occupied .cal-day-price {
+    color: var(--cream);
+  }
+  .cal-day.free .cal-day-price {
+    color: var(--olive-dark);
   }
   #mode-hint {
     display: none;
@@ -808,6 +822,7 @@
             <button type="button" class="price-mode-btn" data-mode="booking">Booking.com</button>
             <button type="button" class="price-mode-btn" data-mode="direct">Rechtstreeks</button>
             <button type="button" class="price-mode-btn" data-mode="friends">Vrienden</button>
+            <button type="button" class="price-mode-btn" data-mode="availability">Beschikbaarheid</button>
           </div>
           <p id="mode-hint">Wijzig via de Airbnb-prijs of pas de formule aan.</p>
           <p id="selection-hint">Tik een startdag en een einddag om een periode te selecteren.</p>
@@ -878,6 +893,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.15.0", date: "2026-07-18", description: "Beschikbaarheid als 5e kalendermodus: boekingen en gesynchroniseerde blokken zichtbaar." },
       { version: "0.14.1", date: "2026-07-18", description: "Bugfix: 'Nu synchroniseren' sloeg de iCal-URL niet eerst op." },
       { version: "0.14.0", date: "2026-07-18", description: "Automatische iCal-synchronisatie met Airbnb en Booking.com." },
       { version: "0.13.1", date: "2026-07-18", description: "Boekingsformulier: 'Prijs' hernoemd naar 'Klantprijs'." },
@@ -967,15 +983,29 @@
     function renderCalendar() {
       calMonthLabel.textContent = `${MONTH_NAMES[calMonth - 1]} ${calYear}`;
       const weeks = buildMonthGrid(calYear, calMonth);
+      const occupancyMap = priceMode === "availability" ? buildOccupancyMap(bookings, syncedBlocks) : null;
       calGrid.innerHTML = weeks
         .flat()
         .map((date) => {
           if (!date) return '<span class="cal-day cal-day-empty"></span>';
           const day = Number(date.slice(8, 10));
+          const selectedClass = date === selectionStart ? " selected" : "";
+
+          if (priceMode === "availability") {
+            const occupied = (occupancyMap[date] || []).length > 0;
+            const stateClass = occupied ? "occupied" : "free";
+            const stateLabel = occupied ? "Bezet" : "Vrij";
+            return `
+              <button type="button" class="cal-day ${stateClass}${selectedClass}" data-date="${date}">
+                <span class="cal-day-num">${day}</span>
+                <span class="cal-day-price">${stateLabel}</span>
+              </button>
+            `;
+          }
+
           const price = computeDisplayPrice(priceMode, pricingCache[date], formulaSettings);
           const priceLabel = price == null ? "—" : `€${Math.round(price * 100) / 100}`;
           const priceClass = price == null ? "cal-day-price empty" : "cal-day-price";
-          const selectedClass = date === selectionStart ? " selected" : "";
           return `
             <button type="button" class="cal-day${selectedClass}" data-date="${date}">
               <span class="cal-day-num">${day}</span>
@@ -987,6 +1017,9 @@
 
       calGrid.querySelectorAll(".cal-day").forEach((btn) => {
         btn.addEventListener("click", () => {
+          if (priceMode === "availability") {
+            return; // doorklikken naar boekingsdetails volgt in US-3.3
+          }
           if (priceMode !== "airbnb") {
             showModeHint();
           } else if (selectionMode) {

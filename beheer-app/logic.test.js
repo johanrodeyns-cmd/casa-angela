@@ -3,11 +3,11 @@ const assert = require('node:assert/strict');
 const {
   getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice,
   getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking,
-  parseIcalEvents, mergeSyncedBlocks,
+  parseIcalEvents, mergeSyncedBlocks, buildOccupancyMap,
 } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.14.1');
+  assert.equal(getVersion(), '0.15.0');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -343,4 +343,35 @@ test('mergeSyncedBlocks assigns a deterministic id per source+uid', () => {
 test('mergeSyncedBlocks clears a source entirely when no events are parsed for it', () => {
   const result = mergeSyncedBlocks(EXISTING_SYNCED_BLOCKS, [], 'booking');
   assert.deepEqual(result, [EXISTING_SYNCED_BLOCKS[0]]);
+});
+
+test('buildOccupancyMap returns an empty map when there are no bookings or synced blocks', () => {
+  assert.deepEqual(buildOccupancyMap([], []), {});
+});
+
+test('buildOccupancyMap marks every date in a booking range as occupied, inclusive', () => {
+  const bookings = [{ id: 'b1', dateFrom: '2026-07-10', dateTo: '2026-07-12', name: 'Jan' }];
+  const map = buildOccupancyMap(bookings, []);
+  assert.deepEqual(Object.keys(map).sort(), ['2026-07-10', '2026-07-11', '2026-07-12']);
+});
+
+test('buildOccupancyMap tags booking entries with type booking and keeps the original fields', () => {
+  const bookings = [{ id: 'b1', dateFrom: '2026-07-10', dateTo: '2026-07-11', name: 'Jan' }];
+  const map = buildOccupancyMap(bookings, []);
+  assert.deepEqual(map['2026-07-10'], [{ type: 'booking', id: 'b1', dateFrom: '2026-07-10', dateTo: '2026-07-11', name: 'Jan' }]);
+});
+
+test('buildOccupancyMap also marks synced blocks as occupied, tagged with type syncedBlock', () => {
+  const syncedBlocks = [{ id: 'airbnb-x', source: 'airbnb', dateFrom: '2026-08-01', dateTo: '2026-08-02' }];
+  const map = buildOccupancyMap([], syncedBlocks);
+  assert.deepEqual(map['2026-08-01'], [{ type: 'syncedBlock', id: 'airbnb-x', source: 'airbnb', dateFrom: '2026-08-01', dateTo: '2026-08-02' }]);
+});
+
+test('buildOccupancyMap lists multiple entries on the same day (e.g. a same-day checkout/checkin turnover)', () => {
+  const bookings = [
+    { id: 'b1', dateFrom: '2026-07-10', dateTo: '2026-07-14', name: 'Jan' },
+    { id: 'b2', dateFrom: '2026-07-14', dateTo: '2026-07-18', name: 'Mieke' },
+  ];
+  const map = buildOccupancyMap(bookings, []);
+  assert.equal(map['2026-07-14'].length, 2);
 });
