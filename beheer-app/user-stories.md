@@ -113,6 +113,8 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 ---
 
 ### US-1.3 ☑ Schakelen tussen de 4 prijstypes (M) — v0.9.0
+> Vervolg in v0.22.0: bezette dagen (boekingen + gesynchroniseerde blokken) krijgen nu ook in deze 4 prijskalenders dezelfde kleur als de Beschikbaarheidskalender (US-3.1/3.2) — prijs blijft zichtbaar, enkel de achtergrondkleur/diagonale split verandert. Zo is in één oogopslag te zien welke dagen al verhuurd zijn, ongeacht welke kalendermodus actief is.
+
 **Als** Johan of Tinneke **wil ik** via knoppen bovenaan de kalender schakelen tussen Airbnb / Booking / Rechtstreeks / Vrienden **zodat** ik snel elk prijstype kan controleren.
 
 **Acceptatiecriteria:**

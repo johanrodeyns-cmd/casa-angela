@@ -1008,6 +1008,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.22.0", date: "2026-07-18", description: "Bezette dagen krijgen ook in de 4 prijskalenders dezelfde kleur als de Beschikbaarheidskalender." },
       { version: "0.21.1", date: "2026-07-18", description: "Weekdag toegevoegd aan datums bij boekingen (bv. 'Do 9 jul 2026')." },
       { version: "0.21.0", date: "2026-07-18", description: "Beschikbaarheidskalender toont nu de gastnaam i.p.v. 'Bezet'." },
       { version: "0.20.0", date: "2026-07-18", description: "Synchronisatie-overzicht: boekingen verifiëren tegen Airbnb/Booking.com." },
@@ -1087,6 +1088,8 @@
     let priceMode = "airbnb"; // 'airbnb' | 'booking' | 'direct' | 'friends'
     let selectionMode = false;
     let selectionStart = null;
+    let bookings = [];
+    let syncedBlocks = []; // populated once iCal-sync (US-2.3) lands
 
     const DEFAULT_FORMULA = { factor: 1, offset: 0 };
     let formulaSettings = {
@@ -1105,19 +1108,20 @@
     function renderCalendar() {
       calMonthLabel.textContent = `${MONTH_NAMES[calMonth - 1]} ${calYear}`;
       const weeks = buildMonthGrid(calYear, calMonth);
-      const occupancyMap = priceMode === "availability" ? buildOccupancyMap(bookings, syncedBlocks) : null;
+      const occupancyMap = buildOccupancyMap(bookings, syncedBlocks);
       calGrid.innerHTML = weeks
         .flat()
         .map((date) => {
           if (!date) return '<span class="cal-day cal-day-empty"></span>';
           const day = Number(date.slice(8, 10));
           const selectedClass = date === selectionStart ? " selected" : "";
+          const state = dayOccupancyState(date, occupancyMap);
+          const stateClass = state !== "vrij" ? ` ${state}` : "";
 
           if (priceMode === "availability") {
-            const state = dayOccupancyState(date, occupancyMap);
             const label = dayDisplayLabel(date, occupancyMap, state);
             return `
-              <button type="button" class="cal-day ${state}${selectedClass}" data-date="${date}">
+              <button type="button" class="cal-day${stateClass}${selectedClass}" data-date="${date}">
                 <span class="cal-day-num">${day}</span>
                 <span class="cal-day-price" title="${label}">${label}</span>
               </button>
@@ -1128,7 +1132,7 @@
           const priceLabel = price == null ? "—" : `€${Math.round(price * 100) / 100}`;
           const priceClass = price == null ? "cal-day-price empty" : "cal-day-price";
           return `
-            <button type="button" class="cal-day${selectedClass}" data-date="${date}">
+            <button type="button" class="cal-day${stateClass}${selectedClass}" data-date="${date}">
               <span class="cal-day-num">${day}</span>
               <span class="${priceClass}">${priceLabel}</span>
             </button>
@@ -1446,8 +1450,6 @@
 
     const PLATFORM_LABELS = { airbnb: "Airbnb", booking: "Booking.com", direct: "Rechtstreeks", friends: "Vrienden" };
 
-    let bookings = [];
-    let syncedBlocks = []; // populated once iCal-sync (US-2.3) lands
     let editingBookingId = null;
     let deletingBookingId = null;
     let overlapConfirmed = false;
