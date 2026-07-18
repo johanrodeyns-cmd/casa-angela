@@ -238,7 +238,9 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 **Acceptatiecriteria:**
 - Given de bestaande 4 prijs-toggles (US-1.3), then is er een 5e knop "Beschikbaarheid" die dezelfde kalendercomponent hergebruikt.
-- Given de Beschikbaarheid-modus, then toont elke dag-cel vrij/bezet op basis van `bookings` + `syncedBlocks` samen (`buildOccupancyMap()`).
+- Given de Beschikbaarheid-modus, then toont elke dag-cel vrij/bezet op basis van `bookings` alleen (`buildOccupancyMap(bookings, [])`) — zie v0.23.0 hieronder.
+
+> Vervolg in v0.23.0: de 5 kalenders (incl. de 4 prijskalenders sinds v0.22.0) tonen kleuring/labels nu enkel op basis van `bookings`, niet meer van `syncedBlocks`. Reden: een gesynchroniseerd blok is ruwe, mogelijk verouderde iCal-data (zie de bugfixes in v0.22.1/v0.22.2 hierboven) — enkel een boeking die je zelf hebt geverifieerd en ingevoerd mag de kalender kleuren. `syncedBlocks` blijven wel meetellen in: (1) de overlap-waarschuwing bij het aanmaken van een boeking (`overlapsExistingBooking`, US-2.2), (2) het dagdetail (tik op een dag) — een niet-gekoppeld blok is daar nog steeds zichtbaar met een "Boeking aanvullen"-knop, en (3) het Synchronisatie-overzicht (US-2.6) voor de manuele mismatch-check. Zo blijft er een vangnet, zonder dat verouderde syncdata de kalender kan vervuilen.
 
 ---
 

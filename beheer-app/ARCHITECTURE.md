@@ -46,10 +46,13 @@ Prijskalender:  klik/select dag(en) -> invoer Airbnb-prijs -> Firestore write (p
 
 Boekingen:      CRUD-form -> validateBooking() -> overlapsExistingBooking()-check (bookings + syncedBlocks,
                 waarschuwing + expliciete "Toch opslaan"-bevestiging bij overlap) -> Firestore write (bookings/{id})
-                -> buildOccupancyMap() + dayOccupancyState() voeden de Beschikbaarheidskalender (Epic 3, 5e
-                   toggle op dezelfde kalendercomponent als de Prijskalender, vrij/bezet/aankomst/vertrek)
+                -> buildOccupancyMap(bookings, []) + dayOccupancyState() voeden de Beschikbaarheidskalender
+                   (Epic 3, 5e toggle op dezelfde kalendercomponent als de Prijskalender, vrij/bezet/aankomst/
+                   vertrek) — bewust ENKEL bookings, geen syncedBlocks (zie v0.23.0 hieronder)
                 -> dag-klik in Beschikbaarheid-modus opent boekingsdetails (rechtstreeks of via een dag-
-                   overzicht bij een turnover/sync-only dag)
+                   overzicht bij een turnover); dat dag-overzicht gebruikt wél buildOccupancyMap(bookings,
+                   syncedBlocks) zodat een niet-gekoppeld gesynchroniseerd blok nog steeds zichtbaar is bij
+                   het tikken op een dag, met een "Boeking aanvullen"-knop
                 -> Kopiëren voor contactpersoon/tuinier: één klik, geen periode-invoer -> upcomingBookings()
                    (vandaag t/m laatste toekomstige boeking) -> formatBookingsListForContact() of
                    -ForGardener() -> navigator.clipboard.writeText() (platte tekst, geen JPG/Canvas,
@@ -60,7 +63,10 @@ iCal-sync:      Instellingendialoog (URL's -> icalFeeds/{airbnb|booking}) + "Nu 
                 -> functions/index.js: fetch(url) -> parseIcalEvents() -> mergeSyncedBlocks() ->
                    writeBatch (volledige vervanging per bron) upsert syncedBlocks/{source-uid}
                 (enkel periode-blokkering, geen naam/prijs) -> client herlaadt syncedBlocks nadien
-                -> meegenomen in overlapsExistingBooking(); nog te bouwen: in occupancyMap (Epic 3)
+                -> meegenomen in overlapsExistingBooking() en in het dag-overzicht/Synchronisatie-overzicht
+                   (US-2.6, manuele mismatch-check) — NIET meer meegenomen in de kalenderkleuring zelf
+                   sinds v0.23.0: een verouderd/stale synced blok mag de Beschikbaarheidskalender niet meer
+                   kleuren, enkel écht ingevoerde boekingen doen dat
 
 Checklists:     toggle item -> Firestore update (checklists/{aankomst|vertrek}.items[i].checked)
                 reset-knop -> alle checked = false

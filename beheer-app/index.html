@@ -1012,6 +1012,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.23.0", date: "2026-07-18", description: "De 5 kalenders tonen kleuring/namen nu enkel op basis van boekingen uit de app, niet meer van gesynchroniseerde iCal-blokken. Zo kan verouderde syncdata de kalender niet meer vervuilen. Mismatches check je manueel via het Synchronisatie-overzicht; tikken op een dag toont een niet-gekoppeld blok nog steeds." },
       { version: "0.22.2", date: "2026-07-18", description: "Bugfix: bij een vertrek en aankomst op dezelfde dag toonde de Beschikbaarheidskalender maar 1 naam (afgekapt). Toont nu beide voornamen; volledige namen blijven zichtbaar via het dagdetail." },
       { version: "0.22.1", date: "2026-07-18", description: "Bugfix: een verouderd gesynchroniseerd blok kon de halve-dag kleuring van aankomst/vertrek overschrijven — een boeking wint nu altijd van een gesynchroniseerd blok voor haar eigen dagen." },
       { version: "0.22.0", date: "2026-07-18", description: "Bezette dagen krijgen ook in de 4 prijskalenders dezelfde kleur als de Beschikbaarheidskalender." },
@@ -1114,7 +1115,11 @@
     function renderCalendar() {
       calMonthLabel.textContent = `${MONTH_NAMES[calMonth - 1]} ${calYear}`;
       const weeks = buildMonthGrid(calYear, calMonth);
-      const occupancyMap = buildOccupancyMap(bookings, syncedBlocks);
+      // Kleuring/labels in de 5 kalenders zijn gebaseerd op boekingen alleen — gesynchroniseerde
+      // blokken zijn ruwe, mogelijk verouderde iCal-data en horen hier niet in mee te tellen.
+      // Mismatches controleer je manueel via het Synchronisatie-overzicht (US-2.6). Tikken op een
+      // dag toont een eventueel niet-gekoppeld blok nog steeds (zie openDayDetailDialog).
+      const occupancyMap = buildOccupancyMap(bookings, []);
       calGrid.innerHTML = weeks
         .flat()
         .map((date) => {
