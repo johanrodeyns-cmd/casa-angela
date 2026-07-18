@@ -327,7 +327,7 @@
     margin-bottom: 4px;
   }
   .cal-day {
-    min-height: 52px;
+    min-height: 60px;
     min-width: 0;
     display: flex;
     flex-direction: column;
@@ -354,12 +354,16 @@
     font-weight: bold;
   }
   .cal-day-price {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
+    line-height: 1.15;
     color: var(--olive-dark);
     max-width: 100%;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    text-align: center;
+    word-break: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
   }
   .cal-day-price.empty {
     color: var(--terracotta);
@@ -1008,6 +1012,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.22.2", date: "2026-07-18", description: "Bugfix: bij een vertrek en aankomst op dezelfde dag toonde de Beschikbaarheidskalender maar 1 naam (afgekapt). Toont nu beide voornamen; volledige namen blijven zichtbaar via het dagdetail." },
       { version: "0.22.1", date: "2026-07-18", description: "Bugfix: een verouderd gesynchroniseerd blok kon de halve-dag kleuring van aankomst/vertrek overschrijven — een boeking wint nu altijd van een gesynchroniseerd blok voor haar eigen dagen." },
       { version: "0.22.0", date: "2026-07-18", description: "Bezette dagen krijgen ook in de 4 prijskalenders dezelfde kleur als de Beschikbaarheidskalender." },
       { version: "0.21.1", date: "2026-07-18", description: "Weekdag toegevoegd aan datums bij boekingen (bv. 'Do 9 jul 2026')." },

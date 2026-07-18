@@ -254,6 +254,8 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 > Vervolg in v0.22.1: bugfix — een verouderd/niet-gekoppeld gesynchroniseerd blok (bv. stale Airbnb-sync) kon de aankomst/vertrek-classificatie van een echte boeking overschrijven zodra hun datums overlapten. `dayOccupancyState` geeft nu voorrang aan `booking`-entries op een dag; `syncedBlock`-entries tellen alleen mee als er géén boeking die dag dekt.
 
+> Vervolg in v0.22.2: bugfix — bij een same-day turnover (iemand vertrekt en de volgende gast komt aan op dezelfde dag) toonde de kalendercel maar 1 naam: de tekst werd stilzwijgend afgekapt (`white-space: nowrap` + ellipsis) zodra beide volledige namen niet pasten. `dayDisplayLabel` toont nu de voornamen van beide gasten (vertrekkende gast eerst), en de cel mag over 2 regels wrappen in plaats van af te kappen. Volledige namen blijven zichtbaar via het dagdetail (tik op de cel).
+
 ---
 
 ### US-3.3 ☑ Doorklikken naar boekingsdetails (M) — v0.17.0

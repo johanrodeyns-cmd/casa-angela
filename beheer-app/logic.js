@@ -1,4 +1,4 @@
-const VERSION = '0.22.1';
+const VERSION = '0.22.2';
 
 function getVersion() {
   return VERSION;
@@ -228,8 +228,14 @@ function dayDisplayLabel(date, occupancyMap, state) {
   if (state === 'vrij') return 'Vrij';
   const guestNames = (occupancyMap[date] || [])
     .filter((e) => e.type === 'booking')
+    // On a same-day turnover, list who's leaving before who's arriving.
+    .sort((a, b) => (a.dateTo === date ? 0 : 1) - (b.dateTo === date ? 0 : 1))
     .map((e) => e.name);
-  return guestNames.length === 0 ? 'Bezet' : guestNames.join(' / ');
+  if (guestNames.length === 0) return 'Bezet';
+  if (guestNames.length === 1) return guestNames[0];
+  // Same-day turnover: first names only, so both guests still fit in a narrow calendar cell.
+  // The full names remain available in the day-detail view.
+  return guestNames.map((name) => name.trim().split(/\s+/)[0]).join(' / ');
 }
 
 const WEEKDAY_ABBREVIATIONS = ['Zo', 'Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za']; // index = Date#getDay()

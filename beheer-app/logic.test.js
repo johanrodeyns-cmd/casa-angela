@@ -9,7 +9,7 @@ const {
 } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.22.1');
+  assert.equal(getVersion(), '0.22.2');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -609,6 +609,33 @@ test('dayDisplayLabel falls back to Bezet when the day only has a synced block w
 test('dayDisplayLabel joins multiple guest names on a same-day turnover', () => {
   const map = { '2026-07-14': [{ type: 'booking', name: 'Jan' }, { type: 'booking', name: 'Mieke' }] };
   assert.equal(dayDisplayLabel('2026-07-14', map, 'bezet'), 'Jan / Mieke');
+});
+
+test('dayDisplayLabel lists the departing guest before the arriving guest on a same-day turnover, regardless of input order', () => {
+  const map = {
+    '2026-07-14': [
+      { type: 'booking', name: 'Mieke', dateFrom: '2026-07-14', dateTo: '2026-07-18' },
+      { type: 'booking', name: 'Jan', dateFrom: '2026-07-10', dateTo: '2026-07-14' },
+    ],
+  };
+  assert.equal(dayDisplayLabel('2026-07-14', map, 'bezet'), 'Jan / Mieke');
+});
+
+test('dayDisplayLabel uses first names only for a same-day turnover, so both guests fit in a narrow calendar cell', () => {
+  const map = {
+    '2026-07-25': [
+      { type: 'booking', name: 'Klakel Boras', dateFrom: '2026-07-20', dateTo: '2026-07-25' },
+      { type: 'booking', name: 'Frederic Martineau', dateFrom: '2026-07-25', dateTo: '2026-08-08' },
+    ],
+  };
+  assert.equal(dayDisplayLabel('2026-07-25', map, 'bezet'), 'Klakel / Frederic');
+});
+
+test('dayDisplayLabel keeps the full name when only one guest occupies the day', () => {
+  const map = {
+    '2026-07-10': [{ type: 'booking', name: 'Frederic Martineau', dateFrom: '2026-07-05', dateTo: '2026-07-15' }],
+  };
+  assert.equal(dayDisplayLabel('2026-07-10', map, 'bezet'), 'Frederic Martineau');
 });
 
 test('weekdayAbbreviation matches the app-wide Ma/Di/Wo/Do/Vr/Za/Zo convention', () => {
