@@ -229,6 +229,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ### US-3.1 ☑ Beschikbaarheid als 5e kalendermodus (M) — v0.15.0
 > Halve-dag-splitsing (US-3.2) en doorklikken naar boekingsdetails (US-3.3) volgden meteen mee, alle drie op dezelfde dag afgewerkt.
+> Vervolg in v0.21.0: dag-cel toont nu de gastnaam i.p.v. het generieke "Bezet" (bij een gesynchroniseerd blok zonder ingevulde boeking blijft "Bezet" staan, want dan is er nog geen naam). Bijkomende bugfix: een lange naam blies de kalendercellen op tot ongelijke breedtes (CSS Grid `min-width: auto`-blowout) — opgelost met `min-width: 0` op `.cal-day`.
 **Als** Johan of Tinneke **wil ik** in dezelfde kalender ook kunnen zien wanneer het huis verhuurd is **zodat** ik niet tussen aparte schermen moet wisselen.
 
 **Acceptatiecriteria:**

@@ -1,4 +1,4 @@
-const VERSION = '0.20.0';
+const VERSION = '0.21.0';
 
 function getVersion() {
   return VERSION;
@@ -218,12 +218,20 @@ function findUnmatchedSyncedBlocks(bookings, syncedBlocks) {
   });
 }
 
+function dayDisplayLabel(date, occupancyMap, state) {
+  if (state === 'vrij') return 'Vrij';
+  const guestNames = (occupancyMap[date] || [])
+    .filter((e) => e.type === 'booking')
+    .map((e) => e.name);
+  return guestNames.length === 0 ? 'Bezet' : guestNames.join(' / ');
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice,
     getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking,
     parseIcalEvents, mergeSyncedBlocks, buildOccupancyMap, dayOccupancyState,
     upcomingBookings, formatBookingsListForContact, formatBookingsListForGardener,
-    findUnmatchedBookings, findUnmatchedSyncedBlocks,
+    findUnmatchedBookings, findUnmatchedSyncedBlocks, dayDisplayLabel,
   };
 }

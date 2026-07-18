@@ -5,11 +5,11 @@ const {
   getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking,
   parseIcalEvents, mergeSyncedBlocks, buildOccupancyMap, dayOccupancyState,
   upcomingBookings, formatBookingsListForContact, formatBookingsListForGardener,
-  findUnmatchedBookings, findUnmatchedSyncedBlocks,
+  findUnmatchedBookings, findUnmatchedSyncedBlocks, dayDisplayLabel,
 } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.20.0');
+  assert.equal(getVersion(), '0.21.0');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -563,4 +563,29 @@ test('findUnmatchedSyncedBlocks excludes a block with a matching booking', () =>
 test('findUnmatchedSyncedBlocks includes a block with no matching booking at all', () => {
   const result = findUnmatchedSyncedBlocks([], SYNC_TEST_BLOCKS);
   assert.equal(result.length, 2);
+});
+
+test('dayDisplayLabel always returns Vrij for a free day, regardless of the occupancy map', () => {
+  assert.equal(dayDisplayLabel('2026-07-15', { '2026-07-15': [{ type: 'booking', name: 'Jan' }] }, 'vrij'), 'Vrij');
+});
+
+test('dayDisplayLabel returns the guest name for an occupied day with a booking', () => {
+  const map = { '2026-07-15': [{ type: 'booking', name: 'Jan Janssens' }] };
+  assert.equal(dayDisplayLabel('2026-07-15', map, 'bezet'), 'Jan Janssens');
+});
+
+test('dayDisplayLabel returns the guest name on arrival and departure days too', () => {
+  const map = { '2026-07-15': [{ type: 'booking', name: 'Jan Janssens' }] };
+  assert.equal(dayDisplayLabel('2026-07-15', map, 'aankomst'), 'Jan Janssens');
+  assert.equal(dayDisplayLabel('2026-07-15', map, 'vertrek'), 'Jan Janssens');
+});
+
+test('dayDisplayLabel falls back to Bezet when the day only has a synced block with no booking yet', () => {
+  const map = { '2026-07-15': [{ type: 'syncedBlock', source: 'airbnb' }] };
+  assert.equal(dayDisplayLabel('2026-07-15', map, 'bezet'), 'Bezet');
+});
+
+test('dayDisplayLabel joins multiple guest names on a same-day turnover', () => {
+  const map = { '2026-07-14': [{ type: 'booking', name: 'Jan' }, { type: 'booking', name: 'Mieke' }] };
+  assert.equal(dayDisplayLabel('2026-07-14', map, 'bezet'), 'Jan / Mieke');
 });
