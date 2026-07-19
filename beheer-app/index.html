@@ -840,6 +840,15 @@
     padding: 0.75rem;
     margin-bottom: 0.5rem;
   }
+  .booking-item.past {
+    background: #dcdcdc;
+  }
+  .booking-item.past .booking-item-dates {
+    color: #6b6b6b;
+  }
+  .booking-item.past .booking-item-meta {
+    color: #8a8a8a;
+  }
   .booking-item-main {
     flex: 1;
     text-align: left;
@@ -1312,6 +1321,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.30.1", date: "2026-07-18", description: "Boekingenlijst: afgelopen boekingen (vertrekdatum in het verleden) krijgen een grijze achtergrond, zodat meteen duidelijk is welke verblijven al voorbij zijn." },
       { version: "0.30.0", date: "2026-07-18", description: "Jaartabel: Belgische officiële feestdagen krijgen nu dezelfde kleur als weekenddagen (inclusief de bewegende feestdagen zoals Paasmaandag, O.L.H. Hemelvaart en Pinkstermaandag)." },
       { version: "0.29.2", date: "2026-07-18", description: "Jaartabel herbouwd met CSS Grid i.p.v. een HTML-tabel: dagkolommen bleven bij veel/brede boekingen toch nog ongelijk breed uitvallen (tabel-layout met colspans bleek onbetrouwbaar). Vaste grid-kolommen lossen dit definitief op." },
       { version: "0.29.1", date: "2026-07-18", description: "Bugfix jaartabel: dagkolommen hadden per maand een andere breedte (browser kon de kolombreedte niet consistent bepalen door de wisselende colspans van boekingsbalken). Vaste kolombreedtes via een colgroup lossen dit op." },
@@ -1925,20 +1935,22 @@
     bookingFields.dateTo.addEventListener("input", () => { updateBookingNightsPreview(); resetOverlapWarning(); });
 
     function renderBookingsList() {
+      const todayIso = isoDateFromDate(new Date());
       const sorted = [...bookings].sort((a, b) => a.dateFrom.localeCompare(b.dateFrom));
       bookingsEmpty.style.display = sorted.length === 0 ? "block" : "none";
       bookingsList.innerHTML = sorted
-        .map(
-          (b) => `
-            <div class="booking-item">
+        .map((b) => {
+          const pastClass = b.dateTo < todayIso ? " past" : "";
+          return `
+            <div class="booking-item${pastClass}">
               <button type="button" class="booking-item-main" data-id="${b.id}">
                 <div class="booking-item-dates">${formatBookingDateRange(b.dateFrom, b.dateTo)} (${b.nights} ${b.nights === 1 ? "nacht" : "nachten"})</div>
                 <div class="booking-item-meta">${b.name} — ${PLATFORM_LABELS[b.platform] ?? b.platform}${b.price != null ? ` — €${b.price}` : ""}</div>
               </button>
               <button type="button" class="booking-item-delete" data-id="${b.id}" aria-label="Verwijderen">🗑</button>
             </div>
-          `
-        )
+          `;
+        })
         .join("");
 
       bookingsList.querySelectorAll(".booking-item-main").forEach((btn) => {
