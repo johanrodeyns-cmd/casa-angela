@@ -1,7 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
-  getVersion, isAllowedEmail, buildMonthGrid, buildMonthTimeline, buildYearGrid, computeDerivedPrice, computeDisplayPrice,
+  getVersion, isAllowedEmail, buildMonthGrid, buildMonthTimeline, buildYearGrid,
+  getEasterSunday, getBelgianPublicHolidays, computeDerivedPrice, computeDisplayPrice,
   getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking,
   parseIcalEvents, mergeSyncedBlocks, buildOccupancyMap, dayOccupancyState,
   upcomingBookings, formatBookingsListForContact, formatBookingsListForGardener,
@@ -11,7 +12,7 @@ const {
 } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.29.2');
+  assert.equal(getVersion(), '0.30.0');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -62,6 +63,36 @@ test('buildMonthTimeline marks Saturdays and Sundays as weekend for free days', 
   assert.equal(byDay[3].weekend, true); // Sat
   assert.equal(byDay[4].weekend, true); // Sun
   assert.equal(byDay[5].weekend, false); // Mon
+});
+
+test('getEasterSunday computes the correct date for known reference years', () => {
+  assert.equal(getEasterSunday(2024), '2024-03-31');
+  assert.equal(getEasterSunday(2025), '2025-04-20');
+  assert.equal(getEasterSunday(2026), '2026-04-05');
+});
+
+test('getBelgianPublicHolidays returns the 10 fixed and Easter-based holidays for a given year', () => {
+  const holidays = getBelgianPublicHolidays(2026).slice().sort();
+  assert.deepEqual(holidays, [
+    '2026-01-01', // Nieuwjaar
+    '2026-04-06', // Paasmaandag (Easter + 1)
+    '2026-05-01', // Dag van de Arbeid
+    '2026-05-14', // O.L.H. Hemelvaart (Easter + 39)
+    '2026-05-25', // Pinkstermaandag (Easter + 50)
+    '2026-07-21', // Nationale feestdag
+    '2026-08-15', // O.L.V. Hemelvaart
+    '2026-11-01', // Allerheiligen
+    '2026-11-11', // Wapenstilstand
+    '2026-12-25', // Kerstmis
+  ].sort());
+});
+
+test('buildMonthTimeline marks a Belgian public holiday that falls on a weekday as a holiday', () => {
+  const timeline = buildMonthTimeline(2026, 7, {}); // 2026-07-21 is a Tuesday (Nationale feestdag)
+  const byDay = Object.fromEntries(timeline.map((c) => [c.day, c]));
+  assert.equal(byDay[21].holiday, true);
+  assert.equal(byDay[21].weekend, false);
+  assert.equal(byDay[20].holiday, false);
 });
 
 test('buildMonthTimeline returns one free entry per day when there is no occupancy', () => {

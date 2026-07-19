@@ -1,4 +1,4 @@
-const VERSION = '0.29.2';
+const VERSION = '0.30.0';
 
 function getVersion() {
   return VERSION;
@@ -11,6 +11,49 @@ function isAllowedEmail(email, allowedEmails) {
 
 function toIsoDate(year, month, day) {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+// Anonymous Gregorian algorithm (Meeus/Jones/Butcher) for the date of Easter Sunday.
+function getEasterSunday(year) {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return toIsoDate(year, month, day);
+}
+
+function addDays(isoDate, days) {
+  const date = new Date(isoDate + 'T00:00:00');
+  date.setDate(date.getDate() + days);
+  return toIsoDate(date.getFullYear(), date.getMonth() + 1, date.getDate());
+}
+
+// The 10 official Belgian public holidays: 6 fixed and 3 relative to Easter Sunday
+// (Easter Sunday itself always falls on a Sunday, so it isn't listed separately).
+function getBelgianPublicHolidays(year) {
+  const easter = getEasterSunday(year);
+  return [
+    toIsoDate(year, 1, 1),
+    addDays(easter, 1),
+    toIsoDate(year, 5, 1),
+    addDays(easter, 39),
+    addDays(easter, 50),
+    toIsoDate(year, 7, 21),
+    toIsoDate(year, 8, 15),
+    toIsoDate(year, 11, 1),
+    toIsoDate(year, 11, 11),
+    toIsoDate(year, 12, 25),
+  ];
 }
 
 function buildMonthGrid(year, month) {
@@ -283,6 +326,7 @@ function dayDisplayLabel(date, occupancyMap, state) {
 // name only needs to be rendered once per stay instead of once per day.
 function buildMonthTimeline(year, month, occupancyMap) {
   const daysInMonth = new Date(year, month, 0).getDate();
+  const holidays = new Set(getBelgianPublicHolidays(year));
   const cells = [];
   let day = 1;
   while (day <= daysInMonth) {
@@ -290,7 +334,7 @@ function buildMonthTimeline(year, month, occupancyMap) {
     const state = dayOccupancyState(date, occupancyMap);
     if (state === 'vrij') {
       const weekday = new Date(date + 'T00:00:00').getDay();
-      cells.push({ type: 'free', day, weekend: weekday === 0 || weekday === 6 });
+      cells.push({ type: 'free', day, weekend: weekday === 0 || weekday === 6, holiday: holidays.has(date) });
       day += 1;
       continue;
     }
@@ -363,7 +407,8 @@ function escapeHtml(str) {
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    getVersion, isAllowedEmail, buildMonthGrid, buildMonthTimeline, buildYearGrid, computeDerivedPrice, computeDisplayPrice,
+    getVersion, isAllowedEmail, buildMonthGrid, buildMonthTimeline, buildYearGrid,
+    getEasterSunday, getBelgianPublicHolidays, computeDerivedPrice, computeDisplayPrice,
     getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking,
     parseIcalEvents, mergeSyncedBlocks, diffSyncedBlocks, buildOccupancyMap, dayOccupancyState,
     upcomingBookings, formatBookingsListForContact, formatBookingsListForGardener,
