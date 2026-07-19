@@ -54,10 +54,12 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 ---
 
 ### US-0.4 ☑ Vaste navigatiebalk (M) — v0.4.0
+> Vervolg in v0.31.0: nieuw tabblad "Prijzen" toegevoegd tussen Boekingen en Checklist aankomst (zie US-3.1/US-1.3) — de navigatiebalk telt sindsdien 5 tabs i.p.v. 4.
+
 **Als** gebruiker **wil ik** een vaste navigatiebalk **zodat** ik altijd snel tussen Kalender, Boekingen en Checklists kan schakelen.
 
 **Acceptatiecriteria:**
-- Given elke pagina, then is een navigatiebalk zichtbaar met minstens: Kalender, Boekingen, Checklist aankomst, Checklist vertrek.
+- Given elke pagina, then is een navigatiebalk zichtbaar met minstens: Kalender, Boekingen, Prijzen, Checklist aankomst, Checklist vertrek.
 - Given een klik op een navigatie-item, then schakelt de UI naar de juiste sectie zonder herladen van de pagina.
 - Given de huidige sectie, then is het bijhorende navigatie-item visueel gemarkeerd als actief.
 - Given een smal (mobiel) scherm, then blijft de navigatie bruikbaar (bv. onderste tab-balk of hamburgermenu) met vingervriendelijke tapgebieden.
@@ -119,6 +121,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ### US-1.3 ☑ Schakelen tussen de 4 prijstypes (M) — v0.9.0
 > Vervolg in v0.22.0: bezette dagen (boekingen + gesynchroniseerde blokken) krijgen nu ook in deze 4 prijskalenders dezelfde kleur als de Beschikbaarheidskalender (US-3.1/3.2) — prijs blijft zichtbaar, enkel de achtergrondkleur/diagonale split verandert. Zo is in één oogopslag te zien welke dagen al verhuurd zijn, ongeacht welke kalendermodus actief is.
+> Vervolg in v0.31.0: de 4 prijstypes verhuisd naar een eigen tabblad "Prijzen" (zie US-3.1) — Beschikbaarheid zat voorheen als 5e knop in dezelfde toggle-rij, dat stond in de weg toen Beschikbaarheid een eigen Maand/Jaar-schakelaar kreeg (US-3.4). De 4-knoppen-toggle zelf werkt ongewijzigd, enkel de locatie (nu Prijzen-tab i.p.v. Kalender-tab) is anders.
 
 **Als** Johan of Tinneke **wil ik** via knoppen bovenaan de kalender schakelen tussen Airbnb / Booking / Rechtstreeks / Vrienden **zodat** ik snel elk prijstype kan controleren.
 
@@ -248,11 +251,13 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 ### US-3.1 ☑ Beschikbaarheid als 5e kalendermodus (M) — v0.15.0
 > Halve-dag-splitsing (US-3.2) en doorklikken naar boekingsdetails (US-3.3) volgden meteen mee, alle drie op dezelfde dag afgewerkt.
 > Vervolg in v0.21.0: dag-cel toont nu de gastnaam i.p.v. het generieke "Bezet" (bij een gesynchroniseerd blok zonder ingevulde boeking blijft "Bezet" staan, want dan is er nog geen naam). Bijkomende bugfix: een lange naam blies de kalendercellen op tot ongelijke breedtes (CSS Grid `min-width: auto`-blowout) — opgelost met `min-width: 0` op `.cal-day`.
+> Vervolg in v0.31.0: op vraag van Johan (tabbladen herschikt) is Beschikbaarheid niet langer een 5e knop naast de 4 prijstypes — het is nu de volledige inhoud van het Kalender-tabblad, met de Maand/Jaar-schakelaar uit US-3.4 bovenaan (Jaar staat sindsdien default actief). De 4 prijstypes (US-1.3) kregen een eigen tabblad "Prijzen". De maandweergave van Beschikbaarheid heeft daardoor een eigen `renderAvailabilityMonth`/`avail-cal-grid` gekregen, los van `renderCalendar`/`cal-grid` (dat nu zuiver de prijzen-maandkalender is) — beide delen wel nog dezelfde `openDayDetailDialog`.
+
 **Als** Johan of Tinneke **wil ik** in dezelfde kalender ook kunnen zien wanneer het huis verhuurd is **zodat** ik niet tussen aparte schermen moet wisselen.
 
 **Acceptatiecriteria:**
-- Given de bestaande 4 prijs-toggles (US-1.3), then is er een 5e knop "Beschikbaarheid" die dezelfde kalendercomponent hergebruikt.
-- Given de Beschikbaarheid-modus, then toont elke dag-cel vrij/bezet op basis van `bookings` alleen (`buildOccupancyMap(bookings, [])`) — zie v0.23.0 hieronder.
+- Given het Kalender-tabblad, then toont dit uitsluitend Beschikbaarheid (Maand/Jaar-schakelaar, zie US-3.4) — geen 5e knop meer naast de 4 prijstypes, die staan sinds v0.31.0 in een eigen tabblad "Prijzen" (US-1.3).
+- Given de Beschikbaarheid-weergave (Maand of Jaar), then toont elke dag-cel vrij/bezet op basis van `bookings` alleen (`buildOccupancyMap(bookings, [])`) — zie v0.23.0 hieronder.
 
 > Vervolg in v0.23.0: de 5 kalenders (incl. de 4 prijskalenders sinds v0.22.0) tonen kleuring/labels nu enkel op basis van `bookings`, niet meer van `syncedBlocks`. Reden: een gesynchroniseerd blok is ruwe, mogelijk verouderde iCal-data (zie de bugfixes in v0.22.1/v0.22.2 hierboven) — enkel een boeking die je zelf hebt geverifieerd en ingevoerd mag de kalender kleuren. `syncedBlocks` blijven wel meetellen in: (1) de overlap-waarschuwing bij het aanmaken van een boeking (`overlapsExistingBooking`, US-2.2), (2) het dagdetail (tik op een dag) — een niet-gekoppeld blok is daar nog steeds zichtbaar met een "Boeking aanvullen"-knop, en (3) het Synchronisatie-overzicht (US-2.6) voor de manuele mismatch-check. Zo blijft er een vangnet, zonder dat verouderde syncdata de kalender kan vervuilen.
 
@@ -289,11 +294,12 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 > Vervolg in v0.29.1: dagkolommen kregen per maand een verschillende breedte (rommelig ogend) — de browser kon de kolombreedte niet consistent bepalen doordat elke rij andere colspan-grenzen heeft (boekingsbalken van wisselende lengte). Opgelost met `table-layout: fixed` + een expliciete `<colgroup>` (32 vaste kolommen: 1 voor de maandnaam, 31 voor de dagen).
 > Vervolg in v0.29.2: bleek bij een echte test (jaar met veel/brede boekingen, bv. 2026) toch nog steeds ongelijke kolombreedtes te geven ondanks de colgroup-fix — een `<table>` met colspans bleek dit gewoon niet 100% betrouwbaar op te lossen. Volledig herbouwd met CSS Grid i.p.v. een HTML-tabel: elke maand is nu een eigen `display: grid`-rij met exact dezelfde vaste kolombreedtes (`grid-template-columns: 92px repeat(31, 26px)`), wat kolomverschillen tussen rijen sowieso onmogelijk maakt.
 > Vervolg in v0.30.0: Belgische officiële feestdagen krijgen dezelfde kleur als weekenddagen (inclusief de bewegende feestdagen t.o.v. Pasen).
+> Vervolg in v0.31.0: tabbladen herschikt (zie US-3.1/US-1.3) — de Maand/Jaar-schakelaar staat niet meer "enkel zichtbaar bij Beschikbaarheid, verborgen bij de 4 prijskalenders", want Beschikbaarheid is nu het hele Kalender-tabblad (geen prijskalenders meer ernaast om voor te verbergen). Tegelijk is **Jaar het nieuwe standaard-geselecteerde beeld** i.p.v. Maand.
 
 **Als** Johan of Tinneke **wil ik** in één oogopslag de beschikbaarheid van het volledige jaar zien **zodat** ik niet maand per maand moet doorklikken om een overzicht te krijgen.
 
 **Acceptatiecriteria:**
-- Given de Beschikbaarheid-modus, then staat er een Maand/Jaar-schakelaar bovenaan; "Jaar" toont een nieuwe jaarweergave, "Maand" toont de bestaande maandweergave (US-3.1). De schakelaar is enkel zichtbaar in Beschikbaarheid, niet bij de 4 prijskalenders.
+- Given het Kalender-tabblad, then staat er een Maand/Jaar-schakelaar bovenaan, met **Jaar default geselecteerd**; "Jaar" toont de jaarweergave, "Maand" toont de maandweergave (US-3.1).
 - Given de jaarweergave, then toont ze een tabel met 12 maandrijen (huidig kalenderjaar) en een kolom per dag (1 t/m 31, kortere maanden krijgen lege opvulcellen); de maandnaam blijft zichtbaar bij horizontaal scrollen (sticky eerste kolom).
 - Given een vrije dag, then toont de cel het dagnummer, met een duidelijke kleurtint op een weekenddag (zaterdag/zondag, op basis van de echte datum) of op een officiële Belgische feestdag (zelfde kleur als een weekenddag).
 - Given een aaneengesloten verblijf, then wordt dit getoond als één doorlopende gekleurde balk (samengevoegde cel) met de gastnaam erin, i.p.v. een cel per dag; een eenzelfde-dag-turnover (vertrek + aankomst) toont beide voornamen in een eigen smalle cel op die dag.

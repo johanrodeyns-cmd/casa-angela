@@ -242,7 +242,7 @@
   }
   @media (min-width: 480px) {
     .price-mode-toggle {
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(4, 1fr);
     }
   }
   .price-mode-btn {
@@ -257,10 +257,6 @@
   }
   .price-mode-btn.active {
     background: var(--primary);
-    color: var(--cream);
-  }
-  .price-mode-btn[data-mode="availability"].active {
-    background: var(--azure);
     color: var(--cream);
   }
   .cal-day.bezet {
@@ -1190,42 +1186,29 @@
       <nav id="app-nav">
         <button type="button" class="nav-item active" data-tab="tab-kalender">Kalender</button>
         <button type="button" class="nav-item" data-tab="tab-boekingen">Boekingen</button>
+        <button type="button" class="nav-item" data-tab="tab-prijzen">Prijzen</button>
         <button type="button" class="nav-item" data-tab="tab-checklist-aankomst">Checklist<br>aankomst</button>
         <button type="button" class="nav-item" data-tab="tab-checklist-vertrek">Checklist<br>vertrek</button>
       </nav>
 
       <div class="tab-content">
         <div id="tab-kalender" class="tab-panel active">
-          <div class="cal-toolbar">
-            <button id="period-toggle" type="button">📅 Periode</button>
-            <button id="formula-open" type="button">⚙ Prijsformule</button>
+          <div id="availability-view-toggle" class="view-toggle">
+            <button type="button" class="view-toggle-btn" data-view="month">Maand</button>
+            <button type="button" class="view-toggle-btn active" data-view="year">Jaar</button>
           </div>
-          <div class="price-mode-toggle">
-            <button type="button" class="price-mode-btn active" data-mode="airbnb">Airbnb</button>
-            <button type="button" class="price-mode-btn" data-mode="booking">Booking.com</button>
-            <button type="button" class="price-mode-btn" data-mode="direct">Rechtstreeks</button>
-            <button type="button" class="price-mode-btn" data-mode="friends">Vrienden</button>
-            <button type="button" class="price-mode-btn" data-mode="availability">Beschikbaarheid</button>
-          </div>
-          <div id="availability-view-toggle" class="view-toggle" hidden>
-            <button type="button" class="view-toggle-btn active" data-view="month">Maand</button>
-            <button type="button" class="view-toggle-btn" data-view="year">Jaar</button>
-          </div>
-          <p id="mode-hint">Wijzig via de Airbnb-prijs of pas de formule aan.</p>
-          <p id="selection-hint">Tik een startdag en een einddag om een periode te selecteren.</p>
-          <p id="copy-feedback"></p>
-          <div id="month-view">
+          <div id="month-view" hidden>
             <div class="calendar-header">
-              <button id="cal-prev" type="button" aria-label="Vorige maand">‹</button>
-              <h3 id="cal-month-label"></h3>
-              <button id="cal-next" type="button" aria-label="Volgende maand">›</button>
+              <button id="avail-cal-prev" type="button" aria-label="Vorige maand">‹</button>
+              <h3 id="avail-cal-month-label"></h3>
+              <button id="avail-cal-next" type="button" aria-label="Volgende maand">›</button>
             </div>
             <div class="cal-weekdays">
               <span>Ma</span><span>Di</span><span>Wo</span><span>Do</span><span>Vr</span><span>Za</span><span>Zo</span>
             </div>
-            <div id="cal-grid" class="cal-grid"></div>
+            <div id="avail-cal-grid" class="cal-grid"></div>
           </div>
-          <div id="year-view" hidden>
+          <div id="year-view">
             <div class="calendar-header">
               <button id="year-prev" type="button" aria-label="Vorig jaar">‹</button>
               <h3 id="year-label"></h3>
@@ -1251,6 +1234,30 @@
           <p id="copy-tuinier-feedback"></p>
           <div id="bookings-list"></div>
           <p id="bookings-empty" class="empty-state">Nog geen boekingen.</p>
+        </div>
+        <div id="tab-prijzen" class="tab-panel">
+          <div class="cal-toolbar">
+            <button id="period-toggle" type="button">📅 Periode</button>
+            <button id="formula-open" type="button">⚙ Prijsformule</button>
+          </div>
+          <div class="price-mode-toggle">
+            <button type="button" class="price-mode-btn active" data-mode="airbnb">Airbnb</button>
+            <button type="button" class="price-mode-btn" data-mode="booking">Booking.com</button>
+            <button type="button" class="price-mode-btn" data-mode="direct">Rechtstreeks</button>
+            <button type="button" class="price-mode-btn" data-mode="friends">Vrienden</button>
+          </div>
+          <p id="mode-hint">Wijzig via de Airbnb-prijs of pas de formule aan.</p>
+          <p id="selection-hint">Tik een startdag en een einddag om een periode te selecteren.</p>
+          <p id="copy-feedback"></p>
+          <div class="calendar-header">
+            <button id="cal-prev" type="button" aria-label="Vorige maand">‹</button>
+            <h3 id="cal-month-label"></h3>
+            <button id="cal-next" type="button" aria-label="Volgende maand">›</button>
+          </div>
+          <div class="cal-weekdays">
+            <span>Ma</span><span>Di</span><span>Wo</span><span>Do</span><span>Vr</span><span>Za</span><span>Zo</span>
+          </div>
+          <div id="cal-grid" class="cal-grid"></div>
         </div>
         <div id="tab-checklist-aankomst" class="tab-panel">
           <div class="checklist" data-list-id="aankomst">
@@ -1321,6 +1328,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.31.0", date: "2026-07-18", description: "Tabbladen herschikt: nieuw tabblad 'Prijzen' (tussen Boekingen en Checklist aankomst) met Periode, Prijsformule en de 4 prijstypes. Het Kalender-tabblad toont nu uitsluitend Beschikbaarheid, met Jaar als nieuw standaardbeeld i.p.v. Maand." },
       { version: "0.30.1", date: "2026-07-18", description: "Boekingenlijst: afgelopen boekingen (vertrekdatum in het verleden) krijgen een grijze achtergrond, zodat meteen duidelijk is welke verblijven al voorbij zijn." },
       { version: "0.30.0", date: "2026-07-18", description: "Jaartabel: Belgische officiële feestdagen krijgen nu dezelfde kleur als weekenddagen (inclusief de bewegende feestdagen zoals Paasmaandag, O.L.H. Hemelvaart en Pinkstermaandag)." },
       { version: "0.29.2", date: "2026-07-18", description: "Jaartabel herbouwd met CSS Grid i.p.v. een HTML-tabel: dagkolommen bleven bij veel/brede boekingen toch nog ongelijk breed uitvallen (tabel-layout met colspans bleek onbetrouwbaar). Vaste grid-kolommen lossen dit definitief op." },
@@ -1431,15 +1439,17 @@
 
     const today = new Date();
     let calYear = today.getFullYear();
-    let calMonth = today.getMonth() + 1; // 1-12
+    let calMonth = today.getMonth() + 1; // 1-12 — Prijzen-tab
     let pricingCache = {}; // date -> airbnbPrice
     let priceMode = "airbnb"; // 'airbnb' | 'booking' | 'direct' | 'friends'
     let selectionMode = false;
     let selectionStart = null;
     let bookings = [];
     let syncedBlocks = []; // populated once iCal-sync (US-2.3) lands
-    let calViewMode = "month"; // 'month' | 'year' — enkel relevant als priceMode === 'availability'
+    let calViewMode = "year"; // 'month' | 'year' — Kalender-tab (Beschikbaarheid), Jaar is default
     let yearViewYear = today.getFullYear();
+    let availCalYear = today.getFullYear();
+    let availCalMonth = today.getMonth() + 1; // 1-12 — Kalender-tab maandweergave
 
     const DEFAULT_FORMULA = { factor: 1, offset: 0 };
     let formulaSettings = {
@@ -1455,19 +1465,64 @@
     const priceInput = document.getElementById("price-input");
     let priceDialogDateValue = null;
 
-    const availabilityViewToggle = document.getElementById("availability-view-toggle");
     const monthView = document.getElementById("month-view");
     const yearView = document.getElementById("year-view");
     const yearGrid = document.getElementById("year-grid");
     const yearLabel = document.getElementById("year-label");
+    const availCalGrid = document.getElementById("avail-cal-grid");
+    const availCalMonthLabel = document.getElementById("avail-cal-month-label");
 
-    function updateCalendarViewVisibility() {
-      availabilityViewToggle.hidden = priceMode !== "availability";
-      const showYear = priceMode === "availability" && calViewMode === "year";
+    function updateAvailabilityViewVisibility() {
+      const showYear = calViewMode === "year";
       monthView.hidden = showYear;
       yearView.hidden = !showYear;
-      if (showYear) renderYearView();
+      if (showYear) renderYearView(); else renderAvailabilityMonth();
     }
+
+    function renderAvailabilityMonth() {
+      availCalMonthLabel.textContent = `${MONTH_NAMES[availCalMonth - 1]} ${availCalYear}`;
+      const weeks = buildMonthGrid(availCalYear, availCalMonth);
+      // Zelfde bron als renderYearView(): enkel boekingen tellen mee, geen gesynchroniseerde
+      // blokken (zie US-2.6/2.3-nota bij de vroegere renderCalendar()).
+      const occupancyMap = buildOccupancyMap(bookings, []);
+      availCalGrid.innerHTML = weeks
+        .flat()
+        .map((date) => {
+          if (!date) return '<span class="cal-day cal-day-empty"></span>';
+          const day = Number(date.slice(8, 10));
+          const state = dayOccupancyState(date, occupancyMap);
+          const stateClass = state !== "vrij" ? ` ${state}` : "";
+          const label = dayDisplayLabel(date, occupancyMap, state);
+          return `
+            <button type="button" class="cal-day${stateClass}" data-date="${date}">
+              <span class="cal-day-num">${day}</span>
+              <span class="cal-day-price" title="${label}">${label}</span>
+            </button>
+          `;
+        })
+        .join("");
+
+      availCalGrid.querySelectorAll(".cal-day").forEach((btn) => {
+        btn.addEventListener("click", () => openDayDetailDialog(btn.dataset.date));
+      });
+    }
+
+    function goToAvailMonth(year, month) {
+      availCalYear = year;
+      availCalMonth = month;
+      renderAvailabilityMonth();
+    }
+
+    document.getElementById("avail-cal-prev").addEventListener("click", () => {
+      const newMonth = availCalMonth === 1 ? 12 : availCalMonth - 1;
+      const newYear = availCalMonth === 1 ? availCalYear - 1 : availCalYear;
+      goToAvailMonth(newYear, newMonth);
+    });
+    document.getElementById("avail-cal-next").addEventListener("click", () => {
+      const newMonth = availCalMonth === 12 ? 1 : availCalMonth + 1;
+      const newYear = availCalMonth === 12 ? availCalYear + 1 : availCalYear;
+      goToAvailMonth(newYear, newMonth);
+    });
 
     function renderYearView() {
       yearLabel.textContent = String(yearViewYear);
@@ -1502,7 +1557,7 @@
         document.querySelectorAll(".view-toggle-btn").forEach((b) => {
           b.classList.toggle("active", b.dataset.view === calViewMode);
         });
-        updateCalendarViewVisibility();
+        updateAvailabilityViewVisibility();
       });
     });
 
@@ -1532,16 +1587,6 @@
           const state = dayOccupancyState(date, occupancyMap);
           const stateClass = state !== "vrij" ? ` ${state}` : "";
 
-          if (priceMode === "availability") {
-            const label = dayDisplayLabel(date, occupancyMap, state);
-            return `
-              <button type="button" class="cal-day${stateClass}${selectedClass}" data-date="${date}">
-                <span class="cal-day-num">${day}</span>
-                <span class="cal-day-price" title="${label}">${label}</span>
-              </button>
-            `;
-          }
-
           const price = computeDisplayPrice(priceMode, pricingCache[date], formulaSettings);
           const priceLabel = price == null ? "—" : `€${Math.round(price * 100) / 100}`;
           const priceClass = price == null ? "cal-day-price empty" : "cal-day-price";
@@ -1556,10 +1601,6 @@
 
       calGrid.querySelectorAll(".cal-day").forEach((btn) => {
         btn.addEventListener("click", () => {
-          if (priceMode === "availability") {
-            openDayDetailDialog(btn.dataset.date);
-            return;
-          }
           if (priceMode !== "airbnb") {
             showModeHint();
           } else if (selectionMode) {
@@ -1611,7 +1652,6 @@
         periodToggleBtn.disabled = priceMode !== "airbnb";
         if (priceMode !== "airbnb") exitSelectionMode();
         renderCalendar();
-        updateCalendarViewVisibility();
       });
     });
 
@@ -1687,7 +1727,7 @@
     }
 
     renderCalendar();
-    updateCalendarViewVisibility();
+    updateAvailabilityViewVisibility();
 
     document.getElementById("cal-prev").addEventListener("click", () => {
       const newMonth = calMonth === 1 ? 12 : calMonth - 1;
