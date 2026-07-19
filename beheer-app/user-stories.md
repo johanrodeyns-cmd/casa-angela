@@ -284,16 +284,20 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ### US-3.4 ☑ Jaarkalender voor beschikbaarheid (M) — v0.28.0
 > Vervolg in v0.28.1: de Maand/Jaar-schakelaar bleef zichtbaar bij de 4 prijskalenders i.p.v. enkel bij Beschikbaarheid — `.view-toggle`'s eigen `display: flex` had dezelfde CSS-specificiteit als het `hidden`-attribuut en won daarvan in de cascade. Opgelost met een expliciete `.view-toggle[hidden] { display: none; }`-regel.
+> Vervolg in v0.29.0: de mini-maandkalenders (heatmap-stijl) overtuigden Johan niet na een eerste test — op basis van een referentiebeeld (Excel-achtig jaaroverzicht: 12 maandrijen, dagkolommen, gastnaam als doorlopende balk) volledig herbouwd naar een spreadsheet-stijl tabel. Bewuste afwijking van het referentiebeeld: geen "Ma Di Wo..."-weekdagkoppen bovenaan (die zouden voor 11 van de 12 maanden fout uitgelijnd staan, want elke maand start op een andere weekdag) — in de plaats krijgt elke vrije dag een correcte weekend-kleuring op basis van de echte kalenderdatum.
+
 **Als** Johan of Tinneke **wil ik** in één oogopslag de beschikbaarheid van het volledige jaar zien **zodat** ik niet maand per maand moet doorklikken om een overzicht te krijgen.
 
 **Acceptatiecriteria:**
-- Given de Beschikbaarheid-modus, then staat er een Maand/Jaar-schakelaar bovenaan; "Jaar" toont een nieuwe jaarweergave, "Maand" toont de bestaande maandweergave (US-3.1).
-- Given de jaarweergave, then toont ze 12 compacte mini-maandkalenders (heatmap-stijl: kleine effen gekleurde dagblokjes — vrij/bezet/aankomst/vertrek — géén gastnaam, die past niet leesbaar op die schaal) voor het huidige kalenderjaar.
-- Given een breed (desktop) scherm, then staan de 12 mini-maanden in een grid (meerdere kolommen) zodat het hele jaar zonder scrollen zichtbaar is; op mobiel staan ze onder elkaar in 1 kolom (verticaal scrollen).
+- Given de Beschikbaarheid-modus, then staat er een Maand/Jaar-schakelaar bovenaan; "Jaar" toont een nieuwe jaarweergave, "Maand" toont de bestaande maandweergave (US-3.1). De schakelaar is enkel zichtbaar in Beschikbaarheid, niet bij de 4 prijskalenders.
+- Given de jaarweergave, then toont ze een tabel met 12 maandrijen (huidig kalenderjaar) en een kolom per dag (1 t/m 31, kortere maanden krijgen lege opvulcellen); de maandnaam blijft zichtbaar bij horizontaal scrollen (sticky eerste kolom).
+- Given een vrije dag, then toont de cel het dagnummer, met een duidelijke kleurtint op een weekenddag (zaterdag/zondag, op basis van de echte datum).
+- Given een aaneengesloten verblijf, then wordt dit getoond als één doorlopende gekleurde balk (samengevoegde cel) met de gastnaam erin, i.p.v. een cel per dag; een eenzelfde-dag-turnover (vertrek + aankomst) toont beide voornamen in een eigen smalle cel op die dag.
+- Given een breed (desktop) scherm, then is de volledige tabel in één keer leesbaar; op mobiel mag de tabel horizontaal scrollen (bewust aanvaard, gezien het aantal dagkolommen).
 - Given vorige/volgende-jaar-knoppen, when ik erop klik, then toont de jaarweergave het gekozen jaar (i.p.v. de maand-navigatiepijltjes uit de maandweergave).
-- Given een klik/tik op een dag in de jaarweergave, then opent dezelfde dag-detaildialoog als in de maandweergave (US-3.3) — geen aparte interactielogica.
+- Given een klik/tik op een cel (vrij of bezet) in de jaarweergave, then opent dezelfde dag-detaildialoog als in de maandweergave (US-3.3) — geen aparte interactielogica.
 
-**Technische notities:** geen nieuwe Firestore-queries — `bookings`/`syncedBlocks` staan al volledig in het geheugen sinds login. Nieuwe pure functie `logic.buildYearGrid(year)` (bouwt de 12 `buildMonthGrid(year, maand)`-resultaten in één array), TDD getest. Rendering en kleurlogica hergebruiken bestaande `dayOccupancyState`/`buildOccupancyMap` uit `index.html`.
+**Technische notities:** geen nieuwe Firestore-queries — `bookings`/`syncedBlocks` staan al volledig in het geheugen sinds login. Pure functies in `logic.js`, TDD getest: `buildMonthTimeline(year, month, occupancyMap)` (één maandrij: vrije dagen los, aaneengesloten dagen met identiek `dayDisplayLabel` samengevoegd tot één `{type:'booked', day, span, label}`-segment) en `buildYearGrid(year, occupancyMap)` (12× `buildMonthTimeline`). Rendering (`renderYearView` in `index.html`) bouwt een `<table>` met `<td colspan>` per segment; `logic.escapeHtml` ontsnapt de gastnaam vóór het in `innerHTML` terechtkomt.
 
 ---
 

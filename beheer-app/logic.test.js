@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
-  getVersion, isAllowedEmail, buildMonthGrid, buildYearGrid, computeDerivedPrice, computeDisplayPrice,
+  getVersion, isAllowedEmail, buildMonthGrid, buildMonthTimeline, buildYearGrid, computeDerivedPrice, computeDisplayPrice,
   getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking,
   parseIcalEvents, mergeSyncedBlocks, buildOccupancyMap, dayOccupancyState,
   upcomingBookings, formatBookingsListForContact, formatBookingsListForGardener,
@@ -11,7 +11,7 @@ const {
 } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.28.1');
+  assert.equal(getVersion(), '0.29.0');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -55,16 +55,52 @@ test('buildMonthGrid contains exactly one cell per day of the month, no duplicat
   assert.equal(days[days.length - 1], '2024-02-29');
 });
 
-test('buildYearGrid returns 12 entries, one per month in order', () => {
-  const year = buildYearGrid(2024);
-  assert.equal(year.length, 12);
-  assert.deepEqual(year.map((m) => m.month), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+test('buildMonthTimeline marks Saturdays and Sundays as weekend for free days', () => {
+  const timeline = buildMonthTimeline(2024, 2, {}); // 2024-02-01 is a Thursday
+  const byDay = Object.fromEntries(timeline.map((c) => [c.day, c]));
+  assert.equal(byDay[1].weekend, false); // Thu
+  assert.equal(byDay[3].weekend, true); // Sat
+  assert.equal(byDay[4].weekend, true); // Sun
+  assert.equal(byDay[5].weekend, false); // Mon
 });
 
-test('buildYearGrid reuses buildMonthGrid for each month\'s weeks', () => {
-  const year = buildYearGrid(2024);
-  assert.deepEqual(year[1].weeks, buildMonthGrid(2024, 2)); // February, leap year
-  assert.deepEqual(year[11].weeks, buildMonthGrid(2024, 12));
+test('buildMonthTimeline returns one free entry per day when there is no occupancy', () => {
+  const timeline = buildMonthTimeline(2024, 2, {}); // leap year, 29 days
+  assert.equal(timeline.length, 29);
+  timeline.forEach((c) => assert.equal(c.type, 'free'));
+});
+
+test('buildMonthTimeline groups consecutive days with the same guest into one booked segment', () => {
+  const bookings = [{ id: 'b1', dateFrom: '2026-07-10', dateTo: '2026-07-14', name: 'Jan' }];
+  const occupancyMap = buildOccupancyMap(bookings, []);
+  const timeline = buildMonthTimeline(2026, 7, occupancyMap);
+  assert.equal(timeline.length, 27); // 9 free + 1 booked segment (collapsing 5 days) + 17 free
+  const booked = timeline.filter((c) => c.type === 'booked');
+  assert.deepEqual(booked, [{ type: 'booked', day: 10, span: 5, label: 'Jan' }]);
+});
+
+test('buildMonthTimeline keeps back-to-back bookings by different guests as separate segments', () => {
+  const bookings = [
+    { id: 'b1', dateFrom: '2026-07-05', dateTo: '2026-07-10', name: 'Jan' },
+    { id: 'b2', dateFrom: '2026-07-10', dateTo: '2026-07-15', name: 'Mieke' },
+  ];
+  const occupancyMap = buildOccupancyMap(bookings, []);
+  const timeline = buildMonthTimeline(2026, 7, occupancyMap);
+  const booked = timeline.filter((c) => c.type === 'booked');
+  assert.deepEqual(booked, [
+    { type: 'booked', day: 5, span: 5, label: 'Jan' },
+    { type: 'booked', day: 10, span: 1, label: 'Jan / Mieke' },
+    { type: 'booked', day: 11, span: 5, label: 'Mieke' },
+  ]);
+});
+
+test('buildYearGrid returns 12 entries, one per month in order, each built from buildMonthTimeline', () => {
+  const bookings = [{ id: 'b1', dateFrom: '2026-07-10', dateTo: '2026-07-14', name: 'Jan' }];
+  const occupancyMap = buildOccupancyMap(bookings, []);
+  const year = buildYearGrid(2026, occupancyMap);
+  assert.equal(year.length, 12);
+  assert.deepEqual(year.map((m) => m.month), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+  assert.deepEqual(year[6].cells, buildMonthTimeline(2026, 7, occupancyMap));
 });
 
 test('computeDerivedPrice multiplies by the factor and adds the offset', () => {

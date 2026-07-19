@@ -392,55 +392,63 @@
     background: var(--primary);
     color: var(--cream);
   }
-  .year-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1.25rem;
+  .year-table-wrap {
+    overflow-x: auto;
+    border-radius: 6px;
   }
-  @media (min-width: 768px) {
-    .year-grid {
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1rem;
-    }
+  .year-table {
+    border-collapse: collapse;
+    width: max-content;
   }
-  .year-month-label {
-    margin: 0 0 0.35rem;
-    font-size: 0.85rem;
-    font-weight: bold;
-    text-transform: capitalize;
-    color: var(--charcoal);
+  .year-table td,
+  .year-table th {
+    border: 1px solid var(--sand-dark);
     text-align: center;
-  }
-  .year-month-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 2px;
-  }
-  .year-day {
-    aspect-ratio: 1;
-    min-height: 0;
-    min-width: 0;
+    font-size: 0.7rem;
     padding: 0;
+    width: 26px;
+    height: 28px;
+  }
+  .year-month-name {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--cream);
+    font-weight: bold;
+    font-size: 0.75rem;
+    text-align: left;
+    text-transform: capitalize;
+    padding: 0 0.6rem;
+    white-space: nowrap;
+  }
+  .year-cell {
+    color: var(--olive-dark);
+  }
+  .year-cell.weekend {
+    background: var(--azure-light);
+  }
+  .year-cell.empty {
     border: none;
-    border-radius: 2px;
-    background: var(--sand);
+  }
+  .year-cell.booked {
+    background: var(--primary);
+    color: var(--cream);
+    font-weight: bold;
+    text-align: left;
+    padding-left: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     cursor: pointer;
   }
-  .year-day:hover {
+  .year-cell.booked:hover {
+    background: var(--primary-light);
+  }
+  .year-cell.free {
+    cursor: pointer;
+  }
+  .year-cell.free:hover {
     background: var(--sand-dark);
-  }
-  .year-day-empty {
-    background: none;
-    cursor: default;
-  }
-  .year-day.bezet {
-    background: var(--primary);
-  }
-  .year-day.aankomst {
-    background: linear-gradient(135deg, var(--sand) 50%, var(--primary) 50%);
-  }
-  .year-day.vertrek {
-    background: linear-gradient(135deg, var(--primary) 50%, var(--sand) 50%);
   }
   dialog#price-dialog,
   dialog#bulk-price-dialog {
@@ -1198,7 +1206,11 @@
               <h3 id="year-label"></h3>
               <button id="year-next" type="button" aria-label="Volgend jaar">›</button>
             </div>
-            <div id="year-grid" class="year-grid"></div>
+            <div class="year-table-wrap">
+              <table class="year-table">
+                <tbody id="year-grid"></tbody>
+              </table>
+            </div>
           </div>
         </div>
         <div id="tab-boekingen" class="tab-panel">
@@ -1286,6 +1298,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.29.0", date: "2026-07-18", description: "Jaarkalender herzien naar een spreadsheet-stijl overzicht: 12 maandrijen met dagkolommen, gastnamen als doorlopende balk over hun volledige verblijf, weekend-kleuring per dag. Op mobiel horizontaal scrollbaar, maandnaam blijft zichtbaar." },
       { version: "0.28.1", date: "2026-07-18", description: "Bugfix: de Maand/Jaar-schakelaar bleef zichtbaar bij de 4 prijskalenders i.p.v. enkel bij Beschikbaarheid (CSS-conflict met het hidden-attribuut)." },
       { version: "0.28.0", date: "2026-07-18", description: "Nieuw: jaarkalender bij Beschikbaarheid — schakel met 'Maand/Jaar' bovenaan tussen de bestaande maandweergave en een compact jaaroverzicht van alle 12 maanden in één oogopslag, met vorige/volgende-jaar-navigatie." },
       { version: "0.27.0", date: "2026-07-18", description: "Huisstijl: de terracotta/bruinrode kleur is in de hele app vervangen door een warmer lichtblauw. Daarnaast: Cache-Control op no-store gezet zodat de app op het iPhone-startscherm niet langer een verouderde versie kan tonen." },
@@ -1429,32 +1442,35 @@
       if (showYear) renderYearView();
     }
 
+    const YEAR_TABLE_COLUMNS = 31; // langste maand — kortere maanden krijgen lege opvulcellen
+
     function renderYearView() {
       yearLabel.textContent = String(yearViewYear);
       // Zelfde bron als renderCalendar(): enkel boekingen tellen mee, geen gesynchroniseerde blokken (US-2.6/2.3-nota hierboven).
       const occupancyMap = buildOccupancyMap(bookings, []);
-      yearGrid.innerHTML = buildYearGrid(yearViewYear)
-        .map(({ month, weeks }) => {
-          const days = weeks
-            .flat()
-            .map((date) => {
-              if (!date) return '<span class="year-day year-day-empty"></span>';
-              const state = dayOccupancyState(date, occupancyMap);
-              const stateClass = state !== "vrij" ? ` ${state}` : "";
-              return `<button type="button" class="year-day${stateClass}" data-date="${date}" aria-label="${date}"></button>`;
+      yearGrid.innerHTML = buildYearGrid(yearViewYear, occupancyMap)
+        .map(({ month, cells }) => {
+          let daysCovered = 0;
+          const tds = cells
+            .map((cell) => {
+              daysCovered += cell.span || 1;
+              const date = toIsoDate(yearViewYear, month, cell.day);
+              if (cell.type === "free") {
+                const weekendClass = cell.weekend ? " weekend" : "";
+                return `<td class="year-cell free${weekendClass}" data-date="${date}">${cell.day}</td>`;
+              }
+              const safeLabel = escapeHtml(cell.label);
+              return `<td class="year-cell booked" colspan="${cell.span}" data-date="${date}" title="${safeLabel}">${safeLabel}</td>`;
             })
             .join("");
-          return `
-            <div class="year-month">
-              <h4 class="year-month-label">${MONTH_NAMES[month - 1]}</h4>
-              <div class="year-month-grid">${days}</div>
-            </div>
-          `;
+          const padding = YEAR_TABLE_COLUMNS - daysCovered;
+          const paddingCell = padding > 0 ? `<td class="year-cell empty" colspan="${padding}"></td>` : "";
+          return `<tr><td class="year-month-name">${MONTH_NAMES[month - 1]}</td>${tds}${paddingCell}</tr>`;
         })
         .join("");
 
-      yearGrid.querySelectorAll(".year-day").forEach((btn) => {
-        btn.addEventListener("click", () => openDayDetailDialog(btn.dataset.date));
+      yearGrid.querySelectorAll(".year-cell[data-date]").forEach((td) => {
+        td.addEventListener("click", () => openDayDetailDialog(td.dataset.date));
       });
     }
 

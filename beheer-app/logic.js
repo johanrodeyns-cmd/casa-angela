@@ -1,4 +1,4 @@
-const VERSION = '0.28.1';
+const VERSION = '0.29.0';
 
 function getVersion() {
   return VERSION;
@@ -28,10 +28,10 @@ function buildMonthGrid(year, month) {
   return weeks;
 }
 
-function buildYearGrid(year) {
+function buildYearGrid(year, occupancyMap) {
   const months = [];
   for (let month = 1; month <= 12; month++) {
-    months.push({ month, weeks: buildMonthGrid(year, month) });
+    months.push({ month, cells: buildMonthTimeline(year, month, occupancyMap) });
   }
   return months;
 }
@@ -278,6 +278,36 @@ function dayDisplayLabel(date, occupancyMap, state) {
   return guestNames.map((name) => name.trim().split(/\s+/)[0]).join(' / ');
 }
 
+// One row of the year-timeline view: consecutive days occupied by the same guest(s)
+// collapse into a single 'booked' segment (like a merged spreadsheet cell), so the
+// name only needs to be rendered once per stay instead of once per day.
+function buildMonthTimeline(year, month, occupancyMap) {
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const cells = [];
+  let day = 1;
+  while (day <= daysInMonth) {
+    const date = toIsoDate(year, month, day);
+    const state = dayOccupancyState(date, occupancyMap);
+    if (state === 'vrij') {
+      const weekday = new Date(date + 'T00:00:00').getDay();
+      cells.push({ type: 'free', day, weekend: weekday === 0 || weekday === 6 });
+      day += 1;
+      continue;
+    }
+    const label = dayDisplayLabel(date, occupancyMap, state);
+    let span = 1;
+    while (day + span <= daysInMonth) {
+      const nextDate = toIsoDate(year, month, day + span);
+      const nextState = dayOccupancyState(nextDate, occupancyMap);
+      if (nextState === 'vrij' || dayDisplayLabel(nextDate, occupancyMap, nextState) !== label) break;
+      span += 1;
+    }
+    cells.push({ type: 'booked', day, span, label });
+    day += span;
+  }
+  return cells;
+}
+
 const WEEKDAY_ABBREVIATIONS = ['Zo', 'Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za']; // index = Date#getDay()
 
 function weekdayAbbreviation(date) {
@@ -333,7 +363,7 @@ function escapeHtml(str) {
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    getVersion, isAllowedEmail, buildMonthGrid, buildYearGrid, computeDerivedPrice, computeDisplayPrice,
+    getVersion, isAllowedEmail, buildMonthGrid, buildMonthTimeline, buildYearGrid, computeDerivedPrice, computeDisplayPrice,
     getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking,
     parseIcalEvents, mergeSyncedBlocks, diffSyncedBlocks, buildOccupancyMap, dayOccupancyState,
     upcomingBookings, formatBookingsListForContact, formatBookingsListForGardener,
