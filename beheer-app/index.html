@@ -562,17 +562,18 @@
     display: block;
   }
   .cal-toolbar {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.5rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.4rem;
     margin-bottom: 0.75rem;
-    flex-wrap: wrap;
   }
   .cal-toolbar button {
-    font-size: 0.85rem;
-    padding: 0.5rem 1rem;
+    font-size: 0.75rem;
+    line-height: 1.2;
+    padding: 0.5rem 0.3rem;
     min-height: 44px;
     background: var(--azure);
+    white-space: normal;
   }
   .cal-toolbar button:hover {
     background: var(--azure-light);
@@ -1339,6 +1340,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.32.1", date: "2026-07-18", description: "Audit-log/Periode/Prijsformule staan nu netjes naast elkaar in 3 gelijke kolommen i.p.v. te wrappen naar een 2e regel." },
       { version: "0.32.0", date: "2026-07-18", description: "Audit-log-knop verhuisd van Boekingen naar Prijzen (links van Periode)." },
       { version: "0.31.2", date: "2026-07-18", description: "Bugfix: bij het openen van de app toonden de kalenders (Prijzen en Kalender-tab) geen boekingen tot je op iets klikte (bv. van Jaar naar Maand). De boekingen laadden dan pas net ná de eerste tekening van de kalenders. Kalenders verversen nu automatisch zodra de boekingen binnen zijn." },
       { version: "0.31.1", date: "2026-07-18", description: "Ingelogd-als/Uitloggen verhuisd naar de bovenste banner (samen met titel en versienummer) i.p.v. een aparte balk erboven." },
