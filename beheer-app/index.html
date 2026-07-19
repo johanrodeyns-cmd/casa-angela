@@ -397,55 +397,63 @@
     border-radius: 6px;
   }
   .year-table {
-    border-collapse: collapse;
-    table-layout: fixed;
+    display: flex;
+    flex-direction: column;
     width: max-content;
   }
-  .year-table col {
-    width: 26px;
+  /* Elke maand is een eigen grid, maar met exact dezelfde vaste kolombreedtes
+     (92px + 31 x 26px) — daardoor kunnen kolommen nooit meer per rij verschillen,
+     in tegenstelling tot een <table> met colspans (die bleek toch niet altijd
+     betrouwbaar even breed te blijven, zie US-3.4). */
+  .year-row {
+    display: grid;
+    grid-template-columns: 92px repeat(31, 26px);
   }
-  .year-table col.year-col-month {
-    width: 92px;
-  }
-  .year-table td,
-  .year-table th {
-    border: 1px solid var(--sand-dark);
-    text-align: center;
-    font-size: 0.7rem;
-    padding: 0;
+  .year-month-name,
+  .year-cell {
+    box-sizing: border-box;
     height: 28px;
-    overflow: hidden;
+    border-right: 1px solid var(--sand-dark);
+    border-bottom: 1px solid var(--sand-dark);
+    font-size: 0.7rem;
+  }
+  .year-row:first-child .year-month-name,
+  .year-row:first-child .year-cell {
+    border-top: 1px solid var(--sand-dark);
   }
   .year-month-name {
     position: sticky;
     left: 0;
     z-index: 1;
     background: var(--cream);
+    border-left: 1px solid var(--sand-dark);
+    display: flex;
+    align-items: center;
     font-weight: bold;
     font-size: 0.75rem;
-    text-align: left;
     text-transform: capitalize;
     padding: 0 0.6rem;
     white-space: nowrap;
+    overflow: hidden;
     text-overflow: ellipsis;
   }
   .year-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: var(--olive-dark);
+    overflow: hidden;
   }
   .year-cell.weekend {
     background: var(--azure-light);
-  }
-  .year-cell.empty {
-    border: none;
   }
   .year-cell.booked {
     background: var(--primary);
     color: var(--cream);
     font-weight: bold;
-    text-align: left;
+    justify-content: flex-start;
     padding-left: 4px;
     white-space: nowrap;
-    overflow: hidden;
     text-overflow: ellipsis;
     cursor: pointer;
   }
@@ -1215,16 +1223,7 @@
               <button id="year-next" type="button" aria-label="Volgend jaar">›</button>
             </div>
             <div class="year-table-wrap">
-              <table class="year-table">
-                <colgroup>
-                  <col class="year-col-month">
-                  <col><col><col><col><col><col><col><col><col><col>
-                  <col><col><col><col><col><col><col><col><col><col>
-                  <col><col><col><col><col><col><col><col><col><col>
-                  <col>
-                </colgroup>
-                <tbody id="year-grid"></tbody>
-              </table>
+              <div id="year-grid" class="year-table"></div>
             </div>
           </div>
         </div>
@@ -1313,6 +1312,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.29.2", date: "2026-07-18", description: "Jaartabel herbouwd met CSS Grid i.p.v. een HTML-tabel: dagkolommen bleven bij veel/brede boekingen toch nog ongelijk breed uitvallen (tabel-layout met colspans bleek onbetrouwbaar). Vaste grid-kolommen lossen dit definitief op." },
       { version: "0.29.1", date: "2026-07-18", description: "Bugfix jaartabel: dagkolommen hadden per maand een andere breedte (browser kon de kolombreedte niet consistent bepalen door de wisselende colspans van boekingsbalken). Vaste kolombreedtes via een colgroup lossen dit op." },
       { version: "0.29.0", date: "2026-07-18", description: "Jaarkalender herzien naar een spreadsheet-stijl overzicht: 12 maandrijen met dagkolommen, gastnamen als doorlopende balk over hun volledige verblijf, weekend-kleuring per dag. Op mobiel horizontaal scrollbaar, maandnaam blijft zichtbaar." },
       { version: "0.28.1", date: "2026-07-18", description: "Bugfix: de Maand/Jaar-schakelaar bleef zichtbaar bij de 4 prijskalenders i.p.v. enkel bij Beschikbaarheid (CSS-conflict met het hidden-attribuut)." },
@@ -1458,35 +1458,29 @@
       if (showYear) renderYearView();
     }
 
-    const YEAR_TABLE_COLUMNS = 31; // langste maand — kortere maanden krijgen lege opvulcellen
-
     function renderYearView() {
       yearLabel.textContent = String(yearViewYear);
       // Zelfde bron als renderCalendar(): enkel boekingen tellen mee, geen gesynchroniseerde blokken (US-2.6/2.3-nota hierboven).
       const occupancyMap = buildOccupancyMap(bookings, []);
       yearGrid.innerHTML = buildYearGrid(yearViewYear, occupancyMap)
         .map(({ month, cells }) => {
-          let daysCovered = 0;
-          const tds = cells
+          const segments = cells
             .map((cell) => {
-              daysCovered += cell.span || 1;
               const date = toIsoDate(yearViewYear, month, cell.day);
               if (cell.type === "free") {
                 const weekendClass = cell.weekend ? " weekend" : "";
-                return `<td class="year-cell free${weekendClass}" data-date="${date}">${cell.day}</td>`;
+                return `<div class="year-cell free${weekendClass}" data-date="${date}">${cell.day}</div>`;
               }
               const safeLabel = escapeHtml(cell.label);
-              return `<td class="year-cell booked" colspan="${cell.span}" data-date="${date}" title="${safeLabel}">${safeLabel}</td>`;
+              return `<div class="year-cell booked" style="grid-column: span ${cell.span}" data-date="${date}" title="${safeLabel}">${safeLabel}</div>`;
             })
             .join("");
-          const padding = YEAR_TABLE_COLUMNS - daysCovered;
-          const paddingCell = padding > 0 ? `<td class="year-cell empty" colspan="${padding}"></td>` : "";
-          return `<tr><td class="year-month-name">${MONTH_NAMES[month - 1]}</td>${tds}${paddingCell}</tr>`;
+          return `<div class="year-row"><div class="year-month-name">${MONTH_NAMES[month - 1]}</div>${segments}</div>`;
         })
         .join("");
 
-      yearGrid.querySelectorAll(".year-cell[data-date]").forEach((td) => {
-        td.addEventListener("click", () => openDayDetailDialog(td.dataset.date));
+      yearGrid.querySelectorAll(".year-cell[data-date]").forEach((el) => {
+        el.addEventListener("click", () => openDayDetailDialog(el.dataset.date));
       });
     }
 
