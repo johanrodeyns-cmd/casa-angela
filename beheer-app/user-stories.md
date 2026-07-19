@@ -283,6 +283,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 ---
 
 ### US-3.4 ☑ Jaarkalender voor beschikbaarheid (M) — v0.28.0
+> Vervolg in v0.28.1: de Maand/Jaar-schakelaar bleef zichtbaar bij de 4 prijskalenders i.p.v. enkel bij Beschikbaarheid — `.view-toggle`'s eigen `display: flex` had dezelfde CSS-specificiteit als het `hidden`-attribuut en won daarvan in de cascade. Opgelost met een expliciete `.view-toggle[hidden] { display: none; }`-regel.
 **Als** Johan of Tinneke **wil ik** in één oogopslag de beschikbaarheid van het volledige jaar zien **zodat** ik niet maand per maand moet doorklikken om een overzicht te krijgen.
 
 **Acceptatiecriteria:**

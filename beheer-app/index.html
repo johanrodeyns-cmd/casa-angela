@@ -374,6 +374,9 @@
     gap: 0.4rem;
     margin-bottom: 0.75rem;
   }
+  .view-toggle[hidden] {
+    display: none;
+  }
   .view-toggle-btn {
     flex: 1;
     min-height: 40px;
@@ -1283,6 +1286,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.28.1", date: "2026-07-18", description: "Bugfix: de Maand/Jaar-schakelaar bleef zichtbaar bij de 4 prijskalenders i.p.v. enkel bij Beschikbaarheid (CSS-conflict met het hidden-attribuut)." },
       { version: "0.28.0", date: "2026-07-18", description: "Nieuw: jaarkalender bij Beschikbaarheid — schakel met 'Maand/Jaar' bovenaan tussen de bestaande maandweergave en een compact jaaroverzicht van alle 12 maanden in één oogopslag, met vorige/volgende-jaar-navigatie." },
       { version: "0.27.0", date: "2026-07-18", description: "Huisstijl: de terracotta/bruinrode kleur is in de hele app vervangen door een warmer lichtblauw. Daarnaast: Cache-Control op no-store gezet zodat de app op het iPhone-startscherm niet langer een verouderde versie kan tonen." },
       { version: "0.26.3", date: "2026-07-18", description: "Tuinier-tabel: koptekst 'Reservas Casa Angela' staat er terug bovenaan (zonder het datumbereik erachter)." },
