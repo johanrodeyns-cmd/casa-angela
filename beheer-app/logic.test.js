@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
-  getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice,
+  getVersion, isAllowedEmail, buildMonthGrid, buildYearGrid, computeDerivedPrice, computeDisplayPrice,
   getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking,
   parseIcalEvents, mergeSyncedBlocks, buildOccupancyMap, dayOccupancyState,
   upcomingBookings, formatBookingsListForContact, formatBookingsListForGardener,
@@ -11,7 +11,7 @@ const {
 } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.27.0');
+  assert.equal(getVersion(), '0.28.0');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -53,6 +53,18 @@ test('buildMonthGrid contains exactly one cell per day of the month, no duplicat
   assert.equal(days.length, 29);
   assert.equal(days[0], '2024-02-01');
   assert.equal(days[days.length - 1], '2024-02-29');
+});
+
+test('buildYearGrid returns 12 entries, one per month in order', () => {
+  const year = buildYearGrid(2024);
+  assert.equal(year.length, 12);
+  assert.deepEqual(year.map((m) => m.month), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+});
+
+test('buildYearGrid reuses buildMonthGrid for each month\'s weeks', () => {
+  const year = buildYearGrid(2024);
+  assert.deepEqual(year[1].weeks, buildMonthGrid(2024, 2)); // February, leap year
+  assert.deepEqual(year[11].weeks, buildMonthGrid(2024, 12));
 });
 
 test('computeDerivedPrice multiplies by the factor and adds the offset', () => {

@@ -1,4 +1,4 @@
-const VERSION = '0.27.0';
+const VERSION = '0.28.0';
 
 function getVersion() {
   return VERSION;
@@ -26,6 +26,14 @@ function buildMonthGrid(year, month) {
   const weeks = [];
   for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
   return weeks;
+}
+
+function buildYearGrid(year) {
+  const months = [];
+  for (let month = 1; month <= 12; month++) {
+    months.push({ month, weeks: buildMonthGrid(year, month) });
+  }
+  return months;
 }
 
 function computeDerivedPrice(airbnbPrice, formula) {
@@ -325,7 +333,7 @@ function escapeHtml(str) {
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    getVersion, isAllowedEmail, buildMonthGrid, computeDerivedPrice, computeDisplayPrice,
+    getVersion, isAllowedEmail, buildMonthGrid, buildYearGrid, computeDerivedPrice, computeDisplayPrice,
     getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking,
     parseIcalEvents, mergeSyncedBlocks, diffSyncedBlocks, buildOccupancyMap, dayOccupancyState,
     upcomingBookings, formatBookingsListForContact, formatBookingsListForGardener,

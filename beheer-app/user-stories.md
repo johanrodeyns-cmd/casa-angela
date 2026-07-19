@@ -282,6 +282,20 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
+### US-3.4 ☑ Jaarkalender voor beschikbaarheid (M) — v0.28.0
+**Als** Johan of Tinneke **wil ik** in één oogopslag de beschikbaarheid van het volledige jaar zien **zodat** ik niet maand per maand moet doorklikken om een overzicht te krijgen.
+
+**Acceptatiecriteria:**
+- Given de Beschikbaarheid-modus, then staat er een Maand/Jaar-schakelaar bovenaan; "Jaar" toont een nieuwe jaarweergave, "Maand" toont de bestaande maandweergave (US-3.1).
+- Given de jaarweergave, then toont ze 12 compacte mini-maandkalenders (heatmap-stijl: kleine effen gekleurde dagblokjes — vrij/bezet/aankomst/vertrek — géén gastnaam, die past niet leesbaar op die schaal) voor het huidige kalenderjaar.
+- Given een breed (desktop) scherm, then staan de 12 mini-maanden in een grid (meerdere kolommen) zodat het hele jaar zonder scrollen zichtbaar is; op mobiel staan ze onder elkaar in 1 kolom (verticaal scrollen).
+- Given vorige/volgende-jaar-knoppen, when ik erop klik, then toont de jaarweergave het gekozen jaar (i.p.v. de maand-navigatiepijltjes uit de maandweergave).
+- Given een klik/tik op een dag in de jaarweergave, then opent dezelfde dag-detaildialoog als in de maandweergave (US-3.3) — geen aparte interactielogica.
+
+**Technische notities:** geen nieuwe Firestore-queries — `bookings`/`syncedBlocks` staan al volledig in het geheugen sinds login. Nieuwe pure functie `logic.buildYearGrid(year)` (bouwt de 12 `buildMonthGrid(year, maand)`-resultaten in één array), TDD getest. Rendering en kleurlogica hergebruiken bestaande `dayOccupancyState`/`buildOccupancyMap` uit `index.html`.
+
+---
+
 ## Epic 4 — Checklists
 
 ### US-4.1 ☑ Checklist-items beheren (CRUD) (M) — v0.24.0
