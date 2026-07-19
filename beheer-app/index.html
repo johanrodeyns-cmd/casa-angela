@@ -608,9 +608,6 @@
   .boekingen-toolbar-grid button:hover {
     background: var(--azure-light);
   }
-  #audit-log-open {
-    margin-top: 0.5rem;
-  }
   .audit-log-row {
     background: var(--sand);
     border-radius: 6px;
@@ -1242,7 +1239,6 @@
               <button id="ical-settings-open" type="button">🔗 iCal-koppelingen</button>
               <button id="sync-check-open" type="button">🔍 Synchronisatie-overzicht</button>
             </div>
-            <button id="audit-log-open" type="button" class="button-secondary full-width">📜 Audit-log</button>
           </div>
           <p id="copy-contact-feedback"></p>
           <p id="copy-tuinier-feedback"></p>
@@ -1251,6 +1247,7 @@
         </div>
         <div id="tab-prijzen" class="tab-panel">
           <div class="cal-toolbar">
+            <button id="audit-log-open" type="button">📜 Audit-log</button>
             <button id="period-toggle" type="button">📅 Periode</button>
             <button id="formula-open" type="button">⚙ Prijsformule</button>
           </div>
@@ -1342,6 +1339,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.32.0", date: "2026-07-18", description: "Audit-log-knop verhuisd van Boekingen naar Prijzen (links van Periode)." },
       { version: "0.31.2", date: "2026-07-18", description: "Bugfix: bij het openen van de app toonden de kalenders (Prijzen en Kalender-tab) geen boekingen tot je op iets klikte (bv. van Jaar naar Maand). De boekingen laadden dan pas net ná de eerste tekening van de kalenders. Kalenders verversen nu automatisch zodra de boekingen binnen zijn." },
       { version: "0.31.1", date: "2026-07-18", description: "Ingelogd-als/Uitloggen verhuisd naar de bovenste banner (samen met titel en versienummer) i.p.v. een aparte balk erboven." },
       { version: "0.31.0", date: "2026-07-18", description: "Tabbladen herschikt: nieuw tabblad 'Prijzen' (tussen Boekingen en Checklist aankomst) met Periode, Prijsformule en de 4 prijstypes. Het Kalender-tabblad toont nu uitsluitend Beschikbaarheid, met Jaar als nieuw standaardbeeld i.p.v. Maand." },

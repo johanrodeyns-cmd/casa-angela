@@ -12,7 +12,7 @@ const {
 } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.31.2');
+  assert.equal(getVersion(), '0.32.0');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
