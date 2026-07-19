@@ -11,7 +11,7 @@ const {
 } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.25.0');
+  assert.equal(getVersion(), '0.26.0');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -543,31 +543,25 @@ test('formatBookingsListForContact uses singular volwassene/kind for a count of 
 });
 
 test('formatBookingsListForGardener returns null when there are no bookings', () => {
-  assert.equal(formatBookingsListForGardener([], (a, b) => `${a} - ${b}`), null);
+  assert.equal(formatBookingsListForGardener([], (d) => d), null);
 });
 
-test('formatBookingsListForGardener includes only date range and name+language', () => {
+test('formatBookingsListForGardener returns a compact Spanish table with only the date range, no name or icons', () => {
   const booking = {
     dateFrom: '2026-07-10', dateTo: '2026-07-14', name: 'Jan Janssens', language: 'NL',
     phone: '0470123456', adultsCount: 2, childrenCount: 1, remark: 'late aankomst', price: 480,
   };
-  const text = formatBookingsListForGardener([booking], (a, b) => `${a} - ${b}`);
-  assert.equal(text, '📅 2026-07-10 - 2026-07-14\n👤 Jan Janssens (NL)');
+  const text = formatBookingsListForGardener([booking], (d) => d);
+  assert.equal(text, 'Desde\tHasta\n2026-07-10\t2026-07-14');
 });
 
-test('formatBookingsListForGardener omits the language suffix when blank', () => {
-  const booking = { dateFrom: '2026-07-10', dateTo: '2026-07-11', name: 'Jan', language: '' };
-  const text = formatBookingsListForGardener([booking], (a, b) => `${a} - ${b}`);
-  assert.equal(text, '📅 2026-07-10 - 2026-07-11\n👤 Jan');
-});
-
-test('formatBookingsListForGardener joins multiple bookings with a blank line separator', () => {
+test('formatBookingsListForGardener lists multiple bookings as one row each under a single header', () => {
   const bookings = [
-    { dateFrom: '2026-07-10', dateTo: '2026-07-11', name: 'Jan', language: '' },
-    { dateFrom: '2026-08-01', dateTo: '2026-08-02', name: 'Mieke', language: '' },
+    { dateFrom: '2026-07-10', dateTo: '2026-07-11', name: 'Jan' },
+    { dateFrom: '2026-08-01', dateTo: '2026-08-02', name: 'Mieke' },
   ];
-  const text = formatBookingsListForGardener(bookings, (a, b) => `${a} - ${b}`);
-  assert.equal(text.split('\n\n').length, 2);
+  const text = formatBookingsListForGardener(bookings, (d) => d);
+  assert.equal(text, 'Desde\tHasta\n2026-07-10\t2026-07-11\n2026-08-01\t2026-08-02');
 });
 
 const SYNC_TEST_BLOCKS = [

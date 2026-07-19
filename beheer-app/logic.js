@@ -1,4 +1,4 @@
-const VERSION = '0.25.0';
+const VERSION = '0.26.0';
 
 function getVersion() {
   return VERSION;
@@ -222,14 +222,10 @@ function formatBookingsListForContact(bookings, formatDateRange) {
 
 // Same date/name-formatting convention as formatBookingsListForContact, but limited to
 // the fields the tuinier (gardener) needs: no phone, guest counts or remark.
-function formatBookingsListForGardener(bookings, formatDateRange) {
+function formatBookingsListForGardener(bookings, formatDate) {
   if (bookings.length === 0) return null;
-  return bookings
-    .map((b) => {
-      const nameLine = b.language ? `👤 ${b.name} (${b.language})` : `👤 ${b.name}`;
-      return [`📅 ${formatDateRange(b.dateFrom, b.dateTo)}`, nameLine].join('\n');
-    })
-    .join('\n\n');
+  const rows = bookings.map((b) => `${formatDate(b.dateFrom)}\t${formatDate(b.dateTo)}`);
+  return ['Desde\tHasta', ...rows].join('\n');
 }
 
 const SYNCABLE_PLATFORMS = ['airbnb', 'booking'];
