@@ -11,7 +11,7 @@ const {
 } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.26.1');
+  assert.equal(getVersion(), '0.26.2');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -546,31 +546,31 @@ test('formatBookingsListForGardener returns null when there are no bookings', ()
   assert.equal(formatBookingsListForGardener([], (d) => d), null);
 });
 
-test('formatBookingsListForGardener wraps a Spanish Desde/Hasta table in a WhatsApp monospace code block, no header/name/icons', () => {
+test('formatBookingsListForGardener returns a plain Desde/Hasta table with only the date range, no name/icons/code-fence', () => {
   const booking = {
     dateFrom: '2026-07-10', dateTo: '2026-07-14', name: 'Jan Janssens', language: 'NL',
     phone: '0470123456', adultsCount: 2, childrenCount: 1, remark: 'late aankomst', price: 480,
   };
   const text = formatBookingsListForGardener([booking], (d) => d);
   const lines = text.split('\n');
-  assert.equal(lines[0], '```');
-  assert.equal(lines[lines.length - 1], '```');
-  assert.equal(lines.length, 4);
-  assert.ok(lines[1].startsWith('Desde'));
-  assert.ok(lines[1].includes('Hasta'));
+  assert.equal(lines.length, 2);
+  assert.ok(lines[0].startsWith('Desde'));
+  assert.ok(lines[0].includes('Hasta'));
+  assert.ok(!text.includes('```'));
   assert.ok(!text.includes('Jan'));
 });
 
-test('formatBookingsListForGardener aligns the Hasta column across all rows for a multi-line table', () => {
+test('formatBookingsListForGardener aligns the Hasta column across all rows, with a clear gap after Desde', () => {
   const bookings = [
     { dateFrom: '2026-07-10', dateTo: '2026-07-14' },
     { dateFrom: '2026-08-01', dateTo: '2026-08-02' },
   ];
   const text = formatBookingsListForGardener(bookings, (d) => d);
   const lines = text.split('\n');
-  const hastaIndex = lines[1].indexOf('Hasta');
-  assert.equal(lines[2].indexOf('2026-07-14'), hastaIndex);
-  assert.equal(lines[3].indexOf('2026-08-02'), hastaIndex);
+  const hastaIndex = lines[0].indexOf('Hasta');
+  assert.equal(lines[1].indexOf('2026-07-14'), hastaIndex);
+  assert.equal(lines[2].indexOf('2026-08-02'), hastaIndex);
+  assert.ok(hastaIndex - 'Desde'.length >= 4);
 });
 
 const SYNC_TEST_BLOCKS = [

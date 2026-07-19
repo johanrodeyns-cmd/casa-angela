@@ -1,4 +1,4 @@
-const VERSION = '0.26.1';
+const VERSION = '0.26.2';
 
 function getVersion() {
   return VERSION;
@@ -227,11 +227,11 @@ function formatBookingsListForGardener(bookings, formatDate) {
   const rows = bookings.map((b) => [formatDate(b.dateFrom), formatDate(b.dateTo)]);
   const col1Width = Math.max('Desde'.length, ...rows.map(([from]) => from.length));
   const pad = (s) => s.padEnd(col1Width, ' ');
-  const lines = [
-    `${pad('Desde')}  Hasta`,
-    ...rows.map(([from, to]) => `${pad(from)}  ${to}`),
-  ];
-  return ['```', ...lines, '```'].join('\n');
+  const gap = '    ';
+  return [
+    `${pad('Desde')}${gap}Hasta`,
+    ...rows.map(([from, to]) => `${pad(from)}${gap}${to}`),
+  ].join('\n');
 }
 
 const SYNCABLE_PLATFORMS = ['airbnb', 'booking'];
