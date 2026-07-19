@@ -207,17 +207,18 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 > Vervolg in v0.26.0: op vraag van de tuinier vertaald naar het Spaans, gastnamen en iconen eruit gehaald, en herschikt als compacte tabel (enkel kolommen Desde/Hasta) — de tuinier heeft enkel de bezette periodes nodig, niet wie er verblijft.
 > Vervolg in v0.26.1: de samenvattende koptekst (datumbereik) bleek overbodig voor de tuinier en is weggehaald — enkel de tabel wordt nu gekopieerd. Daarnaast stond de Hasta-kolom niet uitgelijnd met de einddata na plakken in WhatsApp (geen monospace-lettertype); opgelost door de tabel in een ```` ``` ````-codeblok te wrappen (WhatsApp toont dat monospace) en de kolombreedte dynamisch te berekenen.
 > Vervolg in v0.26.2: het codeblok uit v0.26.1 brak op smalle schermen — monospace-tekens zijn breder, waardoor elke datum op een eigen regel viel i.p.v. netjes naast elkaar. Codeblok weer weggehaald (terug het gewone lettertype, dat naar verluidt prima leesbaar was), met wat meer ruimte tussen Desde en Hasta.
+> Vervolg in v0.26.3: de koptekst "Reservas Casa Angela" mag toch blijven staan bovenaan de tabel — enkel het datumbereik erachter (dat in v0.26.1 samen met de koptekst was weggehaald) blijft weg.
 
 **Als** Johan of Tinneke **wil ik** een beperktere tekstlijst naar het klembord kunnen kopiëren voor de tuinman **zodat** die enkel weet wanneer het huis bezet is, zonder overbodige of privé-gegevens, en ik dat ook zo in WhatsApp kan plakken.
 
 **Acceptatiecriteria:**
-- Given een knop "Kopieer voor tuinier", when ik erop klik, then wordt zonder verdere invoer een compacte Spaanstalige tabel (geen koptekst, enkel de tabel) naar het klembord gekopieerd met per boeking enkel: Desde (datum van), Hasta (datum tot) — geen naam, taal of iconen.
+- Given een knop "Kopieer voor tuinier", when ik erop klik, then wordt een koptekst "Reservas Casa Angela" (zonder datumbereik) gevolgd door een compacte Spaanstalige tabel naar het klembord gekopieerd met per boeking enkel: Desde (datum van), Hasta (datum tot) — geen naam, taal of iconen.
 - Given de tabel, then staat de Hasta-kolom met voldoende ruimte na de Desde-kolom (spatie-opvulling, gewoon lettertype — geen monospace-codeblok, dat brak op smalle schermen).
 - Given dezelfde selectie als US-2.4 (alle boekingen vanaf vandaag tot en met de laatste boeking in de toekomst), then gebruikt deze kopieeractie diezelfde set boekingen, maar met de beperkte veldenset.
 - Given een geslaagde kopieeractie, then toont de app dezelfde korte bevestiging als bij US-2.4.
 - Given geen boekingen vanaf vandaag, then toont de app dezelfde duidelijke melding als bij US-2.4.
 
-**Technische notities:** `logic.formatBookingsListForGardener(bookings, formatDate)` bouwt een spatie-uitgelijnde `Desde`/`Hasta`-tabel (gewoon lettertype, geen codeblok); `index.html` geeft `formatDateEs` (Spaanse datumformattering) en `headerLabel: null` (geen koptekst) mee aan `copyUpcomingBookings`, los van de Nederlandse formatters + koptekst voor de contactpersoon-export (US-2.4).
+**Technische notities:** `logic.formatBookingsListForGardener(bookings, formatDate)` bouwt een spatie-uitgelijnde `Desde`/`Hasta`-tabel (gewoon lettertype, geen codeblok); `index.html` geeft `formatDateEs` (Spaanse datumformattering), `headerLabel: "Reservas Casa Angela"` en `headerRangeFormatter: null` (koptekst zonder datumbereik) mee aan `copyUpcomingBookings`, los van de Nederlandse formatters + koptekst mét datumbereik voor de contactpersoon-export (US-2.4).
 
 ---
 

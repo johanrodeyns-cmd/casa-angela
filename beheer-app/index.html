@@ -1199,6 +1199,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.26.3", date: "2026-07-18", description: "Tuinier-tabel: koptekst 'Reservas Casa Angela' staat er terug bovenaan (zonder het datumbereik erachter)." },
       { version: "0.26.2", date: "2026-07-18", description: "Tuinier-tabel: monospace-codeblok weer weggehaald (brak op smalle schermen, elke datum viel op een eigen regel) — terug het gewone lettertype, met wat meer ruimte tussen Desde en Hasta." },
       { version: "0.26.1", date: "2026-07-18", description: "Tuinier-tabel: samenvattende koptekst weggehaald (enkel nog de tabel), en Hasta-kolom nu correct uitgelijnd in WhatsApp (monospace-codeblok)." },
       { version: "0.26.0", date: "2026-07-18", description: "Kopiëren voor de tuinier is nu een compacte Spaanstalige tabel (enkel data Desde/Hasta), zonder gastnamen of iconen." },
@@ -1940,7 +1941,7 @@
       return toIsoDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
     }
 
-    async function copyUpcomingBookings(button, feedbackEl, formatList, headerLabel, dateFormatter = formatBookingDateRange) {
+    async function copyUpcomingBookings(button, feedbackEl, formatList, headerLabel, dateFormatter = formatBookingDateRange, headerRangeFormatter = dateFormatter) {
       feedbackEl.classList.remove("active");
       const today = isoDateFromDate(new Date());
       const upcoming = upcomingBookings(bookings, today);
@@ -1954,9 +1955,8 @@
           feedbackEl.textContent = "Geen boekingen vanaf vandaag.";
         } else {
           const lastDate = upcoming[upcoming.length - 1].dateTo;
-          const clipboardText = headerLabel
-            ? `${headerLabel} (${dateFormatter(today, lastDate)})\n\n${text}`
-            : text;
+          const header = headerRangeFormatter ? `${headerLabel} (${headerRangeFormatter(today, lastDate)})` : headerLabel;
+          const clipboardText = headerLabel ? `${header}\n\n${text}` : text;
           await navigator.clipboard.writeText(clipboardText);
           feedbackEl.textContent = "Gekopieerd naar klembord.";
         }
@@ -1975,7 +1975,7 @@
     });
 
     document.getElementById("copy-tuinier-open").addEventListener("click", (e) => {
-      copyUpcomingBookings(e.target, document.getElementById("copy-tuinier-feedback"), formatBookingsListForGardener, null, formatDateEs);
+      copyUpcomingBookings(e.target, document.getElementById("copy-tuinier-feedback"), formatBookingsListForGardener, "Reservas Casa Angela", formatDateEs, null);
     });
 
     function openBookingDialog(booking) {
