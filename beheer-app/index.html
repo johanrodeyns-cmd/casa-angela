@@ -30,6 +30,8 @@
     background: var(--primary);
     color: var(--cream);
     padding: 1rem;
+  }
+  .header-top {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -51,6 +53,29 @@
   }
   #version:hover {
     text-decoration: underline;
+  }
+  .header-session {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.25);
+    font-size: 0.85rem;
+  }
+  .header-session[hidden] {
+    display: none;
+  }
+  #user-email {
+    opacity: 0.85;
+  }
+  #signout-button {
+    background: rgba(255, 255, 255, 0.15);
+    padding: 0.5rem 1rem;
+  }
+  #signout-button:hover {
+    background: rgba(255, 255, 255, 0.28);
   }
   dialog#changelog-dialog {
     border: none;
@@ -96,14 +121,6 @@
     margin: 0;
     padding: 0;
     text-align: left;
-  }
-  .app-topbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1rem;
-    background: var(--sand);
   }
   .app-body {
     flex: 1;
@@ -681,10 +698,6 @@
     padding: 0.75rem;
     margin: 0.75rem 0;
   }
-  #user-email {
-    font-size: 0.85rem;
-    opacity: 0.85;
-  }
   dialog#booking-dialog,
   dialog#booking-delete-dialog,
   dialog#ical-settings-dialog,
@@ -980,8 +993,14 @@
 </head>
 <body>
   <header>
-    <h1>Casa Angela — Beheer</h1>
-    <button id="version" type="button"></button>
+    <div class="header-top">
+      <h1>Casa Angela — Beheer</h1>
+      <button id="version" type="button"></button>
+    </div>
+    <div id="header-session" class="header-session" hidden>
+      <span>Ingelogd als <span id="user-email"></span></span>
+      <button id="signout-button" type="button">Uitloggen</button>
+    </div>
   </header>
 
   <dialog id="changelog-dialog">
@@ -1177,11 +1196,6 @@
   </section>
 
   <section id="app-screen" class="screen">
-    <div class="app-topbar">
-      <span>Ingelogd als <span id="user-email"></span></span>
-      <button id="signout-button" type="button">Uitloggen</button>
-    </div>
-
     <div class="app-body">
       <nav id="app-nav">
         <button type="button" class="nav-item active" data-tab="tab-kalender">Kalender</button>
@@ -1328,6 +1342,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.31.1", date: "2026-07-18", description: "Ingelogd-als/Uitloggen verhuisd naar de bovenste banner (samen met titel en versienummer) i.p.v. een aparte balk erboven." },
       { version: "0.31.0", date: "2026-07-18", description: "Tabbladen herschikt: nieuw tabblad 'Prijzen' (tussen Boekingen en Checklist aankomst) met Periode, Prijsformule en de 4 prijstypes. Het Kalender-tabblad toont nu uitsluitend Beschikbaarheid, met Jaar als nieuw standaardbeeld i.p.v. Maand." },
       { version: "0.30.1", date: "2026-07-18", description: "Boekingenlijst: afgelopen boekingen (vertrekdatum in het verleden) krijgen een grijze achtergrond, zodat meteen duidelijk is welke verblijven al voorbij zijn." },
       { version: "0.30.0", date: "2026-07-18", description: "Jaartabel: Belgische officiële feestdagen krijgen nu dezelfde kleur als weekenddagen (inclusief de bewegende feestdagen zoals Paasmaandag, O.L.H. Hemelvaart en Pinkstermaandag)." },
@@ -1417,6 +1432,7 @@
       document.querySelectorAll(".screen").forEach((el) => {
         el.classList.toggle("active", el.id === id);
       });
+      document.getElementById("header-session").hidden = id !== "app-screen";
     }
 
     function showTab(tabId) {
