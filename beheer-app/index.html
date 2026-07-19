@@ -253,19 +253,16 @@
   }
   .price-mode-toggle {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.4rem;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.3rem;
     margin-bottom: 0.75rem;
-  }
-  @media (min-width: 480px) {
-    .price-mode-toggle {
-      grid-template-columns: repeat(4, 1fr);
-    }
   }
   .price-mode-btn {
     min-height: 44px;
-    padding: 0.5rem 0.25rem;
-    font-size: 0.8rem;
+    padding: 0.4rem 0.2rem;
+    font-size: 0.68rem;
+    line-height: 1.15;
+    white-space: normal;
     background: var(--sand);
     color: var(--charcoal);
   }
@@ -1340,6 +1337,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.32.2", date: "2026-07-18", description: "Airbnb/Booking.com/Rechtstreeks/Vrienden staan nu altijd op één rij naast elkaar, ook op smalle schermen (voorheen 2×2 op mobiel)." },
       { version: "0.32.1", date: "2026-07-18", description: "Audit-log/Periode/Prijsformule staan nu netjes naast elkaar in 3 gelijke kolommen i.p.v. te wrappen naar een 2e regel." },
       { version: "0.32.0", date: "2026-07-18", description: "Audit-log-knop verhuisd van Boekingen naar Prijzen (links van Periode)." },
       { version: "0.31.2", date: "2026-07-18", description: "Bugfix: bij het openen van de app toonden de kalenders (Prijzen en Kalender-tab) geen boekingen tot je op iets klikte (bv. van Jaar naar Maand). De boekingen laadden dan pas net ná de eerste tekening van de kalenders. Kalenders verversen nu automatisch zodra de boekingen binnen zijn." },
