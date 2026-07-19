@@ -65,10 +65,12 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 ---
 
 ### US-0.5 ☑ Visueel ontwerp & huisstijl (M) — v0.5.0
+> Vervolg in v0.27.0: op vraag van Johan is de primaire kleur (was terracotta/bruinrood) in de hele beheer-app vervangen door een warmer lichtblauw (`--primary: #4F6FB0`) — een bewuste afwijking van de publieke website's kleurenpalet, enkel voor de beheer-app. PWA-icoontjes (`icon-192.png`/`icon-512.png`) zijn meegewijzigd naar de nieuwe kleur.
+
 **Als** gebruiker **wil ik** een app die er verzorgd en herkenbaar uitziet **zodat** het gebruik ervan aangenaam is, zowel op de computer als op mijn GSM.
 
 **Acceptatiecriteria:**
-- Given het kleurenpalet van de publieke Casa Angela-website (terracotta, olijf, azuur, zand), then gebruikt de beheer-app dezelfde kleuren consequent (CSS-variabelen), zonder de marketing-opsmuk (geen grote hero-afbeeldingen, geen sierlijke lettertypes) over te nemen.
+- Given het kleurenpalet van de beheer-app (primary, olijf, azuur, zand — sinds v0.27.0 een eigen primary-kleur, los van de publieke website), then gebruikt de beheer-app dezelfde kleuren consequent (CSS-variabelen), zonder marketing-opsmuk (geen grote hero-afbeeldingen, geen sierlijke lettertypes).
 - Given elk scherm, when bekeken op een smartphone (viewport ≥ 360px breed), then zijn alle knoppen, kalendercellen en formuliervelden vlot met de duim te bedienen (minstens 44×44px tapgebied).
 - Given elk scherm, when bekeken op een breed (desktop) scherm, then wordt de beschikbare ruimte functioneel benut (bv. kalender + zijpaneel), niet enkel uitgerekt.
 - Given een actie (opslaan, verwijderen, synchroniseren), then geeft de UI duidelijke visuele feedback (laadindicator, bevestiging, foutmelding).
@@ -76,13 +78,16 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 ---
 
 ### US-0.6 ☑ Installeerbare PWA (S) — v0.6.0
+> Vervolg in v0.27.0: de iOS-standalone app bleef een verouderde versie tonen ondanks `Cache-Control: no-cache` — WebKit negeerde de revalidatie voor homescreen-apps. Header aangescherpt naar `no-store` (nooit cachen, altijd volledig ophalen) in `firebase.json`.
+
 **Als** gebruiker **wil ik** de app als icoon op mijn GSM-startscherm kunnen zetten **zodat** het aanvoelt als een echte app.
 
 **Acceptatiecriteria:**
 - Given `manifest.json` met naam, icoon en kleuren, when ik de site op mobiel open, then biedt de browser "Toevoegen aan startscherm" aan.
 - Given de geïnstalleerde app, when ik ze open, then start ze zonder browser-adresbalk (standalone mode).
+- Given een nieuwe deploy, when ik de geïnstalleerde app opnieuw open, then toont ze de nieuwste versie (geen stale cache dankzij `Cache-Control: no-store`).
 
-**Technische notities:** geen service worker nodig voor v1 (zoals Gezondheid) — enkel `manifest.json` + icons.
+**Technische notities:** geen service worker nodig voor v1 (zoals Gezondheid) — enkel `manifest.json` + icons; `Cache-Control: no-store` op html/js/json (`firebase.json`) i.p.v. `no-cache`, specifiek om iOS-standalone-cachegedrag te omzeilen.
 
 ---
 

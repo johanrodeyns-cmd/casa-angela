@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Casa Angela — Beheer</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#C4654A">
+<meta name="theme-color" content="#4F6FB0">
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
   :root {
-    --terracotta: #C4654A;
-    --terracotta-light: #E8A790;
+    --primary: #4F6FB0;
+    --primary-light: #A9B8E0;
     --olive: #7A8B5C;
     --olive-dark: #5A6B3C;
     --azure: #4A90A4;
@@ -27,7 +27,7 @@
     font-family: system-ui, sans-serif;
   }
   header {
-    background: var(--terracotta);
+    background: var(--primary);
     color: var(--cream);
     padding: 1rem;
     display: flex;
@@ -65,7 +65,7 @@
   }
   dialog#changelog-dialog h2 {
     margin-top: 0;
-    color: var(--terracotta);
+    color: var(--primary);
   }
   .changelog-entry {
     text-align: left;
@@ -144,9 +144,9 @@
     background: var(--sand);
   }
   .nav-item.active {
-    color: var(--terracotta);
+    color: var(--primary);
     font-weight: bold;
-    border-top: 3px solid var(--terracotta);
+    border-top: 3px solid var(--primary);
   }
   @media (min-width: 768px) {
     .app-body {
@@ -169,7 +169,7 @@
     }
     .nav-item.active {
       border-top: none;
-      border-left: 3px solid var(--terracotta);
+      border-left: 3px solid var(--primary);
       background: var(--sand);
     }
     .tab-content {
@@ -196,8 +196,8 @@
   }
   .error-message {
     display: none;
-    color: var(--terracotta);
-    background: var(--terracotta-light);
+    color: var(--primary);
+    background: var(--primary-light);
     border-radius: 6px;
     padding: 0.75rem 1rem;
     margin-top: 1rem;
@@ -224,15 +224,15 @@
     min-height: 44px;
     border: none;
     border-radius: 6px;
-    background: var(--terracotta);
+    background: var(--primary);
     color: var(--cream);
     cursor: pointer;
   }
   button:hover {
-    background: var(--terracotta-light);
+    background: var(--primary-light);
   }
   #denied-screen h2 {
-    color: var(--terracotta);
+    color: var(--primary);
   }
   .price-mode-toggle {
     display: grid;
@@ -256,7 +256,7 @@
     background: var(--sand-dark);
   }
   .price-mode-btn.active {
-    background: var(--terracotta);
+    background: var(--primary);
     color: var(--cream);
   }
   .price-mode-btn[data-mode="availability"].active {
@@ -264,7 +264,7 @@
     color: var(--cream);
   }
   .cal-day.bezet {
-    background: var(--terracotta);
+    background: var(--primary);
   }
   .cal-day.bezet .cal-day-num,
   .cal-day.bezet .cal-day-price {
@@ -274,10 +274,10 @@
     color: var(--olive-dark);
   }
   .cal-day.aankomst {
-    background: linear-gradient(135deg, var(--sand) 50%, var(--terracotta) 50%);
+    background: linear-gradient(135deg, var(--sand) 50%, var(--primary) 50%);
   }
   .cal-day.vertrek {
-    background: linear-gradient(135deg, var(--terracotta) 50%, var(--sand) 50%);
+    background: linear-gradient(135deg, var(--primary) 50%, var(--sand) 50%);
   }
   .cal-day.aankomst .cal-day-num,
   .cal-day.aankomst .cal-day-price,
@@ -343,7 +343,7 @@
     background: var(--sand-dark);
   }
   .cal-day.selected {
-    outline: 3px solid var(--terracotta);
+    outline: 3px solid var(--primary);
     outline-offset: -3px;
   }
   .cal-day-empty {
@@ -366,7 +366,7 @@
     -webkit-box-orient: vertical;
   }
   .cal-day-price.empty {
-    color: var(--terracotta);
+    color: var(--primary);
     opacity: 0.7;
   }
   dialog#price-dialog,
@@ -385,7 +385,7 @@
   dialog#price-dialog h2,
   dialog#bulk-price-dialog h2 {
     margin-top: 0;
-    color: var(--terracotta);
+    color: var(--primary);
     font-size: 1.1rem;
   }
   dialog#price-dialog h2::first-letter,
@@ -468,7 +468,7 @@
     background: var(--azure-light);
   }
   .cal-toolbar button.active {
-    background: var(--terracotta);
+    background: var(--primary);
   }
   .cal-toolbar button:disabled {
     background: var(--sand-dark);
@@ -545,7 +545,7 @@
   }
   dialog#formula-dialog h2 {
     margin-top: 0;
-    color: var(--terracotta);
+    color: var(--primary);
     font-size: 1.1rem;
   }
   dialog#formula-dialog p {
@@ -619,7 +619,7 @@
   dialog#day-detail-dialog h2,
   dialog#sync-check-dialog h2 {
     margin-top: 0;
-    color: var(--terracotta);
+    color: var(--primary);
     font-size: 1.1rem;
   }
   dialog#sync-check-dialog h3 {
@@ -764,14 +764,14 @@
   }
   .booking-item-delete {
     background: none;
-    color: var(--terracotta);
+    color: var(--primary);
     min-width: 44px;
     min-height: 44px;
     font-size: 1.2rem;
     padding: 0;
   }
   .booking-item-delete:hover {
-    background: var(--terracotta-light);
+    background: var(--primary-light);
     border-radius: 6px;
   }
   .checklist-form-row {
@@ -814,7 +814,7 @@
     padding: 0;
   }
   .checklist-item.checked .checklist-item-check {
-    color: var(--terracotta);
+    color: var(--primary);
   }
   .checklist-item-text {
     flex: 1;
@@ -855,14 +855,14 @@
   }
   .checklist-item-delete {
     background: none;
-    color: var(--terracotta);
+    color: var(--primary);
     min-width: 44px;
     min-height: 44px;
     font-size: 1.1rem;
     padding: 0;
   }
   .checklist-item-delete:hover {
-    background: var(--terracotta-light);
+    background: var(--primary-light);
     border-radius: 6px;
   }
   .checklist-empty {
@@ -1199,6 +1199,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.27.0", date: "2026-07-18", description: "Huisstijl: de terracotta/bruinrode kleur is in de hele app vervangen door een warmer lichtblauw. Daarnaast: Cache-Control op no-store gezet zodat de app op het iPhone-startscherm niet langer een verouderde versie kan tonen." },
       { version: "0.26.3", date: "2026-07-18", description: "Tuinier-tabel: koptekst 'Reservas Casa Angela' staat er terug bovenaan (zonder het datumbereik erachter)." },
       { version: "0.26.2", date: "2026-07-18", description: "Tuinier-tabel: monospace-codeblok weer weggehaald (brak op smalle schermen, elke datum viel op een eigen regel) — terug het gewone lettertype, met wat meer ruimte tussen Desde en Hasta." },
       { version: "0.26.1", date: "2026-07-18", description: "Tuinier-tabel: samenvattende koptekst weggehaald (enkel nog de tabel), en Hasta-kolom nu correct uitgelijnd in WhatsApp (monospace-codeblok)." },
