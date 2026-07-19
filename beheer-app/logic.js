@@ -1,4 +1,4 @@
-const VERSION = '0.26.0';
+const VERSION = '0.26.1';
 
 function getVersion() {
   return VERSION;
@@ -224,8 +224,14 @@ function formatBookingsListForContact(bookings, formatDateRange) {
 // the fields the tuinier (gardener) needs: no phone, guest counts or remark.
 function formatBookingsListForGardener(bookings, formatDate) {
   if (bookings.length === 0) return null;
-  const rows = bookings.map((b) => `${formatDate(b.dateFrom)}\t${formatDate(b.dateTo)}`);
-  return ['Desde\tHasta', ...rows].join('\n');
+  const rows = bookings.map((b) => [formatDate(b.dateFrom), formatDate(b.dateTo)]);
+  const col1Width = Math.max('Desde'.length, ...rows.map(([from]) => from.length));
+  const pad = (s) => s.padEnd(col1Width, ' ');
+  const lines = [
+    `${pad('Desde')}  Hasta`,
+    ...rows.map(([from, to]) => `${pad(from)}  ${to}`),
+  ];
+  return ['```', ...lines, '```'].join('\n');
 }
 
 const SYNCABLE_PLATFORMS = ['airbnb', 'booking'];

@@ -1199,6 +1199,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.26.1", date: "2026-07-18", description: "Tuinier-tabel: samenvattende koptekst weggehaald (enkel nog de tabel), en Hasta-kolom nu correct uitgelijnd in WhatsApp (monospace-codeblok)." },
       { version: "0.26.0", date: "2026-07-18", description: "Kopiëren voor de tuinier is nu een compacte Spaanstalige tabel (enkel data Desde/Hasta), zonder gastnamen of iconen." },
       { version: "0.25.0", date: "2026-07-18", description: "Audit-log toegevoegd: elke wijziging aan prijzen, boekingen, prijsformule, checklists en gesynchroniseerde blokken wordt vastgelegd (wie, wat, wanneer). Raadpleegbaar via '📜 Audit-log' in de Boekingen-tab." },
       { version: "0.24.0", date: "2026-07-18", description: "Checklist aankomst/vertrek werkt nu volledig: items toevoegen, hernoemen, verwijderen, afvinken, herordenen (▲▼) en de lijst resetten. Wijzigingen zijn meteen zichtbaar bij de andere gebruiker." },
@@ -1720,10 +1721,6 @@
       return new Date(iso + "T00:00:00").toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" });
     }
 
-    function formatBookingDateRangeEs(dateFrom, dateTo) {
-      return `${formatDateEs(dateFrom)} – ${formatDateEs(dateTo)}`;
-    }
-
     function updateBookingNightsPreview() {
       const { dateFrom, dateTo } = bookingFields;
       if (dateFrom.value && dateTo.value && dateTo.value > dateFrom.value) {
@@ -1942,7 +1939,7 @@
       return toIsoDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
     }
 
-    async function copyUpcomingBookings(button, feedbackEl, formatList, headerLabel, dateFormatter = formatBookingDateRange, headerRangeFormatter = formatBookingDateRange) {
+    async function copyUpcomingBookings(button, feedbackEl, formatList, headerLabel, dateFormatter = formatBookingDateRange) {
       feedbackEl.classList.remove("active");
       const today = isoDateFromDate(new Date());
       const upcoming = upcomingBookings(bookings, today);
@@ -1956,8 +1953,10 @@
           feedbackEl.textContent = "Geen boekingen vanaf vandaag.";
         } else {
           const lastDate = upcoming[upcoming.length - 1].dateTo;
-          const header = `${headerLabel} (${headerRangeFormatter(today, lastDate)})`;
-          await navigator.clipboard.writeText(`${header}\n\n${text}`);
+          const clipboardText = headerLabel
+            ? `${headerLabel} (${dateFormatter(today, lastDate)})\n\n${text}`
+            : text;
+          await navigator.clipboard.writeText(clipboardText);
           feedbackEl.textContent = "Gekopieerd naar klembord.";
         }
         feedbackEl.classList.add("active");
@@ -1975,7 +1974,7 @@
     });
 
     document.getElementById("copy-tuinier-open").addEventListener("click", (e) => {
-      copyUpcomingBookings(e.target, document.getElementById("copy-tuinier-feedback"), formatBookingsListForGardener, "Reservas Casa Angela", formatDateEs, formatBookingDateRangeEs);
+      copyUpcomingBookings(e.target, document.getElementById("copy-tuinier-feedback"), formatBookingsListForGardener, null, formatDateEs);
     });
 
     function openBookingDialog(booking) {
