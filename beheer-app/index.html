@@ -398,7 +398,14 @@
   }
   .year-table {
     border-collapse: collapse;
+    table-layout: fixed;
     width: max-content;
+  }
+  .year-table col {
+    width: 26px;
+  }
+  .year-table col.year-col-month {
+    width: 92px;
   }
   .year-table td,
   .year-table th {
@@ -406,8 +413,8 @@
     text-align: center;
     font-size: 0.7rem;
     padding: 0;
-    width: 26px;
     height: 28px;
+    overflow: hidden;
   }
   .year-month-name {
     position: sticky;
@@ -420,6 +427,7 @@
     text-transform: capitalize;
     padding: 0 0.6rem;
     white-space: nowrap;
+    text-overflow: ellipsis;
   }
   .year-cell {
     color: var(--olive-dark);
@@ -1208,6 +1216,13 @@
             </div>
             <div class="year-table-wrap">
               <table class="year-table">
+                <colgroup>
+                  <col class="year-col-month">
+                  <col><col><col><col><col><col><col><col><col><col>
+                  <col><col><col><col><col><col><col><col><col><col>
+                  <col><col><col><col><col><col><col><col><col><col>
+                  <col>
+                </colgroup>
                 <tbody id="year-grid"></tbody>
               </table>
             </div>
@@ -1298,6 +1313,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.29.1", date: "2026-07-18", description: "Bugfix jaartabel: dagkolommen hadden per maand een andere breedte (browser kon de kolombreedte niet consistent bepalen door de wisselende colspans van boekingsbalken). Vaste kolombreedtes via een colgroup lossen dit op." },
       { version: "0.29.0", date: "2026-07-18", description: "Jaarkalender herzien naar een spreadsheet-stijl overzicht: 12 maandrijen met dagkolommen, gastnamen als doorlopende balk over hun volledige verblijf, weekend-kleuring per dag. Op mobiel horizontaal scrollbaar, maandnaam blijft zichtbaar." },
       { version: "0.28.1", date: "2026-07-18", description: "Bugfix: de Maand/Jaar-schakelaar bleef zichtbaar bij de 4 prijskalenders i.p.v. enkel bij Beschikbaarheid (CSS-conflict met het hidden-attribuut)." },
       { version: "0.28.0", date: "2026-07-18", description: "Nieuw: jaarkalender bij Beschikbaarheid — schakel met 'Maand/Jaar' bovenaan tussen de bestaande maandweergave en een compact jaaroverzicht van alle 12 maanden in één oogopslag, met vorige/volgende-jaar-navigatie." },
