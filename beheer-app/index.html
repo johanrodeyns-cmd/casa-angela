@@ -1342,6 +1342,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.31.2", date: "2026-07-18", description: "Bugfix: bij het openen van de app toonden de kalenders (Prijzen en Kalender-tab) geen boekingen tot je op iets klikte (bv. van Jaar naar Maand). De boekingen laadden dan pas net ná de eerste tekening van de kalenders. Kalenders verversen nu automatisch zodra de boekingen binnen zijn." },
       { version: "0.31.1", date: "2026-07-18", description: "Ingelogd-als/Uitloggen verhuisd naar de bovenste banner (samen met titel en versienummer) i.p.v. een aparte balk erboven." },
       { version: "0.31.0", date: "2026-07-18", description: "Tabbladen herschikt: nieuw tabblad 'Prijzen' (tussen Boekingen en Checklist aankomst) met Periode, Prijsformule en de 4 prijstypes. Het Kalender-tabblad toont nu uitsluitend Beschikbaarheid, met Jaar als nieuw standaardbeeld i.p.v. Maand." },
       { version: "0.30.1", date: "2026-07-18", description: "Boekingenlijst: afgelopen boekingen (vertrekdatum in het verleden) krijgen een grijze achtergrond, zodat meteen duidelijk is welke verblijven al voorbij zijn." },
@@ -2021,6 +2022,11 @@
       const snapshot = await getDocs(collection(db, "bookings"));
       bookings = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
       renderBookingsList();
+      // De 3 kalenders (Prijzen + Kalender-tab Maand/Jaar) zijn al gerenderd vóór het
+      // inloggen, met een lege bookings-array — die moeten hier opnieuw renderen,
+      // anders blijven ze leeg tot de gebruiker toevallig iets anders aanklikt.
+      renderCalendar();
+      updateAvailabilityViewVisibility();
     }
 
     const dayDetailDialog = document.getElementById("day-detail-dialog");
