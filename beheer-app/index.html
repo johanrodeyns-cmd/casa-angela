@@ -21,6 +21,7 @@
     --charcoal: #2C2C2C;
     --honey: #C4862E;
     --honey-light: #E8C078;
+    --today-red: #C0392B;
   }
   body {
     margin: 0;
@@ -377,6 +378,10 @@
     outline: 3px solid var(--primary);
     outline-offset: -3px;
   }
+  .cal-day.today {
+    outline: 3px solid var(--today-red);
+    outline-offset: -3px;
+  }
   .cal-day-empty {
     background: none;
     min-height: 52px;
@@ -527,6 +532,10 @@
   }
   .year-cell.free:hover {
     background: var(--sand-dark);
+  }
+  .year-cell.today {
+    outline: 2px solid var(--today-red);
+    outline-offset: -2px;
   }
   dialog#price-dialog,
   dialog#bulk-price-dialog {
@@ -1661,6 +1670,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.43.0", date: "2026-07-20", description: "Kalender-tabblad (Beschikbaarheid, Maand en Jaar): de huidige dag krijgt nu een dikke rode kader, zodat 'vandaag' altijd meteen opvalt." },
       { version: "0.42.0", date: "2026-07-20", description: "Zonnestroom/Netstroom-historie (Dag/Maand/Jaar) blijft nu veel langer client-side gecached (6u/24u/7 dagen i.p.v. 30 min), omdat die grafieken vrijwel enkel al-afgesloten periodes tonen — spaart APsystems-quota. Het live vermogen/uur-verbruik van vandaag blijft wel elke 30 min verversen." },
       { version: "0.41.0", date: "2026-07-20", description: "Kalender-tabblad (Beschikbaarheid, Maand en Jaar): boekingen op naam van Johan en/of Tinneke krijgen nu een warme geel/bruine kleur i.p.v. het gewone blauw, zodat een eigen verblijf meteen opvalt tussen de gastboekingen." },
       { version: "0.40.0", date: "2026-07-20", description: "Netstroom vandaag: de per-minuut-variant gaf een serverfout (APsystems ondersteunt 'minutely' blijkbaar niet betrouwbaar voor de meter, ondanks documentatie) — vervangen door een per-uur-grafiek van vandaag, die dezelfde beproefde weg gebruikt als de Maand/Jaar-historie." },
@@ -1867,6 +1877,7 @@
       // Zelfde bron als renderYearView(): enkel boekingen tellen mee, geen gesynchroniseerde
       // blokken (zie US-2.6/2.3-nota bij de vroegere renderCalendar()).
       const occupancyMap = buildOccupancyMap(bookings, []);
+      const todayIso = new Date().toLocaleDateString("en-CA");
       availCalGrid.innerHTML = weeks
         .flat()
         .map((date) => {
@@ -1876,8 +1887,9 @@
           const label = dayDisplayLabel(date, occupancyMap, state);
           const isOwnStay = state !== "vrij" && /johan|tinneke/i.test(label);
           const stateClass = state !== "vrij" ? ` ${state}${isOwnStay ? " eigen" : ""}` : "";
+          const todayClass = date === todayIso ? " today" : "";
           return `
-            <button type="button" class="cal-day${stateClass}" data-date="${date}">
+            <button type="button" class="cal-day${stateClass}${todayClass}" data-date="${date}">
               <span class="cal-day-num">${day}</span>
               <span class="cal-day-price" title="${label}">${label}</span>
             </button>
@@ -1911,26 +1923,34 @@
       yearLabel.textContent = String(yearViewYear);
       // Zelfde bron als renderCalendar(): enkel boekingen tellen mee, geen gesynchroniseerde blokken (US-2.6/2.3-nota hierboven).
       const occupancyMap = buildOccupancyMap(bookings, []);
+      const todayIso = new Date().toLocaleDateString("en-CA");
+      const [todayY, todayM, todayD] = todayIso.split("-").map(Number);
       yearGrid.innerHTML = buildYearGrid(yearViewYear, occupancyMap)
         .map(({ month, cells }) => {
           const segments = cells
             .map((cell) => {
               if (cell.type === "blank") return '<div class="year-cell blank"></div>';
               const date = toIsoDate(yearViewYear, month, cell.day);
+              // "booked" is een samengevoegde cel over meerdere dagen (grid-column: span N) —
+              // vandaag kan dus ook mid-span vallen, niet enkel op de startdag van het blok.
+              const spanDays = cell.type === "booked" ? cell.span : 1;
+              const containsToday = yearViewYear === todayY && month === todayM
+                && todayD >= cell.day && todayD < cell.day + spanDays;
+              const todayClass = containsToday ? " today" : "";
               if (cell.type === "free") {
                 const weekendClass = cell.weekend || cell.holiday ? " weekend" : "";
                 const title = cell.holiday ? ' title="Feestdag"' : "";
-                return `<div class="year-cell free${weekendClass}" data-date="${date}"${title}>${cell.day}</div>`;
+                return `<div class="year-cell free${weekendClass}${todayClass}" data-date="${date}"${title}>${cell.day}</div>`;
               }
               const safeLabel = escapeHtml(cell.label);
               const ownClass = /johan|tinneke/i.test(cell.label) ? " eigen" : "";
               if (cell.type === "edge") {
-                return `<div class="year-cell ${cell.edge}${ownClass}" data-date="${date}" title="${safeLabel}"></div>`;
+                return `<div class="year-cell ${cell.edge}${ownClass}${todayClass}" data-date="${date}" title="${safeLabel}"></div>`;
               }
               if (cell.type === "turnover") {
-                return `<div class="year-cell turnover${ownClass}" data-date="${date}" title="${safeLabel}"></div>`;
+                return `<div class="year-cell turnover${ownClass}${todayClass}" data-date="${date}" title="${safeLabel}"></div>`;
               }
-              return `<div class="year-cell booked${ownClass}" style="grid-column: span ${cell.span}" data-date="${date}" title="${safeLabel}">${safeLabel}</div>`;
+              return `<div class="year-cell booked${ownClass}${todayClass}" style="grid-column: span ${cell.span}" data-date="${date}" title="${safeLabel}">${safeLabel}</div>`;
             })
             .join("");
           return `<div class="year-row"><div class="year-month-name">${MONTH_NAMES[month - 1]}</div>${segments}</div>`;

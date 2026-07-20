@@ -330,6 +330,18 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
+### US-3.6 ☑ Huidige dag visueel gemarkeerd (S) — v0.43.0
+**Als** Johan of Tinneke **wil ik** in het Kalender-tabblad in één oogopslag zien welke dag "vandaag" is **zodat** ik me sneller kan oriënteren, vooral in de Jaarweergave waar geen enkele andere aanwijzing daarvoor bestaat.
+
+**Acceptatiecriteria:**
+- Given de Maandweergave, then krijgt de cel van de huidige dag een dikke rode kader, ongeacht of die dag vrij, bezet, aankomst, vertrek of eigen verblijf is.
+- Given de Jaarweergave, then krijgt de cel (of, bij een meerdaagse samengevoegde boekingscel, het volledige blok waar de huidige dag deel van uitmaakt) diezelfde dikke rode kader.
+- Given een andere maand/ander jaar dan de huidige, then verschijnt de rode kader niet (enkel de echte huidige dag wordt gemarkeerd).
+
+**Technische notities:** nieuwe CSS-variabele `--today-red`, nieuwe classes `.cal-day.today`/`.year-cell.today` (`outline`, zoals het bestaande `.cal-day.selected`-patroon, zodat de kader geen ruimte inneemt en los staat van de achtergrondkleur-classes). Vergelijking via `new Date().toLocaleDateString("en-CA")` (lokale tijdzone) tegen de datum van elke cel; voor een samengevoegde `booked`-cel (`grid-column: span N`) wordt gecontroleerd of vandaag ergens binnen `[cell.day, cell.day + cell.span)` valt, niet enkel op de startdag van het blok. Puur front-end, geen wijziging aan `logic.js` of het datamodel. Geldt enkel in het Kalender-tabblad (Beschikbaarheid), niet in de Prijzen-tab.
+
+---
+
 ## Epic 4 — Checklists
 
 ### US-4.1 ☑ Checklist-items beheren (CRUD) (M) — v0.24.0
