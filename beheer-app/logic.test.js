@@ -12,7 +12,7 @@ const {
 } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.32.3');
+  assert.equal(getVersion(), '0.33.0');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -56,13 +56,41 @@ test('buildMonthGrid contains exactly one cell per day of the month, no duplicat
   assert.equal(days[days.length - 1], '2024-02-29');
 });
 
+function timelineByDay(timeline) {
+  const byDay = {};
+  timeline.forEach((c) => {
+    if (c.type !== 'blank') byDay[c.day] = c;
+  });
+  return byDay;
+}
+
 test('buildMonthTimeline marks Saturdays and Sundays as weekend for free days', () => {
   const timeline = buildMonthTimeline(2024, 2, {}); // 2024-02-01 is a Thursday
-  const byDay = Object.fromEntries(timeline.map((c) => [c.day, c]));
+  const byDay = timelineByDay(timeline);
   assert.equal(byDay[1].weekend, false); // Thu
   assert.equal(byDay[3].weekend, true); // Sat
   assert.equal(byDay[4].weekend, true); // Sun
   assert.equal(byDay[5].weekend, false); // Mon
+});
+
+test('buildMonthTimeline pads leading/trailing days outside the month as blank cells, matching buildMonthGrid', () => {
+  const flat = buildMonthGrid(2024, 2).flat();
+  const timeline = buildMonthTimeline(2024, 2, {});
+  assert.equal(timeline.length, flat.length);
+  flat.forEach((date, i) => {
+    assert.equal(timeline[i].type, date === null ? 'blank' : 'free');
+  });
+});
+
+test('buildMonthTimeline places every weekend day at column index 5 or 6 within its 7-day block, so weekends align vertically across all months', () => {
+  for (let month = 1; month <= 12; month++) {
+    const timeline = buildMonthTimeline(2026, month, {});
+    timeline.forEach((cell, index) => {
+      if (cell.type === 'free' && cell.weekend) {
+        assert.ok(index % 7 === 5 || index % 7 === 6, `month ${month}, day ${cell.day}, index ${index}`);
+      }
+    });
+  }
 });
 
 test('getEasterSunday computes the correct date for known reference years', () => {
@@ -89,23 +117,22 @@ test('getBelgianPublicHolidays returns the 10 fixed and Easter-based holidays fo
 
 test('buildMonthTimeline marks a Belgian public holiday that falls on a weekday as a holiday', () => {
   const timeline = buildMonthTimeline(2026, 7, {}); // 2026-07-21 is a Tuesday (Nationale feestdag)
-  const byDay = Object.fromEntries(timeline.map((c) => [c.day, c]));
+  const byDay = timelineByDay(timeline);
   assert.equal(byDay[21].holiday, true);
   assert.equal(byDay[21].weekend, false);
   assert.equal(byDay[20].holiday, false);
 });
 
-test('buildMonthTimeline returns one free entry per day when there is no occupancy', () => {
+test('buildMonthTimeline returns one free entry per real day when there is no occupancy', () => {
   const timeline = buildMonthTimeline(2024, 2, {}); // leap year, 29 days
-  assert.equal(timeline.length, 29);
-  timeline.forEach((c) => assert.equal(c.type, 'free'));
+  const freeDays = timeline.filter((c) => c.type === 'free');
+  assert.equal(freeDays.length, 29);
 });
 
 test('buildMonthTimeline groups consecutive days with the same guest into one booked segment', () => {
   const bookings = [{ id: 'b1', dateFrom: '2026-07-10', dateTo: '2026-07-14', name: 'Jan' }];
   const occupancyMap = buildOccupancyMap(bookings, []);
   const timeline = buildMonthTimeline(2026, 7, occupancyMap);
-  assert.equal(timeline.length, 27); // 9 free + 1 booked segment (collapsing 5 days) + 17 free
   const booked = timeline.filter((c) => c.type === 'booked');
   assert.deepEqual(booked, [{ type: 'booked', day: 10, span: 5, label: 'Jan' }]);
 });

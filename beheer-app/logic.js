@@ -1,4 +1,4 @@
-const VERSION = '0.32.3';
+const VERSION = '0.33.0';
 
 function getVersion() {
   return VERSION;
@@ -324,30 +324,40 @@ function dayDisplayLabel(date, occupancyMap, state) {
 // One row of the year-timeline view: consecutive days occupied by the same guest(s)
 // collapse into a single 'booked' segment (like a merged spreadsheet cell), so the
 // name only needs to be rendered once per stay instead of once per day.
+// Padt met blanco cellen vóór dag 1 en na de laatste dag (zelfde Monday-first
+// patroon als buildMonthGrid), zodat kolom N altijd dezelfde weekdag voorstelt
+// in élke maand — weekends vallen daardoor verticaal samen over alle 12 rijen.
 function buildMonthTimeline(year, month, occupancyMap) {
-  const daysInMonth = new Date(year, month, 0).getDate();
+  const flatDates = buildMonthGrid(year, month).flat();
   const holidays = new Set(getBelgianPublicHolidays(year));
   const cells = [];
-  let day = 1;
-  while (day <= daysInMonth) {
-    const date = toIsoDate(year, month, day);
+  let i = 0;
+  while (i < flatDates.length) {
+    const date = flatDates[i];
+    if (!date) {
+      cells.push({ type: 'blank' });
+      i += 1;
+      continue;
+    }
+    const day = Number(date.slice(8, 10));
     const state = dayOccupancyState(date, occupancyMap);
     if (state === 'vrij') {
       const weekday = new Date(date + 'T00:00:00').getDay();
       cells.push({ type: 'free', day, weekend: weekday === 0 || weekday === 6, holiday: holidays.has(date) });
-      day += 1;
+      i += 1;
       continue;
     }
     const label = dayDisplayLabel(date, occupancyMap, state);
     let span = 1;
-    while (day + span <= daysInMonth) {
-      const nextDate = toIsoDate(year, month, day + span);
+    while (i + span < flatDates.length) {
+      const nextDate = flatDates[i + span];
+      if (!nextDate) break;
       const nextState = dayOccupancyState(nextDate, occupancyMap);
       if (nextState === 'vrij' || dayDisplayLabel(nextDate, occupancyMap, nextState) !== label) break;
       span += 1;
     }
     cells.push({ type: 'booked', day, span, label });
-    day += span;
+    i += span;
   }
   return cells;
 }

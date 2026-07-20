@@ -417,7 +417,7 @@
      betrouwbaar even breed te blijven, zie US-3.4). */
   .year-row {
     display: grid;
-    grid-template-columns: 92px repeat(31, 26px);
+    grid-template-columns: 92px repeat(42, 26px);
   }
   .year-month-name,
   .year-cell {
@@ -456,6 +456,10 @@
   }
   .year-cell.weekend {
     background: var(--azure-light);
+  }
+  .year-cell.blank {
+    border: none;
+    background: none;
   }
   .year-cell.booked {
     background: var(--primary);
@@ -1337,6 +1341,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.33.0", date: "2026-07-20", description: "Jaartabel: weekends vallen nu verticaal samen over alle maanden (elke rij begint met wat opvulling zodat kolommen altijd dezelfde weekdag voorstellen), i.p.v. dat dag 1 altijd in dezelfde kolom staat." },
       { version: "0.32.3", date: "2026-07-20", description: "Checklist-items compacter: minder witruimte per regel, zodat er meer items tegelijk op het scherm passen. Het vinkje blijft 44×44px (duimvriendelijk tapgebied)." },
       { version: "0.32.2", date: "2026-07-18", description: "Airbnb/Booking.com/Rechtstreeks/Vrienden staan nu altijd op één rij naast elkaar, ook op smalle schermen (voorheen 2×2 op mobiel)." },
       { version: "0.32.1", date: "2026-07-18", description: "Audit-log/Periode/Prijsformule staan nu netjes naast elkaar in 3 gelijke kolommen i.p.v. te wrappen naar een 2e regel." },
@@ -1548,6 +1553,7 @@
         .map(({ month, cells }) => {
           const segments = cells
             .map((cell) => {
+              if (cell.type === "blank") return '<div class="year-cell blank"></div>';
               const date = toIsoDate(yearViewYear, month, cell.day);
               if (cell.type === "free") {
                 const weekendClass = cell.weekend || cell.holiday ? " weekend" : "";
