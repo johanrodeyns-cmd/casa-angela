@@ -289,7 +289,11 @@ export const casaAngelaEnergy = onCall({ timeoutSeconds: 30 }, async (request) =
 // Zonnestroom, enkel een ander pad-namespace (installer/api/v2 i.p.v. user/api/v2) en een
 // "meter"-eid i.p.v. het inverter/ECU-eid — in de praktijk vaak dezelfde ECU (type 'ECU
 // with meter activated'), dus hergebruikt de UI voorlopig hetzelfde EID-veld als Zonnestroom.
-// level: daily (date_range=YYYY-MM) | monthly (date_range=YYYY) | yearly (geen date_range).
+// level: hourly (date_range=YYYY-MM-DD) | daily (date_range=YYYY-MM) | monthly (date_range=YYYY)
+// | yearly (geen date_range). "minutely" bestaat volgens de documentatie ook, maar geeft in de
+// praktijk een HTTP 500 terug voor deze meter — vermoedelijk een bug/beperking aan APsystems'
+// kant, dus bewust niet aangeboden; "hourly" (voor "vandaag per uur") gebruikt exact dezelfde,
+// al bevestigd werkende platte-array-vorm als daily/monthly/yearly.
 export const casaAngelaMeterEnergy = onCall({ timeoutSeconds: 30 }, async (request) => {
   requireAllowedUser(request);
   const { id, appSecret, systemId } = nutsRequireCreds(request.data);
@@ -297,13 +301,13 @@ export const casaAngelaMeterEnergy = onCall({ timeoutSeconds: 30 }, async (reque
   if (typeof eid !== 'string' || eid.trim() === '') {
     throw new HttpsError('invalid-argument', 'eid ontbreekt.');
   }
-  if (!['daily', 'monthly', 'yearly'].includes(level)) {
-    throw new HttpsError('invalid-argument', 'level moet daily, monthly of yearly zijn.');
+  if (!['hourly', 'daily', 'monthly', 'yearly'].includes(level)) {
+    throw new HttpsError('invalid-argument', 'level moet hourly, daily, monthly of yearly zijn.');
   }
   const meterEid = eid.trim();
   let qs = `?energy_level=${level}`;
   if (level !== 'yearly') {
-    if (typeof dateRange !== 'string' || !/^\d{4}(-\d{2})?$/.test(dateRange)) {
+    if (typeof dateRange !== 'string' || !/^\d{4}(-\d{2}(-\d{2})?)?$/.test(dateRange)) {
       throw new HttpsError('invalid-argument', 'dateRange ontbreekt of heeft fout formaat.');
     }
     qs += `&date_range=${dateRange}`;
@@ -314,32 +318,6 @@ export const casaAngelaMeterEnergy = onCall({ timeoutSeconds: 30 }, async (reque
     headers,
   ) || {};
   return { values: Array.isArray(data.exported) ? data.exported : [] };
-});
-
-// Netstroom vandaag (minutely, per-minuut geëxporteerde energie) — mirror van
-// casaAngelaToday, maar voor de meter i.p.v. de ECU/inverters.
-export const casaAngelaMeterToday = onCall({ timeoutSeconds: 30 }, async (request) => {
-  requireAllowedUser(request);
-  const { id, appSecret, systemId } = nutsRequireCreds(request.data);
-  const { eid, date } = request.data || {};
-  if (typeof eid !== 'string' || eid.trim() === '') {
-    throw new HttpsError('invalid-argument', 'eid ontbreekt.');
-  }
-  const meterEid = eid.trim();
-  const dateRange = (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date))
-    ? date
-    : new Date().toISOString().slice(0, 10);
-  const headers = await buildHeaders(id, appSecret, meterEid, 'GET');
-  const data = await nutsGetJson(
-    `${APSYSTEMS_BASE_URL}/installer/api/v2/systems/${systemId}/devices/meter/period/${meterEid}` +
-      `?energy_level=minutely&date_range=${dateRange}`,
-    headers,
-  ) || {};
-  const energy = data.energy || {};
-  return {
-    time: Array.isArray(data.time) ? data.time : [],
-    exported: Array.isArray(energy.exported) ? energy.exported : [],
-  };
 });
 
 // Stuur een storings- of herstelmail via Gmail SMTP. account = het Gmail-adres dat het

@@ -1632,6 +1632,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.40.0", date: "2026-07-20", description: "Netstroom vandaag: de per-minuut-variant gaf een serverfout (APsystems ondersteunt 'minutely' blijkbaar niet betrouwbaar voor de meter, ondanks documentatie) — vervangen door een per-uur-grafiek van vandaag, die dezelfde beproefde weg gebruikt als de Maand/Jaar-historie." },
       { version: "0.39.1", date: "2026-07-20", description: "Bugfix: 'Netstroom vandaag' toonde bij een fout of ontbrekende data stilzwijgend niets — nu zichtbare status/foutmelding, zoals bij de andere grafieken." },
       { version: "0.39.0", date: "2026-07-20", description: "Netstroom: grafiek 'Netstroom vandaag' toegevoegd (per-minuut geëxporteerde energie, volledige dag 00:00-23:59), net als bij Zonnestroom." },
       { version: "0.38.0", date: "2026-07-20", description: "Netstroom werkt nu via de officiële APsystems-koppeling (dezelfde App ID/Secret als Zonnestroom) i.p.v. een EMA-website-sessiecookie — Johan vond de juiste, officiële documentatie terug. Toont Dag/Maand/Jaar-historiek van het geëxporteerde vermogen, net als bij Zonnestroom. Geen apart instellingenscherm, geen meterstanden meer manueel in te geven voor Netstroom." },
@@ -1708,7 +1709,6 @@
     const casaAngelaTodayFn = httpsCallable(functionsClient, "casaAngelaToday");
     const casaAngelaEnergyFn = httpsCallable(functionsClient, "casaAngelaEnergy");
     const casaAngelaMeterEnergyFn = httpsCallable(functionsClient, "casaAngelaMeterEnergy");
-    const casaAngelaMeterTodayFn = httpsCallable(functionsClient, "casaAngelaMeterToday");
     const casaAngelaMonitorTestFn = httpsCallable(functionsClient, "casaAngelaMonitorTest");
     const casaAngelaMonitorRunNowFn = httpsCallable(functionsClient, "casaAngelaMonitorRunNow");
 
@@ -3421,10 +3421,10 @@
       });
     }
 
-    // "Netstroom vandaag" — mirror van renderNutsPowerChart, maar per-minuut geëxporteerde
-    // energie (kWh) i.p.v. vermogen (W): de meter-API geeft geen apart "exported"-vermogen
-    // terug, enkel een gecombineerd netto import/export-vermogen, dus de kWh-energiereeks
-    // ligt dichter bij wat de gebruiker vroeg ("exported").
+    // "Netstroom vandaag" — per uur i.p.v. per minuut: de Meter-level API geeft voor
+    // energy_level=minutely een HTTP 500 terug voor deze meter (vermoedelijk een bug/
+    // beperking aan APsystems' kant, ondanks dat het gedocumenteerd staat). "hourly" gebruikt
+    // exact dezelfde, al bevestigd werkende platte-array-vorm als de Historie (US-6.10).
     let netstroomTodayChart = null;
     async function renderNetstroomTodayChart() {
       const statusEl = document.getElementById("netstroom-today-status");
@@ -3442,48 +3442,31 @@
       statusEl.textContent = "Laden…";
       statusEl.hidden = false;
       block.hidden = true;
-      let data;
+      const localDate = new Date().toLocaleDateString("en-CA");
+      let values;
       try {
-        const localDate = new Date().toLocaleDateString("en-CA");
-        data = await nutsCached("meter_today_" + localDate,
-          () => casaAngelaMeterTodayFn({ appId, appSecret, sid, eid, date: localDate }).then((r) => r.data),
+        const vals = await nutsCached("meter_energy_hourly_" + localDate,
+          () => casaAngelaMeterEnergyFn({ appId, appSecret, sid, eid, level: "hourly", dateRange: localDate }).then((r) => r.data.values),
           false);
+        values = (vals || []).map((v) => Number(v));
       } catch (err) {
         statusEl.textContent = "Kon vandaag niet laden: " + (err.message || err);
         statusEl.hidden = false;
         block.hidden = true;
         return;
       }
-      if (!Array.isArray(data.time) || data.time.length === 0) {
-        statusEl.textContent = "Nog geen data voor vandaag beschikbaar.";
-        statusEl.hidden = false;
-        block.hidden = true;
-        return;
-      }
       statusEl.hidden = true;
       block.hidden = false;
-      const { labels, values } = padTodaySeries(data.time || [], (data.exported || []).map((v) => Number(v)));
+      values = padSeriesValues(values, 24);
+      const labels = values.map((_, i) => `${i}u`);
       const { Chart } = await loadNutsChartJs();
       if (netstroomTodayChart) netstroomTodayChart.destroy();
       netstroomTodayChart = new Chart(document.getElementById("netstroom-today-chart"), {
-        type: "line",
-        data: {
-          labels,
-          datasets: [{
-            label: "Netstroom (kWh)",
-            data: values,
-            borderColor: "#4F6FB0",
-            backgroundColor: "#A9B8E0",
-            tension: 0.3,
-            fill: true,
-            pointRadius: 0,
-            pointHoverRadius: 4,
-          }],
-        },
+        type: "bar",
+        data: { labels, datasets: [{ label: "Netstroom (kWh)", data: values, backgroundColor: "#A9B8E0", borderColor: "#4F6FB0", borderWidth: 1 }] },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          interaction: { mode: "index", intersect: false },
           plugins: {
             legend: { display: false },
             tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.y} kWh` } },
