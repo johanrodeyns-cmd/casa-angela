@@ -499,10 +499,17 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
-### US-6.10 ☐ Netstroomverbruik via APsystems EMA ("geëxporteerd") (S)
+### US-6.10 ☑ Netstroomverbruik via APsystems EMA ("geëxporteerd") (S) — v0.37.0
+> Johan zocht het juiste veld zelf op via de Netwerk-tab van de browser (DevTools) terwijl hij het EMA-dashboard bekeek: `sEnergy`/`sLifetimeEnergy`, teruggegeven door `getDashboardProductionInfoAjax` op de EMA-website. **Belangrijk verschil met Zonnestroom:** dit veld zit niet in de officiële, ondertekende Open API (App ID/Secret/SID) — enkel in het interne dashboard van de EMA-website zelf, dat een ingelogde sessie (browser-cookie) vereist. Bewust toch gebouwd ondanks die extra fragiliteit (op vraag van Johan, na expliciete afweging): de sessie kan verlopen, en moet dan manueel vernieuwd worden door de cookie opnieuw uit de browser te kopiëren.
+
 **Als** Johan of Tinneke **wil ik** ook het netstroomverbruik zien **zodat** ik een volledig beeld heb van alle nutsvoorzieningen op één plek.
 
-**Status:** geblokkeerd — Johan zoekt zelf het juiste EMA-veld/endpoint op voor "geëxporteerd" (netstroom) vooraleer dit gebouwd kan worden. De Netstroom-sub-tab toont voorlopig enkel een plaatshoudende tekst.
+**Acceptatiecriteria:**
+- Given de Netstroom-sub-tab, then werkt die verder identiek aan Water/Gas (US-6.9): datum + meterstand (kWh) invoeren, verwijderen, grafiek per maand/jaar met jaarnavigatie, live gesynchroniseerd tussen Johan en Tinneke.
+- Given een uitklapbare "EMA-sessie"-sectie, then kan ik daar de cookie invullen/opslaan en op "Ophalen" klikken om de huidige `sLifetimeEnergy`-stand automatisch als meting van vandaag toe te voegen (overschrijft een eventuele meting van dezelfde dag i.p.v. een dubbele aan te maken).
+- Given een verlopen/ongeldige EMA-sessie, then toont "Ophalen" een duidelijke melding dat de cookie vernieuwd moet worden, i.p.v. stil te falen — handmatige invoer blijft in de tussentijd gewoon werken.
+
+**Technische notities:** nieuwe Cloud Function `casaAngelaGridEnergy` (onCall) — POST naar `https://apsystemsema.com/ema/ajax/getDashboardApiAjax/getDashboardProductionInfoAjax` met de cookie als `Cookie`-header (plus een aantal browser-achtige headers: Origin/Referer/X-Requested-With/User-Agent, gekopieerd uit de echte browser-request) — géén HMAC-signing zoals de Open API, want dit is een sessie-geauthenticeerde website-call. `settings/emaSession.cookie` bewaart de cookie (zelfde vertrouwensmodel als `settings/apsystems.appSecret`: enkel in Firestore, enkel leesbaar door de 2 whitelisted e-mailadressen). `netstroomReadings/{id}` hergebruikt exact hetzelfde datamodel en dezelfde pure functies (`computeMeterIntervals`/`buildMonthlyConsumption`/`buildYearlyConsumption`) als Water/Gas — `setupMeterUtility(type, unit)` kreeg een `unit`-parameter (`"m³"` voor Water/Gas, `"kWh"` voor Netstroom) i.p.v. hardcoded eenheid.
 
 ---
 
@@ -510,4 +517,4 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 - Excel-voorbeeld met bestaande boekingsdata: nog te ontvangen indien gewenst als aanvulling op de hierboven afgesproken velden.
 - **Nuts (Epic 6)**: pas de "Casa Angela"-tab in de Huishouden-app verwijderen zodra deze hier volledig getest en werkend bevonden is (met échte APsystems-credentials en een échte testmail/forceer-check).
-- **US-6.10 (Netstroom)**: wacht op Johan om het juiste APsystems EMA-veld voor "geëxporteerd" stroom te melden vooraleer de integratie gebouwd wordt.
+- **US-6.10 (Netstroom)**: nog live te testen met een échte EMA-cookie (de "Ophalen"-knop) — controleer ook wat er gebeurt zodra de sessie na verloop van tijd effectief verloopt (foutmelding correct? handmatige invoer blijft werken?).

@@ -1512,7 +1512,44 @@
           </div>
 
           <div id="nuts-view-net" hidden>
-            <p class="empty-state">Binnenkort beschikbaar: netstroomverbruik ("geëxporteerd") via de APsystems EMA-gegevens. Wordt aangesloten zodra het juiste EMA-veld gekend is.</p>
+            <h3 class="nuts-section-title">Netstroom</h3>
+            <form id="netstroom-reading-form" class="meter-reading-form">
+              <div class="meter-reading-field">
+                <label for="netstroom-reading-date">Datum</label>
+                <input type="date" id="netstroom-reading-date" required>
+              </div>
+              <div class="meter-reading-field">
+                <label for="netstroom-reading-value">Meterstand (kWh)</label>
+                <input type="number" id="netstroom-reading-value" step="0.001" min="0" required>
+              </div>
+              <button type="submit">Toevoegen</button>
+            </form>
+            <p id="netstroom-reading-error" class="error-message"></p>
+            <div class="nuts-period-toggle">
+              <button type="button" class="button-secondary active" data-meter-period="monthly">Maand</button>
+              <button type="button" class="button-secondary" data-meter-period="yearly">Jaar</button>
+            </div>
+            <div class="meter-year-nav" id="netstroom-year-nav">
+              <button type="button" id="netstroom-year-prev" class="button-secondary">◀</button>
+              <span id="netstroom-year-label"></span>
+              <button type="button" id="netstroom-year-next" class="button-secondary">▶</button>
+            </div>
+            <p id="netstroom-chart-empty" class="empty-state" hidden>Nog geen (of te weinig) metingen om een grafiek te tonen.</p>
+            <div class="nuts-chart-wrap"><canvas id="netstroom-chart"></canvas></div>
+            <h3 class="nuts-section-title">Metingen</h3>
+            <p id="netstroom-list-empty" class="empty-state" hidden>Nog geen metingen ingevoerd.</p>
+            <ul id="netstroom-reading-list" class="meter-reading-list"></ul>
+            <details class="nuts-settings">
+              <summary>EMA-sessie (automatisch ophalen)</summary>
+              <p class="empty-state">De officiële APsystems-koppeling (App ID/Secret) geeft enkel zonnestroom-productie terug, geen netstroom. Netstroom komt uit het EMA-dashboard zelf en vereist een ingelogde sessie (cookie) — die verloopt af en toe en moet dan hieronder vernieuwd worden. Zolang dat niet lukt, blijft handmatige invoer hierboven werken.</p>
+              <label for="netstroom-cookie">Cookie (uit browser-DevTools, tabblad Network → Headers → Request Headers → Cookie bij een aanvraag op apsystemsema.com)</label>
+              <input id="netstroom-cookie" type="password" autocomplete="off" spellcheck="false">
+              <div class="nuts-save-row">
+                <button type="button" id="netstroom-session-save-btn">Opslaan</button>
+                <button type="button" id="netstroom-fetch-btn" class="button-secondary">Ophalen</button>
+              </div>
+              <p id="netstroom-session-status" class="empty-state" hidden></p>
+            </details>
           </div>
 
           <div id="nuts-view-water" hidden>
@@ -1620,6 +1657,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.37.0", date: "2026-07-20", description: "Netstroom-tab werkt nu: metingen (kWh) invoeren + grafiek per maand/jaar (net als Water/Gas), plus een 'Ophalen'-knop die de netstroom-meterstand automatisch haalt uit het EMA-dashboard. Let op: dit gebruikt (bij gebrek aan een officieel netstroom-veld in de APsystems-koppeling) een ingelogde EMA-sessie i.p.v. de App ID/Secret — die sessie kan af en toe verlopen en moet dan manueel vernieuwd worden bij Instellingen; handmatige invoer blijft intussen gewoon werken." },
       { version: "0.36.0", date: "2026-07-20", description: "Zonnestroom-tab herzien: de 5 kaartjes (huidig vermogen t.e.m. lifetime) zijn weg, de grafiek 'Opbrengst per maand' (jan-dec, altijd het volledige jaar) staat nu bovenaan en is meteen zichtbaar, 'Vermogen vandaag' staat eronder en toont nu de hele dag (00:00-23:59) i.p.v. te stoppen bij het huidige tijdstip. Dagweergave toont voortaan ook altijd de volledige maand. De 'Vernieuwen'-knop is weg (een pagina-herlaad ververst toch)." },
       { version: "0.35.0", date: "2026-07-20", description: "Nuts opgesplitst in 4 onderdelen (Zonnestroom/Netstroom/Water/Gas). Zonnestroom is de bestaande APsystems-integratie. Water en Gas: meterstanden manueel ingeven, met verbruiksgrafieken per maand/jaar. Netstroom volgt later (wacht op de juiste EMA-gegevens)." },
       { version: "0.34.0", date: "2026-07-20", description: "Nieuw tabblad 'Nuts': zonnepaneel-opbrengst via APsystems (dashboard, grafiek van vandaag, historie dag/maand/jaar, instellingen) + storingsmonitor met e-mailalert. Geport uit de Huishouden-app." },
@@ -1690,6 +1728,7 @@
     const casaAngelaInvertersFn = httpsCallable(functionsClient, "casaAngelaInverters");
     const casaAngelaTodayFn = httpsCallable(functionsClient, "casaAngelaToday");
     const casaAngelaEnergyFn = httpsCallable(functionsClient, "casaAngelaEnergy");
+    const casaAngelaGridEnergyFn = httpsCallable(functionsClient, "casaAngelaGridEnergy");
     const casaAngelaMonitorTestFn = httpsCallable(functionsClient, "casaAngelaMonitorTest");
     const casaAngelaMonitorRunNowFn = httpsCallable(functionsClient, "casaAngelaMonitorRunNow");
 
@@ -3181,7 +3220,7 @@
     })();
 
     // ===== Water/gas: manuele meterstanden, verbruik gelineariseerd tussen 2 metingen =====
-    function setupMeterUtility(type) {
+    function setupMeterUtility(type, unit) {
       const root = document.getElementById(`nuts-view-${type}`);
       const form = document.getElementById(`${type}-reading-form`);
       const dateInput = document.getElementById(`${type}-reading-date`);
@@ -3206,7 +3245,7 @@
           .map(
             (r) => `
               <li class="meter-reading-item" data-id="${r.id}">
-                <span>${new Date(r.date + "T00:00:00").toLocaleDateString("nl-BE", { day: "numeric", month: "short", year: "numeric" })} — ${r.reading} m³</span>
+                <span>${new Date(r.date + "T00:00:00").toLocaleDateString("nl-BE", { day: "numeric", month: "short", year: "numeric" })} — ${r.reading} ${unit}</span>
                 <button type="button" data-action="delete" aria-label="Verwijderen">🗑</button>
               </li>
             `
@@ -3239,7 +3278,7 @@
           data: {
             labels,
             datasets: [{
-              label: "Verbruik (m³)",
+              label: `Verbruik (${unit})`,
               data: roundedValues,
               backgroundColor: "#A9B8E0",
               borderColor: "#4F6FB0",
@@ -3250,7 +3289,7 @@
             responsive: true,
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true, ticks: { callback: (v) => v + " m³" } } },
+            scales: { y: { beginAtZero: true, ticks: { callback: (v) => v + " " + unit } } },
           },
         });
       }
@@ -3321,12 +3360,80 @@
       yearNavEl.querySelector(`#${type}-year-next`).addEventListener("click", () => { chartYear += 1; renderChart(); });
     }
 
+    // Netstroom: sEnergy/sLifetimeEnergy zitten niet in de officiële Open API (enkel
+    // productie), maar wel in het interne EMA-dashboard — dat vereist een ingelogde
+    // sessie (cookie) i.p.v. App ID/Secret. Fragieler: de sessie verloopt, vandaar de
+    // val-terug op handmatige invoer (hergebruikt via setupMeterUtility hierboven).
+    function nutsEmaSessionDoc() { return doc(db, "settings", "emaSession"); }
+
+    function setupNetstroomFetch() {
+      const cookieInput = document.getElementById("netstroom-cookie");
+      const saveBtn = document.getElementById("netstroom-session-save-btn");
+      const fetchBtn = document.getElementById("netstroom-fetch-btn");
+      const statusEl = document.getElementById("netstroom-session-status");
+
+      getDoc(nutsEmaSessionDoc()).then((snap) => {
+        if (snap.exists()) cookieInput.value = snap.data().cookie || "";
+      }).catch((err) => console.error("Kon EMA-sessie niet laden:", err));
+
+      saveBtn.addEventListener("click", async () => {
+        try {
+          await setDoc(nutsEmaSessionDoc(), { cookie: cookieInput.value.trim() }, { merge: true });
+          statusEl.textContent = "Opgeslagen.";
+          statusEl.hidden = false;
+        } catch (err) {
+          statusEl.textContent = "Opslaan mislukt: " + (err.message || err);
+          statusEl.hidden = false;
+        }
+      });
+
+      fetchBtn.addEventListener("click", async () => {
+        const cookie = cookieInput.value.trim();
+        if (!cookie) {
+          statusEl.textContent = "Vul eerst de EMA-cookie in.";
+          statusEl.hidden = false;
+          return;
+        }
+        statusEl.textContent = "Ophalen…";
+        statusEl.hidden = false;
+        try {
+          const { data } = await casaAngelaGridEnergyFn({ cookie });
+          const today = new Date().toLocaleDateString("en-CA");
+          const existingSnap = await getDocs(query(collection(db, "netstroomReadings"), where("date", "==", today)));
+          const batch = writeBatch(db);
+          if (!existingSnap.empty) {
+            const existingDoc = existingSnap.docs[0];
+            const before = { id: existingDoc.id, ...existingDoc.data() };
+            const after = { ...before, reading: data.sLifetimeEnergy };
+            batch.set(existingDoc.ref, after);
+            addAuditEntry(batch, "netstroomReadings", existingDoc.id, "update", before, after);
+          } else {
+            const ref = doc(collection(db, "netstroomReadings"));
+            const created = {
+              date: today,
+              reading: data.sLifetimeEnergy,
+              createdBy: auth.currentUser.email,
+              createdAt: serverTimestamp(),
+            };
+            batch.set(ref, created);
+            addAuditEntry(batch, "netstroomReadings", ref.id, "create", null, created);
+          }
+          await batch.commit();
+          statusEl.textContent = `✅ Opgehaald: ${data.sLifetimeEnergy} kWh (vandaag ${data.sEnergy} kWh).`;
+        } catch (err) {
+          statusEl.textContent = "Ophalen mislukt: " + (err.message || err);
+        }
+      });
+    }
+
     let meterUtilitiesStarted = false;
     function startMeterUtilities() {
       if (meterUtilitiesStarted) return;
       meterUtilitiesStarted = true;
-      setupMeterUtility("water");
-      setupMeterUtility("gas");
+      setupMeterUtility("water", "m³");
+      setupMeterUtility("gas", "m³");
+      setupMeterUtility("netstroom", "kWh");
+      setupNetstroomFetch();
     }
 
     // signOut() after a denied login re-fires onAuthStateChanged(null); this flag

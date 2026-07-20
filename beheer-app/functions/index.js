@@ -282,6 +282,58 @@ export const casaAngelaEnergy = onCall({ timeoutSeconds: 30 }, async (request) =
   return { values: Array.isArray(data) ? data : [] };
 });
 
+// Netstroom ("geëxporteerd"/sEnergy): dit veld zit NIET in de officiële, ondertekende Open
+// API hierboven (die geeft enkel productie-kWh terug) — enkel in het interne dashboard van
+// de EMA-website, en die vereist een ingelogde sessie (cookie), geen App ID/Secret. Fragieler
+// dan de Open API: de sessie verloopt en moet dan manueel vernieuwd worden (zie Instellingen
+// in de Netstroom-tab) — vandaar ook de val-terug op manuele meterstand-invoer in de UI.
+const EMA_DASHBOARD_URL = 'https://apsystemsema.com/ema/ajax/getDashboardApiAjax/getDashboardProductionInfoAjax';
+
+async function emaDashboardFetch(cookie) {
+  let res;
+  try {
+    res = await fetch(EMA_DASHBOARD_URL, {
+      method: 'POST',
+      headers: {
+        Cookie: cookie,
+        Origin: 'https://apsystemsema.com',
+        Referer: 'https://apsystemsema.com/ema/security/optmainmenu/intoLargeDashboard.action?locale=en_US',
+        'X-Requested-With': 'XMLHttpRequest',
+        Accept: 'application/json, text/javascript, */*; q=0.01',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+    });
+  } catch (err) {
+    console.error('EMA network error:', err.message);
+    throw new HttpsError('unavailable', `Netwerkfout: ${err.message}`);
+  }
+  const bodyText = await res.text();
+  let parsed;
+  try {
+    parsed = JSON.parse(bodyText);
+  } catch {
+    throw new HttpsError('unauthenticated', 'EMA-sessie verlopen of ongeldig — vernieuw de cookie in Instellingen.');
+  }
+  const data = parsed.data || parsed;
+  if (typeof data.sEnergy === 'undefined' || typeof data.sLifetimeEnergy === 'undefined') {
+    throw new HttpsError('unauthenticated', 'EMA-sessie verlopen of ongeldig — vernieuw de cookie in Instellingen.');
+  }
+  return data;
+}
+
+export const casaAngelaGridEnergy = onCall({ timeoutSeconds: 30 }, async (request) => {
+  requireAllowedUser(request);
+  const { cookie } = request.data || {};
+  if (typeof cookie !== 'string' || cookie.trim() === '') {
+    throw new HttpsError('invalid-argument', 'cookie ontbreekt.');
+  }
+  const data = await emaDashboardFetch(cookie);
+  return {
+    sEnergy: Number(data.sEnergy),
+    sLifetimeEnergy: Number(data.sLifetimeEnergy),
+  };
+});
+
 // Stuur een storings- of herstelmail via Gmail SMTP. account = het Gmail-adres dat het
 // app-wachtwoord bezit (= afzender = ontvanger). Secret nooit loggen.
 async function sendNutsAlertMail(account, kind, ctx) {
