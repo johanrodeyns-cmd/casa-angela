@@ -5,7 +5,7 @@ const {
   getEasterSunday, getBelgianPublicHolidays, computeDerivedPrice, computeDisplayPrice,
   getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking,
   parseIcalEvents, mergeSyncedBlocks, buildOccupancyMap, dayOccupancyState,
-  upcomingBookings, formatBookingsListForContact, formatBookingsListForGardener,
+  upcomingBookings, buildContactImageRows, formatBookingsListForGardener,
   findUnmatchedBookings, findUnmatchedSyncedBlocks, dayDisplayLabel, weekdayAbbreviation,
   sortChecklistItems, addChecklistItem, renameChecklistItem, removeChecklistItem,
   toggleChecklistItem, resetChecklistItems, moveChecklistItem, escapeHtml, diffSyncedBlocks,
@@ -15,7 +15,7 @@ const {
 } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.43.0');
+  assert.equal(getVersion(), '0.44.0');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -634,50 +634,36 @@ test('upcomingBookings returns results sorted by dateFrom ascending', () => {
   assert.deepEqual(dates, [...dates].sort());
 });
 
-test('formatBookingsListForContact returns null when there are no bookings', () => {
-  assert.equal(formatBookingsListForContact([], (a, b) => `${a} - ${b}`), null);
+test('buildContactImageRows returns an empty array for no bookings', () => {
+  assert.deepEqual(buildContactImageRows([]), []);
 });
 
-test('formatBookingsListForContact includes date range, nights, name+language, phone, guest counts and remark', () => {
+test('buildContactImageRows maps date range, computed nights, name, language, phone and guest counts', () => {
   const booking = {
     dateFrom: '2026-07-10', dateTo: '2026-07-14', name: 'Jan Janssens', language: 'NL',
     phone: '0470123456', adultsCount: 2, childrenCount: 1, remark: 'late aankomst',
   };
-  const text = formatBookingsListForContact([booking], (a, b) => `${a} - ${b}`);
-  assert.match(text, /2026-07-10 - 2026-07-14/);
-  assert.match(text, /4 nachten/);
-  assert.match(text, /Jan Janssens \(NL\)/);
-  assert.match(text, /0470123456/);
-  assert.match(text, /2 volwassenen, 1 kind\b/);
-  assert.match(text, /late aankomst/);
+  const [row] = buildContactImageRows([booking]);
+  assert.deepEqual(row, {
+    dateFrom: '2026-07-10', dateTo: '2026-07-14', nights: 4, name: 'Jan Janssens',
+    language: 'NL', phone: '0470123456', adults: 2, children: 1, remark: 'late aankomst',
+  });
 });
 
-test('formatBookingsListForContact falls back to em-dash for missing phone/remark and omits language when blank', () => {
-  const booking = { dateFrom: '2026-07-10', dateTo: '2026-07-11', name: 'Jan', language: '', phone: '', adultsCount: 1, childrenCount: 0, remark: '' };
-  const text = formatBookingsListForContact([booking], (a, b) => `${a} - ${b}`);
-  assert.match(text, /👤 Jan\n/);
-  assert.match(text, /—/);
+test('buildContactImageRows defaults missing language/phone/remark to an empty string and missing guest counts to 0', () => {
+  const booking = { dateFrom: '2026-07-10', dateTo: '2026-07-11', name: 'Jan' };
+  const [row] = buildContactImageRows([booking]);
+  assert.equal(row.language, '');
+  assert.equal(row.phone, '');
+  assert.equal(row.remark, '');
+  assert.equal(row.adults, 0);
+  assert.equal(row.children, 0);
 });
 
-test('formatBookingsListForContact joins multiple bookings with a blank line separator', () => {
-  const bookings = [
-    { dateFrom: '2026-07-10', dateTo: '2026-07-11', name: 'Jan', language: '', phone: '', adultsCount: 1, childrenCount: 0, remark: '' },
-    { dateFrom: '2026-08-01', dateTo: '2026-08-02', name: 'Mieke', language: '', phone: '', adultsCount: 1, childrenCount: 0, remark: '' },
-  ];
-  const text = formatBookingsListForContact(bookings, (a, b) => `${a} - ${b}`);
-  assert.equal(text.split('\n\n').length, 2);
-});
-
-test('formatBookingsListForContact never includes a price field', () => {
-  const booking = { dateFrom: '2026-07-10', dateTo: '2026-07-11', name: 'Jan', language: '', phone: '', adultsCount: 1, childrenCount: 0, remark: '', price: 999 };
-  const text = formatBookingsListForContact([booking], (a, b) => `${a} - ${b}`);
-  assert.ok(!text.includes('999'));
-});
-
-test('formatBookingsListForContact uses singular volwassene/kind for a count of 1', () => {
-  const booking = { dateFrom: '2026-07-10', dateTo: '2026-07-11', name: 'Jan', language: '', phone: '', adultsCount: 1, childrenCount: 1, remark: '' };
-  const text = formatBookingsListForContact([booking], (a, b) => `${a} - ${b}`);
-  assert.match(text, /1 volwassene, 1 kind\b/);
+test('buildContactImageRows never includes a price field', () => {
+  const booking = { dateFrom: '2026-07-10', dateTo: '2026-07-11', name: 'Jan', price: 999 };
+  const [row] = buildContactImageRows([booking]);
+  assert.equal(row.price, undefined);
 });
 
 test('formatBookingsListForGardener returns null when there are no bookings', () => {

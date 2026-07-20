@@ -1,4 +1,4 @@
-const VERSION = '0.43.0';
+const VERSION = '0.44.0';
 
 function getVersion() {
   return VERSION;
@@ -250,25 +250,22 @@ function upcomingBookings(bookings, today) {
     .sort((a, b) => a.dateFrom.localeCompare(b.dateFrom));
 }
 
-// formatDateRange(dateFrom, dateTo) is injected so this stays locale-agnostic —
-// the caller (index.html) supplies the actual nl-BE date formatting.
-function formatBookingsListForContact(bookings, formatDateRange) {
-  if (bookings.length === 0) return null;
-  return bookings
-    .map((b) => {
-      const nights = nightsBetween(b.dateFrom, b.dateTo);
-      const nameLine = b.language ? `👤 ${b.name} (${b.language})` : `👤 ${b.name}`;
-      const adults = b.adultsCount ?? 0;
-      const children = b.childrenCount ?? 0;
-      return [
-        `📅 ${formatDateRange(b.dateFrom, b.dateTo)} (${nights} ${nights === 1 ? 'nacht' : 'nachten'})`,
-        nameLine,
-        `📞 ${b.phone || '—'}`,
-        `👥 ${adults} ${adults === 1 ? 'volwassene' : 'volwassenen'}, ${children} ${children === 1 ? 'kind' : 'kinderen'}`,
-        `📝 ${b.remark || '—'}`,
-      ].join('\n');
-    })
-    .join('\n\n');
+// Field selection/defaulting for the "afbeelding voor contactpersoon" table (v0.44.0),
+// which replaced the text-copy variant: WhatsApp caps message length, and a long
+// upcoming-bookings list could exceed it, while an image has no such limit. Returns plain
+// data only — canvas drawing and date/locale formatting stay in index.html.
+function buildContactImageRows(bookings) {
+  return bookings.map((b) => ({
+    dateFrom: b.dateFrom,
+    dateTo: b.dateTo,
+    nights: nightsBetween(b.dateFrom, b.dateTo),
+    name: b.name,
+    language: b.language || '',
+    phone: b.phone || '',
+    adults: b.adultsCount ?? 0,
+    children: b.childrenCount ?? 0,
+    remark: b.remark || '',
+  }));
 }
 
 // Same date/name-formatting convention as formatBookingsListForContact, but limited to
@@ -560,7 +557,7 @@ if (typeof module !== 'undefined' && module.exports) {
     getEasterSunday, getBelgianPublicHolidays, computeDerivedPrice, computeDisplayPrice,
     getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking,
     parseIcalEvents, mergeSyncedBlocks, diffSyncedBlocks, buildOccupancyMap, dayOccupancyState,
-    upcomingBookings, formatBookingsListForContact, formatBookingsListForGardener,
+    upcomingBookings, buildContactImageRows, formatBookingsListForGardener,
     findUnmatchedBookings, findUnmatchedSyncedBlocks, dayDisplayLabel, weekdayAbbreviation,
     sortChecklistItems, addChecklistItem, renameChecklistItem, removeChecklistItem,
     toggleChecklistItem, resetChecklistItems, moveChecklistItem, escapeHtml,

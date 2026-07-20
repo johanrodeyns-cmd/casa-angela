@@ -806,7 +806,7 @@
   #day-detail-title {
     text-transform: capitalize;
   }
-  #copy-contact-feedback,
+  #contact-image-feedback,
   #copy-tuinier-feedback {
     display: none;
     background: var(--olive);
@@ -816,7 +816,7 @@
     margin-bottom: 0.75rem;
     font-size: 0.85rem;
   }
-  #copy-contact-feedback.active,
+  #contact-image-feedback.active,
   #copy-tuinier-feedback.active {
     display: block;
   }
@@ -1431,13 +1431,13 @@
           <div class="boekingen-toolbar">
             <button id="booking-new" type="button" class="full-width">+ Nieuwe boeking</button>
             <div class="boekingen-toolbar-grid">
-              <button id="copy-contact-open" type="button">📋 Kopieer voor contactpersoon</button>
+              <button id="contact-image-open" type="button">🖼️ Afbeelding voor contactpersoon</button>
               <button id="copy-tuinier-open" type="button">🌿 Kopieer voor tuinier</button>
               <button id="ical-settings-open" type="button">🔗 iCal-koppelingen</button>
               <button id="sync-check-open" type="button">🔍 Synchronisatie-overzicht</button>
             </div>
           </div>
-          <p id="copy-contact-feedback"></p>
+          <p id="contact-image-feedback"></p>
           <p id="copy-tuinier-feedback"></p>
           <div id="bookings-list"></div>
           <p id="bookings-empty" class="empty-state">Nog geen boekingen.</p>
@@ -1670,6 +1670,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.44.0", date: "2026-07-20", description: "Boekingen-tab: 'Kopieer voor contactpersoon' vervangen door '🖼️ Afbeelding voor contactpersoon' — een tabel-afbeelding (JPG) i.p.v. platte tekst, want WhatsApp weigerde lange boekingenlijsten wegens het maximum aantal tekens per bericht. Op mobiel opent dit meteen het deelvenster naar WhatsApp; anders wordt de afbeelding gedownload." },
       { version: "0.43.0", date: "2026-07-20", description: "Kalender-tabblad (Beschikbaarheid, Maand en Jaar): de huidige dag krijgt nu een dikke rode kader, zodat 'vandaag' altijd meteen opvalt." },
       { version: "0.42.0", date: "2026-07-20", description: "Zonnestroom/Netstroom-historie (Dag/Maand/Jaar) blijft nu veel langer client-side gecached (6u/24u/7 dagen i.p.v. 30 min), omdat die grafieken vrijwel enkel al-afgesloten periodes tonen — spaart APsystems-quota. Het live vermogen/uur-verbruik van vandaag blijft wel elke 30 min verversen." },
       { version: "0.41.0", date: "2026-07-20", description: "Kalender-tabblad (Beschikbaarheid, Maand en Jaar): boekingen op naam van Johan en/of Tinneke krijgen nu een warme geel/bruine kleur i.p.v. het gewone blauw, zodat een eigen verblijf meteen opvalt tussen de gastboekingen." },
@@ -2622,8 +2623,189 @@
       }
     }
 
-    document.getElementById("copy-contact-open").addEventListener("click", (e) => {
-      copyUpcomingBookings(e.target, document.getElementById("copy-contact-feedback"), formatBookingsListForContact, "📋 Boekingen Casa Angela");
+    // "Afbeelding voor contactpersoon" (v0.44.0, verving de tekst-copy-knop): WhatsApp limiteert
+    // de lengte van een tekstbericht, waardoor plakken van een lange boekingenlijst daarop
+    // vastliep — een afbeelding (tabel, net als de Excel-achtige lijst die Johan al gebruikte)
+    // heeft die beperking niet. Tekenen gebeurt op een <canvas> (nooit in de DOM ingevoegd, enkel
+    // gebruikt om een JPG-Blob te produceren); op mobiel opent dat het native deelvenster
+    // (navigator.share, rechtstreeks "WhatsApp" kiesbaar) met downloaden als terugval.
+    const CONTACT_IMAGE_COLUMNS = [
+      { key: "dateFrom", label: "Datum Van", width: 190 },
+      { key: "dateTo", label: "Datum Tot", width: 190 },
+      { key: "nights", label: "#nachten", width: 72, align: "center" },
+      { key: "name", label: "Naam", width: 150 },
+      { key: "language", label: "Taal", width: 55, align: "center" },
+      { key: "phone", label: "Tel nr", width: 140 },
+      { key: "adults", label: "#volwassenen", width: 96, align: "center" },
+      { key: "children", label: "#kinderen", width: 82, align: "center" },
+      { key: "remark", label: "Opmerking", width: 220, wrap: true },
+    ];
+
+    function formatFullDate(iso) {
+      return new Date(iso + "T00:00:00").toLocaleDateString("nl-BE", {
+        weekday: "long", day: "numeric", month: "long", year: "numeric",
+      });
+    }
+
+    function wrapCanvasText(ctx, text, maxWidth) {
+      const words = String(text).split(" ");
+      const lines = [];
+      let line = "";
+      for (const word of words) {
+        const candidate = line ? `${line} ${word}` : word;
+        if (line && ctx.measureText(candidate).width > maxWidth) {
+          lines.push(line);
+          line = word;
+        } else {
+          line = candidate;
+        }
+      }
+      lines.push(line);
+      return lines;
+    }
+
+    function drawCanvasCellLine(ctx, text, x, width, yMiddle, align, padX) {
+      ctx.textAlign = align === "center" ? "center" : "left";
+      ctx.fillText(text, align === "center" ? x + width / 2 : x + padX, yMiddle);
+    }
+
+    function renderContactImageBlob(rows) {
+      const PAD_X = 8, PAD_Y = 6, LINE_H = 17, HEADER_H = 34, ROW_MIN_H = 30, SCALE = 2;
+      const BODY_FONT = "13px Arial, sans-serif";
+      const HEADER_FONT = "bold 13px Arial, sans-serif";
+
+      const measureCtx = document.createElement("canvas").getContext("2d");
+      measureCtx.font = BODY_FONT;
+      const cellLines = rows.map((row) => {
+        const lines = {};
+        for (const col of CONTACT_IMAGE_COLUMNS) {
+          const raw = row[col.key];
+          const text = raw === "" || raw == null ? "—" : String(raw);
+          lines[col.key] = col.wrap ? wrapCanvasText(measureCtx, text, col.width - PAD_X * 2) : [text];
+        }
+        return lines;
+      });
+      const rowHeights = cellLines.map((lines) => {
+        const maxLines = Math.max(...Object.values(lines).map((l) => l.length));
+        return Math.max(ROW_MIN_H, maxLines * LINE_H + PAD_Y * 2);
+      });
+
+      const totalWidth = CONTACT_IMAGE_COLUMNS.reduce((sum, c) => sum + c.width, 0);
+      const totalHeight = HEADER_H + rowHeights.reduce((a, b) => a + b, 0);
+
+      const canvas = document.createElement("canvas");
+      canvas.width = totalWidth * SCALE;
+      canvas.height = totalHeight * SCALE;
+      const ctx = canvas.getContext("2d");
+      ctx.scale(SCALE, SCALE);
+      ctx.textBaseline = "middle";
+
+      ctx.fillStyle = "#FFFBF5";
+      ctx.fillRect(0, 0, totalWidth, totalHeight);
+
+      ctx.fillStyle = "#4F6FB0";
+      ctx.fillRect(0, 0, totalWidth, HEADER_H);
+      ctx.fillStyle = "#FFFBF5";
+      ctx.font = HEADER_FONT;
+      let hx = 0;
+      for (const col of CONTACT_IMAGE_COLUMNS) {
+        drawCanvasCellLine(ctx, col.label, hx, col.width, HEADER_H / 2, col.align, PAD_X);
+        hx += col.width;
+      }
+
+      ctx.font = BODY_FONT;
+      let y = HEADER_H;
+      rows.forEach((_, i) => {
+        const h = rowHeights[i];
+        ctx.fillStyle = i % 2 === 0 ? "#FFFBF5" : "#F5EBE0";
+        ctx.fillRect(0, y, totalWidth, h);
+
+        let cx = 0;
+        for (const col of CONTACT_IMAGE_COLUMNS) {
+          ctx.fillStyle = "#2C2C2C";
+          cellLines[i][col.key].forEach((line, li) => {
+            const lineY = y + PAD_Y + LINE_H * li + LINE_H / 2;
+            drawCanvasCellLine(ctx, line, cx, col.width, lineY, col.align, PAD_X);
+          });
+          ctx.strokeStyle = "#E6D5C3";
+          ctx.beginPath();
+          ctx.moveTo(cx + 0.5, y);
+          ctx.lineTo(cx + 0.5, y + h);
+          ctx.stroke();
+          cx += col.width;
+        }
+        y += h;
+      });
+      ctx.strokeStyle = "#E6D5C3";
+      ctx.strokeRect(totalWidth - 0.5, HEADER_H, 0, totalHeight - HEADER_H);
+
+      return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob); else reject(new Error("Kon geen afbeelding maken."));
+        }, "image/jpeg", 0.92);
+      });
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    async function generateContactImage(button, feedbackEl) {
+      feedbackEl.classList.remove("active");
+      const today = isoDateFromDate(new Date());
+      const upcoming = upcomingBookings(bookings, today);
+
+      const originalLabel = button.textContent;
+      button.disabled = true;
+      button.innerHTML = '<span class="spinner"></span>Bezig…';
+      try {
+        if (upcoming.length === 0) {
+          feedbackEl.textContent = "Geen boekingen vanaf vandaag.";
+          feedbackEl.classList.add("active");
+          return;
+        }
+        const rows = buildContactImageRows(upcoming).map((r) => ({
+          ...r, dateFrom: formatFullDate(r.dateFrom), dateTo: formatFullDate(r.dateTo),
+        }));
+        const blob = await renderContactImageBlob(rows);
+        const filename = `boekingen-casa-angela-${today}.jpg`;
+
+        if (navigator.canShare && navigator.canShare({ files: [new File([blob], filename, { type: "image/jpeg" })] })) {
+          try {
+            await navigator.share({
+              files: [new File([blob], filename, { type: "image/jpeg" })],
+              title: "Boekingen Casa Angela",
+            });
+            feedbackEl.textContent = "Afbeelding gedeeld.";
+          } catch (shareErr) {
+            if (shareErr.name === "AbortError") {
+              feedbackEl.classList.remove("active");
+              return;
+            }
+            downloadBlob(blob, filename);
+            feedbackEl.textContent = "Delen mislukt — afbeelding gedownload.";
+          }
+        } else {
+          downloadBlob(blob, filename);
+          feedbackEl.textContent = "Afbeelding gedownload.";
+        }
+        feedbackEl.classList.add("active");
+      } catch (err) {
+        feedbackEl.textContent = "Genereren mislukt: " + (err.message || err);
+        feedbackEl.classList.add("active");
+      } finally {
+        button.disabled = false;
+        button.textContent = originalLabel;
+      }
+    }
+
+    document.getElementById("contact-image-open").addEventListener("click", (e) => {
+      generateContactImage(e.target, document.getElementById("contact-image-feedback"));
     });
 
     document.getElementById("copy-tuinier-open").addEventListener("click", (e) => {

@@ -196,19 +196,20 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
-### US-2.4 ☑ Kopiëren naar klembord voor de contactpersoon ter plaatse (M) — v0.19.0
+### US-2.4 ☑ Afbeelding voor de contactpersoon ter plaatse (M) — v0.19.0
 > Vereenvoudigd t.o.v. de eerste versie (v0.18.0): geen manuele periode-invoer meer. Eén klik kopieert meteen alles vanaf vandaag tot en met de laatste boeking in de toekomst.
+> Vervolg in v0.44.0: de tekst-copy-knop volledig vervangen door een afbeelding (JPG-tabel). Bij een langere lijst upcoming bookings liep WhatsApp tegen zijn maximum aantal tekens per bericht aan bij het plakken — een afbeelding heeft die beperking niet. Johan stuurde een voorbeeld van de tabelvorm die hij al gebruikte (Datum Van/Datum Tot/#nachten/Naam/Taal/Tel nr/#volwassenen/#kinderen/Opmerking) als referentie voor de kolomindeling. Expliciete keuze (i.p.v. het bericht automatisch in meerdere delen op te knippen): de knop vervangt de oude volledig, en op mobiel wordt rechtstreeks gedeeld via het native deelvenster i.p.v. enkel gedownload.
 
-**Als** Johan of Tinneke **wil ik** een overzicht van boekingen als tekst naar het klembord kunnen kopiëren **zodat** ik het direct kan plakken in een WhatsApp-bericht naar onze contactpersoon ter plaatse, zonder inzage in prijzen.
+**Als** Johan of Tinneke **wil ik** een overzicht van boekingen als afbeelding kunnen genereren en delen **zodat** ik het naar WhatsApp naar onze contactpersoon ter plaatse kan sturen, zonder inzage in prijzen en zonder tegen een berichtlengte-limiet aan te lopen.
 
 **Acceptatiecriteria:**
-- Given een knop "Kopieer voor contactpersoon", when ik erop klik, then wordt zonder verdere invoer een leesbaar geformatteerde tekstlijst naar het klembord gekopieerd (`navigator.clipboard.writeText`) — géén periode manueel in te geven, géén afbeelding, géén download.
-- Given de gekopieerde tekst, then omvat ze alle boekingen vanaf vandaag tot en met de laatste boeking in de toekomst (een lopende boeking die vandaag nog niet is afgelopen, telt mee).
-- Given die tekst, then bevat ze per boeking: Datum van, Datum tot, aantal nachten, naam, taal, telefoonnummer, aantal volwassenen, aantal kinderen, opmerking — zonder Klantprijs.
-- Given een geslaagde kopieeractie, then toont de app een korte bevestiging (bv. "Gekopieerd naar klembord") zodat duidelijk is dat het gelukt is.
-- Given geen boekingen vanaf vandaag, then toont de app een duidelijke melding i.p.v. een lege of onzinnige kopieeractie.
+- Given een knop "🖼️ Afbeelding voor contactpersoon", when ik erop klik, then wordt zonder verdere invoer een tabel-afbeelding (JPG) gegenereerd met alle boekingen vanaf vandaag tot en met de laatste boeking in de toekomst (een lopende boeking die vandaag nog niet is afgelopen, telt mee).
+- Given die tabel, then bevat ze per boeking een rij met: Datum Van, Datum Tot, #nachten, Naam, Taal, Tel nr, #volwassenen, #kinderen, Opmerking — zonder Klantprijs.
+- Given een mobiel toestel dat het native deelvenster ondersteunt (`navigator.canShare` met bestanden), then opent de knop dat deelvenster meteen met de afbeelding, zodat "WhatsApp" er rechtstreeks uit gekozen kan worden.
+- Given geen ondersteuning voor het deelvenster (bv. desktop) of een geannuleerde/mislukte deelactie, then wordt de afbeelding gewoon gedownload, met een duidelijke statusmelding welk van beide gebeurd is.
+- Given geen boekingen vanaf vandaag, then toont de app een duidelijke melding i.p.v. een lege of onzinnige afbeelding.
 
-**Technische notities:** puur tekst, geen Canvas/JPG en geen Web Share API meer nodig — `navigator.clipboard.writeText()` volstaat (werkt over HTTPS, wat deze app al is via Firebase Hosting). `logic.upcomingBookings(bookings, today)` filtert op `dateTo >= today` en sorteert op `dateFrom` — geen manuele periode-selectie. Format zo dat het er verzorgd uitziet als geplakt in een WhatsApp-bericht.
+**Technische notities:** `logic.buildContactImageRows(bookings)` (pure, TDD) selecteert/normaliseert de velden (nachten via `nightsBetween`, lege standaardwaarden voor taal/telefoon/opmerking, geen prijsveld); `index.html` formatteert de datums (`formatFullDate`, volledige weekdag+maand nl-BE) en tekent de tabel op een off-screen `<canvas>` (`renderContactImageBlob`, 2× schaalfactor voor scherpte op telefoonschermen, opmerking-kolom wrapt over meerdere regels indien nodig) → `canvas.toBlob('image/jpeg')`. Delen via `navigator.share({ files: [File] })` wanneer `navigator.canShare` dat toelaat (met `AbortError`-afhandeling bij annuleren = geen foutmelding), anders een `<a download>`-link (`downloadBlob`). Vervangt volledig de oude `formatBookingsListForContact` + `navigator.clipboard.writeText`-aanpak (verwijderd, incl. tests) — enkel de tuinier-export (US-2.5) gebruikt nog de tekst/klembord-route.
 
 ---
 
@@ -227,7 +228,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 - Given een geslaagde kopieeractie, then toont de app dezelfde korte bevestiging als bij US-2.4.
 - Given geen boekingen vanaf vandaag, then toont de app dezelfde duidelijke melding als bij US-2.4.
 
-**Technische notities:** `logic.formatBookingsListForGardener(bookings, formatDate)` bouwt een spatie-uitgelijnde `Desde`/`Hasta`-tabel (gewoon lettertype, geen codeblok); `index.html` geeft `formatDateEs` (Spaanse datumformattering), `headerLabel: "Reservas Casa Angela"` en `headerRangeFormatter: null` (koptekst zonder datumbereik) mee aan `copyUpcomingBookings`, los van de Nederlandse formatters + koptekst mét datumbereik voor de contactpersoon-export (US-2.4).
+**Technische notities:** `logic.formatBookingsListForGardener(bookings, formatDate)` bouwt een spatie-uitgelijnde `Desde`/`Hasta`-tabel (gewoon lettertype, geen codeblok); `index.html` geeft `formatDateEs` (Spaanse datumformattering), `headerLabel: "Reservas Casa Angela"` en `headerRangeFormatter: null` (koptekst zonder datumbereik) mee aan `copyUpcomingBookings` — sinds v0.44.0 de enige knop die deze tekst/klembord-helper nog gebruikt (de contactpersoon-export (US-2.4) is een afbeelding geworden).
 
 ---
 
