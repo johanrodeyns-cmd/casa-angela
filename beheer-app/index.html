@@ -1007,6 +1007,123 @@
   .checklist-reset {
     margin-top: 0.5rem;
   }
+  .nuts-title {
+    margin: 0 0 0.25rem;
+  }
+  .nuts-subtitle {
+    margin: 0 0 1rem;
+    color: var(--charcoal);
+    opacity: 0.7;
+    font-size: 0.9rem;
+  }
+  .nuts-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  @media (min-width: 480px) {
+    .nuts-cards {
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    }
+  }
+  .nuts-card {
+    background: var(--sand);
+    border-radius: 8px;
+    padding: 0.9rem 1rem;
+  }
+  .nuts-card-label {
+    font-size: 0.7rem;
+    color: var(--olive-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .nuts-card-value {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: var(--charcoal);
+    margin-top: 0.25rem;
+  }
+  .nuts-card-value::after {
+    content: " kWh";
+    font-size: 0.75rem;
+    font-weight: normal;
+    color: var(--olive-dark);
+  }
+  .nuts-card-value.nuts-watt::after {
+    content: " W";
+  }
+  .nuts-section-title {
+    margin: 1.25rem 0 0.75rem;
+    font-size: 1rem;
+  }
+  .nuts-chart-wrap {
+    position: relative;
+    height: 240px;
+  }
+  #nuts-refresh-btn {
+    margin-top: 0.75rem;
+  }
+  .nuts-period-toggle {
+    display: flex;
+    gap: 0.4rem;
+    margin-bottom: 0.75rem;
+  }
+  .nuts-period-toggle button.active {
+    background: var(--primary);
+    color: var(--cream);
+  }
+  .nuts-settings {
+    margin-top: 1.5rem;
+    max-width: 480px;
+  }
+  .nuts-settings summary {
+    cursor: pointer;
+    font-weight: bold;
+    padding: 0.5rem 0;
+  }
+  .nuts-settings label {
+    display: block;
+    font-size: 0.85rem;
+    margin: 0.75rem 0 0.25rem;
+  }
+  .nuts-settings input[type="text"],
+  .nuts-settings input[type="password"],
+  .nuts-settings input[type="email"] {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 1rem;
+    padding: 0.6rem;
+    min-height: 44px;
+    border: 1px solid var(--sand-dark);
+    border-radius: 6px;
+  }
+  .nuts-eid-row {
+    display: flex;
+    gap: 0.5rem;
+  }
+  .nuts-eid-row input {
+    flex: 1;
+  }
+  .nuts-checkbox-label {
+    display: flex !important;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    margin: 0 !important;
+  }
+  .nuts-alert-block {
+    border-top: 1px solid var(--sand-dark);
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+  }
+  .nuts-alert-actions,
+  .nuts-save-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    flex-wrap: wrap;
+  }
 </style>
 </head>
 <body>
@@ -1221,6 +1338,7 @@
         <button type="button" class="nav-item" data-tab="tab-prijzen">Prijzen</button>
         <button type="button" class="nav-item" data-tab="tab-checklist-aankomst">Checklist<br>aankomst</button>
         <button type="button" class="nav-item" data-tab="tab-checklist-vertrek">Checklist<br>vertrek</button>
+        <button type="button" class="nav-item" data-tab="tab-nuts">Nuts</button>
       </nav>
 
       <div class="tab-content">
@@ -1315,6 +1433,63 @@
             <button type="button" class="checklist-reset button-secondary full-width">Reset lijst</button>
           </div>
         </div>
+        <div id="tab-nuts" class="tab-panel">
+          <h2 class="nuts-title">Nuts</h2>
+          <p class="nuts-subtitle">Zonnepaneel-opbrengst via APsystems.</p>
+          <p id="nuts-overview-error" class="error-message"></p>
+          <p id="nuts-overview-prompt" class="empty-state">Stel eerst je APsystems-gegevens in (open Instellingen hieronder).</p>
+          <div class="nuts-cards" id="nuts-cards" hidden>
+            <div class="nuts-card"><div class="nuts-card-label">Huidig vermogen</div><div class="nuts-card-value nuts-watt" id="nuts-power">—</div></div>
+            <div class="nuts-card"><div class="nuts-card-label">Vandaag</div><div class="nuts-card-value" id="nuts-today">—</div></div>
+            <div class="nuts-card"><div class="nuts-card-label">Deze maand</div><div class="nuts-card-value" id="nuts-month">—</div></div>
+            <div class="nuts-card"><div class="nuts-card-label">Dit jaar</div><div class="nuts-card-value" id="nuts-year">—</div></div>
+            <div class="nuts-card"><div class="nuts-card-label">Lifetime</div><div class="nuts-card-value" id="nuts-lifetime">—</div></div>
+          </div>
+          <div id="nuts-chart-block" hidden>
+            <h3 class="nuts-section-title">Vermogen vandaag</h3>
+            <div class="nuts-chart-wrap"><canvas id="nuts-power-chart"></canvas></div>
+          </div>
+          <button type="button" id="nuts-refresh-btn" class="button-secondary">Vernieuwen</button>
+          <div id="nuts-history-section" hidden>
+            <h3 class="nuts-section-title">Historie</h3>
+            <div class="nuts-period-toggle">
+              <button type="button" class="button-secondary" data-nuts-period="daily">Dag</button>
+              <button type="button" class="button-secondary" data-nuts-period="monthly">Maand</button>
+              <button type="button" class="button-secondary" data-nuts-period="yearly">Jaar</button>
+            </div>
+            <p id="nuts-history-status" class="empty-state">Kies een periode om de historie te laden.</p>
+            <div id="nuts-history-block" class="nuts-chart-wrap" hidden><canvas id="nuts-history-chart"></canvas></div>
+          </div>
+          <details class="nuts-settings">
+            <summary>Instellingen</summary>
+            <label for="nuts-appid">App ID</label>
+            <input id="nuts-appid" type="text" autocomplete="off" spellcheck="false">
+            <label for="nuts-secret">App Secret</label>
+            <input id="nuts-secret" type="password" autocomplete="off" spellcheck="false">
+            <label for="nuts-sid">SID</label>
+            <input id="nuts-sid" type="text" autocomplete="off" spellcheck="false" placeholder="bv. D22C118889095229">
+            <label for="nuts-eid">EID (voor de grafiek)</label>
+            <div class="nuts-eid-row">
+              <input id="nuts-eid" type="text" autocomplete="off" spellcheck="false">
+              <button type="button" id="nuts-fetch-eid-btn" class="button-secondary" title="Haal de EID op uit je systeem">Haal op</button>
+            </div>
+            <div class="nuts-alert-block">
+              <label class="nuts-checkbox-label"><input type="checkbox" id="nuts-alert-enabled"> E-mail mij bij storing (geen data overdag)</label>
+              <label for="nuts-alert-email">Alert-e-mailadres</label>
+              <input id="nuts-alert-email" type="email" autocomplete="off" spellcheck="false">
+              <div class="nuts-alert-actions">
+                <button type="button" id="nuts-alert-test-btn" class="button-secondary">Stuur testmail</button>
+                <button type="button" id="nuts-force-check-btn" class="button-secondary" title="Eén check meteen uitvoeren (2x klikken met zekering uit = storingsmail)">Forceer check</button>
+              </div>
+              <p id="nuts-alert-status" class="empty-state"></p>
+            </div>
+            <div class="nuts-save-row">
+              <button type="button" id="nuts-save-btn">Opslaan</button>
+              <button type="button" id="nuts-testconn-btn" class="button-secondary">Verbinding testen</button>
+            </div>
+            <p id="nuts-settings-status" class="empty-state"></p>
+          </details>
+        </div>
       </div>
     </div>
   </section>
@@ -1360,6 +1535,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.34.0", date: "2026-07-20", description: "Nieuw tabblad 'Nuts': zonnepaneel-opbrengst via APsystems (dashboard, grafiek van vandaag, historie dag/maand/jaar, instellingen) + storingsmonitor met e-mailalert. Geport uit de Huishouden-app." },
       { version: "0.33.3", date: "2026-07-20", description: "Kalender-tabblad gebruikt op een breed scherm nu de volledige beschikbare breedte (voorheen vastgezet op 900px zoals de andere tabs), zodat de jaartabel minder snel moet scrollen." },
       { version: "0.33.2", date: "2026-07-20", description: "Jaartabel: dagen met een gastenwissel (vertrek + aankomst dezelfde dag) tonen nu ook een diagonale split, zonder de (te drukke) namen erin." },
       { version: "0.33.1", date: "2026-07-20", description: "Jaartabel: aankomst- en vertrekdagen tonen nu dezelfde diagonale kleursplit als de andere kalenders (zonder gastnaam erin, enkel de volledig bezette dagen ertussen tonen de naam)." },
@@ -1423,6 +1599,13 @@
     const db = getFirestore(app);
     const functionsClient = getFunctions(app);
 
+    const casaAngelaSummaryFn = httpsCallable(functionsClient, "casaAngelaSummary");
+    const casaAngelaInvertersFn = httpsCallable(functionsClient, "casaAngelaInverters");
+    const casaAngelaTodayFn = httpsCallable(functionsClient, "casaAngelaToday");
+    const casaAngelaEnergyFn = httpsCallable(functionsClient, "casaAngelaEnergy");
+    const casaAngelaMonitorTestFn = httpsCallable(functionsClient, "casaAngelaMonitorTest");
+    const casaAngelaMonitorRunNowFn = httpsCallable(functionsClient, "casaAngelaMonitorRunNow");
+
     // US-5.1: every create/update/delete on an audited collection gets an auditLog entry,
     // written in the SAME batch as the actual data change (atomic — either both succeed or
     // neither does). `email` always comes from the logged-in session, never a form field —
@@ -1469,6 +1652,7 @@
       document.querySelectorAll(".nav-item").forEach((btn) => {
         btn.classList.toggle("active", btn.dataset.tab === tabId);
       });
+      if (tabId === "tab-nuts") refreshNuts();
     }
 
     document.querySelectorAll(".nav-item").forEach((btn) => {
@@ -2610,6 +2794,309 @@
       setupChecklist("aankomst");
       setupChecklist("vertrek");
     }
+
+    // ===== Nuts (zonnepanelen via APsystems) — geport uit de Huishouden-app =====
+    function nutsSettingsDoc() { return doc(db, "settings", "apsystems"); }
+
+    // Client-cache in Firestore (30 min TTL) — Firestore-reads tellen niet tegen de
+    // APsystems-quota (1000 calls/maand), dit voorkomt herhaalde API-calls per tab-bezoek.
+    const NUTS_CACHE_TTL_MS = 30 * 60 * 1000;
+    function nutsCacheDoc() { return doc(db, "cache", "apsystems"); }
+    async function nutsCached(key, fetchFn, force) {
+      if (!force) {
+        try {
+          const snap = await getDoc(nutsCacheDoc());
+          const e = snap.exists() ? snap.data()[key] : null;
+          if (e && e.fetchedAt && (Date.now() - e.fetchedAt) < NUTS_CACHE_TTL_MS) return e.data;
+        } catch { /* val terug op directe fetch */ }
+      }
+      const data = await fetchFn();
+      try {
+        await setDoc(nutsCacheDoc(), { [key]: { data, fetchedAt: Date.now() } }, { merge: true });
+      } catch { /* cache-write faalt → niet fataal */ }
+      return data;
+    }
+
+    let nutsChartJsModule = null;
+    async function loadNutsChartJs() {
+      if (nutsChartJsModule) return nutsChartJsModule;
+      const mod = await import("https://cdn.jsdelivr.net/npm/chart.js@4.4.1/+esm");
+      mod.Chart.register(...mod.registerables);
+      mod.Chart.defaults.color = "#2C2C2C";
+      mod.Chart.defaults.borderColor = "#E6D5C3";
+      nutsChartJsModule = mod;
+      return mod;
+    }
+
+    let nutsTodayChart = null;
+    async function renderNutsPowerChart(time, power) {
+      const { Chart } = await loadNutsChartJs();
+      const values = (power || []).map((v) => Number(v));
+      if (nutsTodayChart) nutsTodayChart.destroy();
+      nutsTodayChart = new Chart(document.getElementById("nuts-power-chart"), {
+        type: "line",
+        data: {
+          labels: time || [],
+          datasets: [{
+            label: "Vermogen (W)",
+            data: values,
+            borderColor: "#4F6FB0",
+            backgroundColor: "#A9B8E0",
+            tension: 0.3,
+            fill: true,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.y} W` } },
+          },
+          scales: {
+            y: { beginAtZero: true, ticks: { callback: (v) => v + " W" } },
+            x: { grid: { display: false }, ticks: { maxTicksLimit: 12 } },
+          },
+        },
+      });
+    }
+
+    let nutsHistoryChart = null;
+    async function renderNutsHistory(level) {
+      const statusEl = document.getElementById("nuts-history-status");
+      const block = document.getElementById("nuts-history-block");
+      const appId = document.getElementById("nuts-appid").value.trim();
+      const appSecret = document.getElementById("nuts-secret").value;
+      const sid = document.getElementById("nuts-sid").value.trim();
+      if (!appId || !appSecret || !sid) {
+        statusEl.textContent = "Vul eerst je gegevens in.";
+        statusEl.hidden = false;
+        block.hidden = true;
+        return;
+      }
+      document.querySelectorAll("[data-nuts-period]").forEach((b) =>
+        b.classList.toggle("active", b.dataset.nutsPeriod === level));
+
+      const now = new Date();
+      let dateRange = "";
+      if (level === "daily") dateRange = now.toLocaleDateString("en-CA").slice(0, 7); // YYYY-MM
+      else if (level === "monthly") dateRange = String(now.getFullYear());
+
+      statusEl.textContent = "Laden…";
+      statusEl.hidden = false;
+      let values;
+      try {
+        const vals = await nutsCached("energy_" + level + "_" + (dateRange || "all"),
+          () => casaAngelaEnergyFn({ appId, appSecret, sid, level, dateRange }).then((r) => r.data.values),
+          false);
+        values = (vals || []).map((v) => Number(v));
+      } catch (err) {
+        statusEl.textContent = "Kon historie niet laden: " + (err.message || err);
+        block.hidden = true;
+        return;
+      }
+      statusEl.hidden = true;
+      block.hidden = false;
+
+      let labels;
+      if (level === "daily") {
+        labels = values.map((_, i) => String(i + 1));
+      } else if (level === "monthly") {
+        const m = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+        labels = values.map((_, i) => m[i] || String(i + 1));
+      } else {
+        const cur = now.getFullYear();
+        const n = values.length;
+        labels = values.map((_, i) => String(cur - (n - 1) + i));
+      }
+
+      const { Chart } = await loadNutsChartJs();
+      if (nutsHistoryChart) nutsHistoryChart.destroy();
+      nutsHistoryChart = new Chart(document.getElementById("nuts-history-chart"), {
+        type: "bar",
+        data: { labels, datasets: [{ label: "Opbrengst (kWh)", data: values, backgroundColor: "#4F6FB0", borderColor: "#4F6FB0" }] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.y} kWh` } } },
+          scales: {
+            y: { beginAtZero: true, ticks: { callback: (v) => v + " kWh" } },
+            x: { grid: { display: false }, ticks: { maxTicksLimit: 16 } },
+          },
+        },
+      });
+    }
+
+    // force=true → cache omzeilen (Vernieuwen-knop).
+    async function refreshNuts(force = false) {
+      const cardsEl = document.getElementById("nuts-cards");
+      const promptEl = document.getElementById("nuts-overview-prompt");
+      const errEl = document.getElementById("nuts-overview-error");
+      errEl.classList.remove("active");
+
+      let s = {};
+      try {
+        const snap = await getDoc(nutsSettingsDoc());
+        if (snap.exists()) s = snap.data();
+      } catch (err) {
+        errEl.textContent = "Kon instellingen niet laden: " + (err.message || err);
+        errEl.classList.add("active");
+        return;
+      }
+      document.getElementById("nuts-appid").value = s.appId || "";
+      document.getElementById("nuts-secret").value = s.appSecret || "";
+      document.getElementById("nuts-sid").value = s.sid || "";
+      document.getElementById("nuts-eid").value = s.eid || "";
+      document.getElementById("nuts-alert-enabled").checked = s.alertEnabled === true;
+      document.getElementById("nuts-alert-email").value = s.alertEmail || (auth.currentUser && auth.currentUser.email) || "";
+
+      const historySection = document.getElementById("nuts-history-section");
+      if (!s.appId || !s.appSecret || !s.sid) {
+        promptEl.hidden = false;
+        cardsEl.hidden = true;
+        historySection.hidden = true;
+        return;
+      }
+      promptEl.hidden = true;
+      cardsEl.hidden = false;
+      historySection.hidden = false;
+
+      try {
+        const data = await nutsCached("summary",
+          () => casaAngelaSummaryFn({ appId: s.appId, appSecret: s.appSecret, sid: s.sid }).then((r) => r.data),
+          force);
+        document.getElementById("nuts-today").textContent = data.today ?? "—";
+        document.getElementById("nuts-month").textContent = data.month ?? "—";
+        document.getElementById("nuts-year").textContent = data.year ?? "—";
+        document.getElementById("nuts-lifetime").textContent = data.lifetime ?? "—";
+      } catch (err) {
+        errEl.textContent = "Kon opbrengst niet ophalen: " + (err.message || err);
+        errEl.classList.add("active");
+      }
+
+      const powerEl = document.getElementById("nuts-power");
+      const chartBlock = document.getElementById("nuts-chart-block");
+      if (!s.eid) {
+        powerEl.textContent = "—";
+        chartBlock.hidden = true;
+        return;
+      }
+      try {
+        const localDate = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD in lokale tz
+        const data = await nutsCached("today_" + localDate,
+          () => casaAngelaTodayFn({ appId: s.appId, appSecret: s.appSecret, sid: s.sid, eid: s.eid, date: localDate }).then((r) => r.data),
+          force);
+        const power = Array.isArray(data.power) ? data.power : [];
+        const last = power.length ? power[power.length - 1] : null;
+        powerEl.textContent = last != null ? Math.round(Number(last)).toString() : "—";
+        chartBlock.hidden = false;
+        await renderNutsPowerChart(data.time, power);
+      } catch (err) {
+        powerEl.textContent = "—";
+        chartBlock.hidden = true;
+        errEl.textContent = "Kon vermogen vandaag niet ophalen: " + (err.message || err);
+        errEl.classList.add("active");
+      }
+    }
+
+    (function setupNuts() {
+      const saveBtn = document.getElementById("nuts-save-btn");
+      const testBtn = document.getElementById("nuts-testconn-btn");
+      const refreshBtn = document.getElementById("nuts-refresh-btn");
+      const statusEl = document.getElementById("nuts-settings-status");
+
+      function readNutsForm() {
+        return {
+          appId: document.getElementById("nuts-appid").value.trim(),
+          appSecret: document.getElementById("nuts-secret").value,
+          sid: document.getElementById("nuts-sid").value.trim(),
+          eid: document.getElementById("nuts-eid").value.trim(),
+          alertEnabled: document.getElementById("nuts-alert-enabled").checked,
+          alertEmail: document.getElementById("nuts-alert-email").value.trim(),
+        };
+      }
+      function showNutsStatus(msg) { statusEl.textContent = msg; statusEl.hidden = false; }
+
+      saveBtn.addEventListener("click", async () => {
+        const f = readNutsForm();
+        try {
+          await setDoc(nutsSettingsDoc(), f, { merge: true });
+          showNutsStatus("Opgeslagen.");
+          refreshNuts(true); // creds kunnen gewijzigd zijn → verse data
+        } catch (err) {
+          showNutsStatus("Opslaan mislukt: " + (err.message || err));
+        }
+      });
+
+      testBtn.addEventListener("click", async () => {
+        const f = readNutsForm();
+        if (!f.appId || !f.appSecret || !f.sid) { showNutsStatus("Vul App ID, Secret én SID in."); return; }
+        showNutsStatus("Bezig met testen…");
+        try {
+          await casaAngelaSummaryFn({ appId: f.appId, appSecret: f.appSecret, sid: f.sid });
+          showNutsStatus("✅ Verbinding OK.");
+        } catch (err) {
+          showNutsStatus("Fout: " + (err.message || err));
+        }
+      });
+
+      document.getElementById("nuts-fetch-eid-btn").addEventListener("click", async () => {
+        const f = readNutsForm();
+        if (!f.appId || !f.appSecret || !f.sid) { showNutsStatus("Vul eerst App ID, Secret én SID in."); return; }
+        showNutsStatus("EID ophalen…");
+        try {
+          const { data } = await casaAngelaInvertersFn({ appId: f.appId, appSecret: f.appSecret, sid: f.sid });
+          const devices = data.devices || [];
+          if (!devices.length || !devices[0].eid) { showNutsStatus("Geen ECU gevonden voor dit systeem."); return; }
+          document.getElementById("nuts-eid").value = devices[0].eid;
+          showNutsStatus(devices.length > 1
+            ? `${devices.length} ECU's gevonden; eerste ingevuld. Klik Opslaan.`
+            : "EID ingevuld. Klik Opslaan.");
+        } catch (err) {
+          showNutsStatus("EID ophalen mislukt: " + (err.message || err));
+        }
+      });
+
+      refreshBtn.addEventListener("click", () => refreshNuts(true));
+
+      document.querySelectorAll("[data-nuts-period]").forEach((btn) => {
+        btn.addEventListener("click", () => renderNutsHistory(btn.dataset.nutsPeriod));
+      });
+
+      const alertStatusEl = document.getElementById("nuts-alert-status");
+      document.getElementById("nuts-alert-test-btn").addEventListener("click", async () => {
+        const email = document.getElementById("nuts-alert-email").value.trim();
+        if (!email.includes("@")) { alertStatusEl.textContent = "Vul een geldig e-mailadres in."; alertStatusEl.hidden = false; return; }
+        alertStatusEl.textContent = "Testmail versturen…"; alertStatusEl.hidden = false;
+        try {
+          await casaAngelaMonitorTestFn({ email });
+          alertStatusEl.textContent = "✅ Testmail verstuurd — check je inbox.";
+        } catch (err) {
+          alertStatusEl.textContent = "Fout: " + (err.message || err);
+        }
+      });
+
+      document.getElementById("nuts-force-check-btn").addEventListener("click", async () => {
+        alertStatusEl.textContent = "Check uitvoeren…"; alertStatusEl.hidden = false;
+        try {
+          const { data } = await casaAngelaMonitorRunNowFn({});
+          if (data.status === "alerted") {
+            alertStatusEl.textContent = `⚠️ Storingsmail verstuurd (today=${data.todayKwh} kWh, vlak=${data.consecutiveFlat}).`;
+          } else if (data.status === "recovered") {
+            alertStatusEl.textContent = `✅ Herstelmail verstuurd (today=${data.todayKwh} kWh).`;
+          } else if (data.status === "ok") {
+            alertStatusEl.textContent = `Check ok — today=${data.todayKwh} kWh, vlak=${data.consecutiveFlat}/2, alerted=${data.alerted}.`;
+          } else {
+            alertStatusEl.textContent = `Overgeslagen: ${data.reason || data.status}`;
+          }
+        } catch (err) {
+          alertStatusEl.textContent = "Fout: " + (err.message || err);
+        }
+      });
+    })();
 
     // signOut() after a denied login re-fires onAuthStateChanged(null); this flag
     // stops that from bouncing the user back to the login screen automatically.

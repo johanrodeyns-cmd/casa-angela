@@ -1,4 +1,4 @@
-const VERSION = '0.33.3';
+const VERSION = '0.34.0';
 
 function getVersion() {
   return VERSION;

@@ -374,6 +374,94 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
+## Epic 6 — Nuts (zonnepanelen via APsystems)
+
+> Geport uit de Huishouden-app (tabblad "Casa Angela" daar) naar een eigen tabblad "Nuts" hier, op vraag van Johan. Eerst hier aan het werk krijgen, pas daarna de versie in Huishouden verwijderen.
+
+### US-6.1 ◐ Credentials beheren (M)
+**Als** Johan of Tinneke **wil ik** mijn APsystems App ID, App Secret, SID en EID kunnen invoeren en wijzigen vanuit een instellingen-sectie binnen de Nuts-tab **zodat** ik geen code hoef aan te passen.
+
+**Acceptatiecriteria:**
+- Given de Nuts-tab, then staat er een uitklapbare "Instellingen"-sectie met velden voor App ID, App Secret (password-veld), SID en EID.
+- Given een "Haal op"-knop naast EID, when ik erop klik (met geldige App ID/Secret/SID), then wordt de EID automatisch opgehaald en ingevuld.
+- Given het instellingenformulier, when ik op "Opslaan" klik, then worden de gegevens opgeslagen in `settings/apsystems` en ververst het dashboard meteen met verse data.
+- Given een "Verbinding testen"-knop, then geeft die meteen feedback of de credentials werken, zonder eerst te moeten opslaan.
+
+**Technische notities:** `settings/apsystems` (gedeeld document, geen per-uid pad — Johan en Tinneke delen hetzelfde zonnepaneelsysteem). App Secret staat in Firestore (niet Secret Manager) omdat hij per call client-side wordt meegegeven aan de Cloud Function.
+
+---
+
+### US-6.2 ◐ Dagoverzicht (M)
+**Als** Johan of Tinneke **wil ik** bij het openen van Nuts meteen zien: huidig vermogen (W), opbrengst vandaag (kWh), deze maand (kWh), dit jaar (kWh) en lifetime (kWh).
+
+**Acceptatiecriteria:**
+- Given geldige credentials, when ik de Nuts-tab open, then toont het dashboard 5 kaarten: huidig vermogen, vandaag, deze maand, dit jaar, lifetime.
+- Given geen credentials ingevuld, then toont de tab een duidelijke prompt om eerst Instellingen te openen, i.p.v. lege/foutieve kaarten.
+- Given een API- of netwerkfout, then toont de tab een duidelijke foutmelding i.p.v. een stille lege staat.
+
+**Technische notities:** `casaAngelaSummary` (Cloud Function, CORS-proxy naar APsystems) voor today/month/year/lifetime; `casaAngelaToday` voor het huidig vermogen (laatste waarde van de vandaag-reeks, enkel als EID gekend is).
+
+---
+
+### US-6.3 ◐ Grafiek van vandaag (M)
+**Als** Johan of Tinneke **wil ik** een grafiek zien van het vermogen per tijdstip vandaag (lijngrafiek W over tijd).
+
+**Acceptatiecriteria:**
+- Given een gekende EID, then toont de Nuts-tab onder de kaarten een lijngrafiek van het vermogen (W) doorheen de dag.
+- Given geen EID gekend, then blijft de grafiek verborgen (geen lege/foutieve chart).
+
+**Technische notities:** Chart.js 4.4.1 via lazy `import()` (jsdelivr `+esm`), enkel geladen wanneer de Nuts-tab effectief data toont.
+
+---
+
+### US-6.4 ◐ Historische data (M)
+**Als** Johan of Tinneke **wil ik** kunnen schakelen tussen dag/maand/jaar-weergave met een grafiek per periode.
+
+**Acceptatiecriteria:**
+- Given 3 knoppen "Dag"/"Maand"/"Jaar" onder Historie, when ik op een ervan klik, then toont een staafgrafiek de opbrengst (kWh) per periode-eenheid (dagen van de huidige maand, maanden van het huidig jaar, of jaren).
+- Given de actieve periode-knop, then is die visueel gemarkeerd als actief.
+
+**Technische notities:** `casaAngelaEnergy` (level: daily/monthly/yearly).
+
+---
+
+### US-6.5 ◐ Slimme caching (M)
+**Als** Johan of Tinneke **wil ik** dat de app niet meer dan 1 API-call per 30 minuten doet voor dezelfde data **zodat** we binnen de gratis APsystems-quota (1000 calls/maand) blijven.
+
+**Acceptatiecriteria:**
+- Given data die al binnen de laatste 30 minuten opgehaald is, when ik de Nuts-tab opnieuw open, then komt de data uit cache (geen nieuwe APsystems-call).
+- Given een "Vernieuwen"-knop, when ik erop klik, then wordt de cache genegeerd en verse data opgehaald.
+
+**Technische notities:** `nutsCached(key, fetchFn, force)` — cache in `cache/apsystems` (Firestore-reads tellen niet tegen de quota), TTL 30 min, aparte cache-key per databron (`summary`, `today_{date}`, `energy_{level}_{range}`).
+
+---
+
+### US-6.6 ◐ Foutafhandeling (M)
+**Als** Johan of Tinneke **wil ik** duidelijke meldingen zien bij quota-overschrijding, foute credentials of netwerkproblemen.
+
+**Acceptatiecriteria:**
+- Given een APsystems-foutcode (bv. quota bereikt, auth mislukt), then toont de app een leesbare Nederlandstalige melding i.p.v. de ruwe foutcode.
+- Given een netwerkfout, then toont de app dat duidelijk i.p.v. stil te falen.
+
+**Technische notities:** `nutsCodeMessage(code)` vertaalt de bekende APsystems-foutcodes; App Secret wordt nooit gelogd (niet in `console.log`, niet in foutmeldingen).
+
+---
+
+### US-6.7 ◐ Storingsmonitor met e-mailalert (M)
+**Als** Johan of Tinneke **wil ik** een e-mail krijgen als de zonnepanelen overdag geen productiedata meer doorsturen **zodat** we snel weten of bv. de zekering is afgeslagen, ook als we niet in Casa Angela zijn.
+
+**Acceptatiecriteria:**
+- Given "E-mail mij bij storing" aangevinkt + een alert-e-mailadres, then checkt een uurlijkse achtergrondtaak (9-18u Spaanse tijd) of de dagopbrengst nog stijgt.
+- Given 2 opeenvolgende checks zonder stijging, then wordt een storingsmail verstuurd — niet bij elke vlakke check opnieuw (geen mail-spam).
+- Given een stijging na een storingsmail, then wordt een herstelmail verstuurd.
+- Given een "Stuur testmail"-knop, then kan ik de mailverzending testen zonder op de cron te wachten.
+- Given een "Forceer check"-knop, then kan ik handmatig één check uitvoeren (handig bij het testen).
+
+**Technische notities:** `decideAlertState(prevState, todayKwh, nowMs, todayDateStr)` (pure functie, `functions/lib/casaAngelaMonitor.js`, TDD getest — 1-op-1 gekopieerd uit Huishouden) bepaalt storings-/herstelmail o.b.v. `FLAT_CHECKS_BEFORE_ALERT = 2`; state bewaard in `settings/apsystems.monitorState`. Mail via `nodemailer`/Gmail SMTP, secret `GMAIL_APP_PASSWORD` (**eigen secret voor dit Firebase-project** — kan niet gedeeld worden met het gelijkaardige secret in Huishouden).
+
+---
+
 ## Nog te bevestigen / open punten
 
 - Excel-voorbeeld met bestaande boekingsdata: nog te ontvangen indien gewenst als aanvulling op de hierboven afgesproken velden.
+- **Nuts (Epic 6)**: pas de "Casa Angela"-tab in de Huishouden-app verwijderen zodra deze hier volledig getest en werkend bevonden is (met échte APsystems-credentials en een échte testmail/forceer-check).

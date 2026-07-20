@@ -28,5 +28,6 @@ service cloud.firestore {
     match /syncedBlocks/{docId} { allow read, write: if isAllowedUser(); }
     match /icalFeeds/{docId} { allow read, write: if isAllowedUser(); }
     match /meta/{docId} { allow read, write: if isAllowedUser(); }
+    match /cache/{docId} { allow read, write: if isAllowedUser(); }
   }
 }
