@@ -1,4 +1,4 @@
-const VERSION = '0.34.0';
+const VERSION = '0.35.0';
 
 function getVersion() {
   return VERSION;
@@ -430,6 +430,80 @@ function escapeHtml(str) {
   return str.replace(/[&<>"']/g, (char) => HTML_ESCAPES[char]);
 }
 
+// Water/gas meters are read manually at irregular moments, never on calendar-month
+// boundaries — so consumption between two readings is spread evenly over the days in
+// between (linear extrapolation) to produce month/year totals. Good enough until a more
+// precise model is needed.
+function computeMeterIntervals(readings) {
+  const sorted = [...readings].sort((a, b) => a.date.localeCompare(b.date));
+  const intervals = [];
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = sorted[i - 1];
+    const curr = sorted[i];
+    const days = nightsBetween(prev.date, curr.date);
+    if (days <= 0) continue;
+    const consumption = curr.reading - prev.reading;
+    intervals.push({ dateFrom: prev.date, dateTo: curr.date, days, consumption, avgPerDay: consumption / days });
+  }
+  return intervals;
+}
+
+function extrapolateDailyConsumption(readings) {
+  const daily = {};
+  computeMeterIntervals(readings).forEach((interval) => {
+    getDateRange(interval.dateFrom, interval.dateTo).forEach((date) => {
+      if (date === interval.dateTo) return; // owned by the next interval, avoids double-counting
+      daily[date] = interval.avgPerDay;
+    });
+  });
+  return daily;
+}
+
+function buildMonthlyConsumption(readings, year) {
+  const daily = extrapolateDailyConsumption(readings);
+  const totals = new Array(12).fill(0);
+  Object.entries(daily).forEach(([date, amount]) => {
+    if (Number(date.slice(0, 4)) !== year) return;
+    totals[Number(date.slice(5, 7)) - 1] += amount;
+  });
+  return totals;
+}
+
+function buildYearlyConsumption(readings) {
+  const daily = extrapolateDailyConsumption(readings);
+  const totals = {};
+  Object.entries(daily).forEach(([date, amount]) => {
+    const year = date.slice(0, 4);
+    totals[year] = (totals[year] || 0) + amount;
+  });
+  return Object.keys(totals)
+    .sort()
+    .map((year) => ({ year, total: totals[year] }));
+}
+
+// Meters only count up, so a candidate reading must fit between its chronological
+// neighbours — readings can be entered in any order (the user reports them "at whatever
+// moment they happen to check"), not just appended at the end.
+function validateMeterReading(existingReadings, candidate) {
+  const errors = {};
+  if (!candidate.date) errors.date = 'Datum is verplicht.';
+  if (candidate.reading === '' || candidate.reading == null || Number.isNaN(Number(candidate.reading))) {
+    errors.reading = 'Meterstand is verplicht.';
+  }
+  if (!errors.date && !errors.reading) {
+    const sorted = [...existingReadings].sort((a, b) => a.date.localeCompare(b.date));
+    const before = [...sorted].reverse().find((r) => r.date < candidate.date);
+    const after = sorted.find((r) => r.date > candidate.date);
+    const value = Number(candidate.reading);
+    if (before && value < before.reading) {
+      errors.reading = `Moet minstens ${before.reading} zijn (vorige stand op ${before.date}).`;
+    } else if (after && value > after.reading) {
+      errors.reading = `Moet hoogstens ${after.reading} zijn (volgende stand op ${after.date}).`;
+    }
+  }
+  return { valid: Object.keys(errors).length === 0, errors };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     getVersion, isAllowedEmail, buildMonthGrid, buildMonthTimeline, buildYearGrid,
@@ -440,5 +514,7 @@ if (typeof module !== 'undefined' && module.exports) {
     findUnmatchedBookings, findUnmatchedSyncedBlocks, dayDisplayLabel, weekdayAbbreviation,
     sortChecklistItems, addChecklistItem, renameChecklistItem, removeChecklistItem,
     toggleChecklistItem, resetChecklistItems, moveChecklistItem, escapeHtml,
+    computeMeterIntervals, extrapolateDailyConsumption, buildMonthlyConsumption,
+    buildYearlyConsumption, validateMeterReading,
   };
 }

@@ -461,7 +461,42 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
+### US-6.8 ☑ Nuts opgesplitst in 4 onderdelen (M) — v0.35.0
+**Als** Johan of Tinneke **wil ik** binnen Nuts kunnen schakelen tussen Zonnestroom, Netstroom, Water en Gas **zodat** elk nutsvoorziening zijn eigen overzicht en invoer krijgt, i.p.v. alles door elkaar op één scherm.
+
+**Acceptatiecriteria:**
+- Given de Nuts-tab, then staat er bovenaan een schakelaar met 4 opties: Zonnestroom, Netstroom, Water, Gas.
+- Given "Zonnestroom" (default actief), then toont dit exact de bestaande APsystems-dashboard/grafiek/historie/instellingen/storingsmonitor (US-6.1 t/m 6.7), ongewijzigd.
+- Given een van de 4 opties, when ik erop klik, then toont enkel de inhoud van die optie; de andere 3 zijn verborgen.
+
+**Technische notities:** `#nuts-view-toggle` hergebruikt de `.view-toggle`/`.view-toggle-btn`-CSS van `#availability-view-toggle`, maar met een eigen `data-nuts-view`-attribuut en eigen scoped click-listener (niet de gedeelde `calViewMode`-logica) — anders zou een klik hier de Maand/Jaar-status van de Kalender-tab resetten.
+
+---
+
+### US-6.9 ☑ Water- en gasverbruik: manuele meterstanden + verbruiksgrafiek (M) — v0.35.0
+**Als** Johan of Tinneke **wil ik** af en toe de meterstand van water en gas ingeven (datum + stand) **zodat** ik, net zoals bij zonnestroom, een grafiek van het verbruik per maand en per jaar kan zien, zonder dat ik elke maand netjes op dezelfde dag hoef af te lezen.
+
+**Acceptatiecriteria:**
+- Given de Water- of Gas-sub-tab, then kan ik een datum en een meterstand (m³) ingeven en toevoegen aan de historiek.
+- Given een nieuwe meterstand, then moet die passen tussen de chronologisch vorige en volgende meting (meters tellen enkel op) — een ongeldige stand toont een duidelijke foutmelding i.p.v. stil te falen; metingen mogen in eender welke volgorde ingegeven worden (niet enkel na de laatste).
+- Given minstens 2 metingen, then toont een grafiek het verbruik per maand (met jaarnavigatie) of per jaar (schakelbaar, hetzelfde Maand/Jaar-patroon als bij de Historie van Zonnestroom).
+- Given metingen die niet op maandgrenzen vallen, then wordt het verbruik lineair over de tussenliggende dagen verdeeld (extrapolatie) om toch een maand/jaar-grafiek te kunnen tonen — een eenvoudig eerste model, later te verfijnen indien nodig.
+- Given een meting, then kan ik die verwijderen uit de lijst.
+- Given een wijziging door één van beiden, then is deze meteen zichtbaar bij de andere (Firestore realtime, zoals de checklists).
+
+**Technische notities:** `waterReadings/{id}`/`gasReadings/{id}` (`{date, reading, createdBy, createdAt}`), generieke `setupMeterUtility(type)` voor beide (`type: 'water'|'gas'`). Pure functies in `logic.js` (TDD): `computeMeterIntervals`, `extrapolateDailyConsumption`, `buildMonthlyConsumption`, `buildYearlyConsumption`, `validateMeterReading`. Grafiek: Chart.js staafdiagram, zelfde lazy-load (`loadNutsChartJs`) als Zonnestroom.
+
+---
+
+### US-6.10 ☐ Netstroomverbruik via APsystems EMA ("geëxporteerd") (S)
+**Als** Johan of Tinneke **wil ik** ook het netstroomverbruik zien **zodat** ik een volledig beeld heb van alle nutsvoorzieningen op één plek.
+
+**Status:** geblokkeerd — Johan zoekt zelf het juiste EMA-veld/endpoint op voor "geëxporteerd" (netstroom) vooraleer dit gebouwd kan worden. De Netstroom-sub-tab toont voorlopig enkel een plaatshoudende tekst.
+
+---
+
 ## Nog te bevestigen / open punten
 
 - Excel-voorbeeld met bestaande boekingsdata: nog te ontvangen indien gewenst als aanvulling op de hierboven afgesproken velden.
 - **Nuts (Epic 6)**: pas de "Casa Angela"-tab in de Huishouden-app verwijderen zodra deze hier volledig getest en werkend bevonden is (met échte APsystems-credentials en een échte testmail/forceer-check).
+- **US-6.10 (Netstroom)**: wacht op Johan om het juiste APsystems EMA-veld voor "geëxporteerd" stroom te melden vooraleer de integratie gebouwd wordt.

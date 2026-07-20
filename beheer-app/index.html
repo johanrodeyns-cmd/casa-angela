@@ -1124,6 +1124,66 @@
     margin-top: 0.75rem;
     flex-wrap: wrap;
   }
+  .meter-reading-form {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+  }
+  .meter-reading-field {
+    flex: 1;
+    min-width: 140px;
+  }
+  .meter-reading-field label {
+    display: block;
+    font-size: 0.85rem;
+    margin: 0 0 0.25rem;
+  }
+  .meter-reading-field input {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 1rem;
+    padding: 0.6rem;
+    min-height: 44px;
+    border: 1px solid var(--sand-dark);
+    border-radius: 6px;
+  }
+  .meter-reading-form button[type="submit"] {
+    min-height: 44px;
+  }
+  .meter-year-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .meter-year-nav button {
+    min-width: 44px;
+    min-height: 40px;
+  }
+  .meter-reading-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .meter-reading-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--sand);
+    font-size: 0.9rem;
+  }
+  .meter-reading-item button {
+    min-height: 36px;
+    padding: 0.3rem 0.7rem;
+    font-size: 0.8rem;
+    background: var(--sand);
+    color: var(--charcoal);
+    flex-shrink: 0;
+  }
 </style>
 </head>
 <body>
@@ -1435,7 +1495,15 @@
         </div>
         <div id="tab-nuts" class="tab-panel">
           <h2 class="nuts-title">Nuts</h2>
-          <p class="nuts-subtitle">Zonnepaneel-opbrengst via APsystems.</p>
+          <p class="nuts-subtitle">Zonnestroom, netstroom, water en gas.</p>
+          <div id="nuts-view-toggle" class="view-toggle">
+            <button type="button" class="view-toggle-btn active" data-nuts-view="zon">Zonnestroom</button>
+            <button type="button" class="view-toggle-btn" data-nuts-view="net">Netstroom</button>
+            <button type="button" class="view-toggle-btn" data-nuts-view="water">Water</button>
+            <button type="button" class="view-toggle-btn" data-nuts-view="gas">Gas</button>
+          </div>
+
+          <div id="nuts-view-zon">
           <p id="nuts-overview-error" class="error-message"></p>
           <p id="nuts-overview-prompt" class="empty-state">Stel eerst je APsystems-gegevens in (open Instellingen hieronder).</p>
           <div class="nuts-cards" id="nuts-cards" hidden>
@@ -1489,6 +1557,71 @@
             </div>
             <p id="nuts-settings-status" class="empty-state"></p>
           </details>
+          </div>
+
+          <div id="nuts-view-net" hidden>
+            <p class="empty-state">Binnenkort beschikbaar: netstroomverbruik ("geëxporteerd") via de APsystems EMA-gegevens. Wordt aangesloten zodra het juiste EMA-veld gekend is.</p>
+          </div>
+
+          <div id="nuts-view-water" hidden>
+            <h3 class="nuts-section-title">Waterverbruik</h3>
+            <form id="water-reading-form" class="meter-reading-form">
+              <div class="meter-reading-field">
+                <label for="water-reading-date">Datum</label>
+                <input type="date" id="water-reading-date" required>
+              </div>
+              <div class="meter-reading-field">
+                <label for="water-reading-value">Meterstand (m³)</label>
+                <input type="number" id="water-reading-value" step="0.001" min="0" required>
+              </div>
+              <button type="submit">Toevoegen</button>
+            </form>
+            <p id="water-reading-error" class="error-message"></p>
+            <div class="nuts-period-toggle">
+              <button type="button" class="button-secondary active" data-meter-period="monthly">Maand</button>
+              <button type="button" class="button-secondary" data-meter-period="yearly">Jaar</button>
+            </div>
+            <div class="meter-year-nav" id="water-year-nav">
+              <button type="button" id="water-year-prev" class="button-secondary">◀</button>
+              <span id="water-year-label"></span>
+              <button type="button" id="water-year-next" class="button-secondary">▶</button>
+            </div>
+            <p id="water-chart-empty" class="empty-state" hidden>Nog geen (of te weinig) metingen om een grafiek te tonen.</p>
+            <div class="nuts-chart-wrap"><canvas id="water-chart"></canvas></div>
+            <h3 class="nuts-section-title">Metingen</h3>
+            <p id="water-list-empty" class="empty-state" hidden>Nog geen metingen ingevoerd.</p>
+            <ul id="water-reading-list" class="meter-reading-list"></ul>
+          </div>
+
+          <div id="nuts-view-gas" hidden>
+            <h3 class="nuts-section-title">Gasverbruik</h3>
+            <form id="gas-reading-form" class="meter-reading-form">
+              <div class="meter-reading-field">
+                <label for="gas-reading-date">Datum</label>
+                <input type="date" id="gas-reading-date" required>
+              </div>
+              <div class="meter-reading-field">
+                <label for="gas-reading-value">Meterstand (m³)</label>
+                <input type="number" id="gas-reading-value" step="0.001" min="0" required>
+              </div>
+              <button type="submit">Toevoegen</button>
+            </form>
+            <p id="gas-reading-error" class="error-message"></p>
+            <div class="nuts-period-toggle">
+              <button type="button" class="button-secondary active" data-meter-period="monthly">Maand</button>
+              <button type="button" class="button-secondary" data-meter-period="yearly">Jaar</button>
+            </div>
+            <div class="meter-year-nav" id="gas-year-nav">
+              <button type="button" id="gas-year-prev" class="button-secondary">◀</button>
+              <span id="gas-year-label"></span>
+              <button type="button" id="gas-year-next" class="button-secondary">▶</button>
+            </div>
+            <p id="gas-chart-empty" class="empty-state" hidden>Nog geen (of te weinig) metingen om een grafiek te tonen.</p>
+            <div class="nuts-chart-wrap"><canvas id="gas-chart"></canvas></div>
+            <h3 class="nuts-section-title">Metingen</h3>
+            <p id="gas-list-empty" class="empty-state" hidden>Nog geen metingen ingevoerd.</p>
+            <ul id="gas-reading-list" class="meter-reading-list"></ul>
+          </div>
         </div>
       </div>
     </div>
@@ -1535,6 +1668,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.35.0", date: "2026-07-20", description: "Nuts opgesplitst in 4 onderdelen (Zonnestroom/Netstroom/Water/Gas). Zonnestroom is de bestaande APsystems-integratie. Water en Gas: meterstanden manueel ingeven, met verbruiksgrafieken per maand/jaar. Netstroom volgt later (wacht op de juiste EMA-gegevens)." },
       { version: "0.34.0", date: "2026-07-20", description: "Nieuw tabblad 'Nuts': zonnepaneel-opbrengst via APsystems (dashboard, grafiek van vandaag, historie dag/maand/jaar, instellingen) + storingsmonitor met e-mailalert. Geport uit de Huishouden-app." },
       { version: "0.33.3", date: "2026-07-20", description: "Kalender-tabblad gebruikt op een breed scherm nu de volledige beschikbare breedte (voorheen vastgezet op 900px zoals de andere tabs), zodat de jaartabel minder snel moet scrollen." },
       { version: "0.33.2", date: "2026-07-20", description: "Jaartabel: dagen met een gastenwissel (vertrek + aankomst dezelfde dag) tonen nu ook een diagonale split, zonder de (te drukke) namen erin." },
@@ -1657,6 +1791,18 @@
 
     document.querySelectorAll(".nav-item").forEach((btn) => {
       btn.addEventListener("click", () => showTab(btn.dataset.tab));
+    });
+
+    document.querySelectorAll("#nuts-view-toggle .view-toggle-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("#nuts-view-toggle .view-toggle-btn").forEach((b) => {
+          b.classList.toggle("active", b === btn);
+        });
+        document.getElementById("nuts-view-zon").hidden = btn.dataset.nutsView !== "zon";
+        document.getElementById("nuts-view-net").hidden = btn.dataset.nutsView !== "net";
+        document.getElementById("nuts-view-water").hidden = btn.dataset.nutsView !== "water";
+        document.getElementById("nuts-view-gas").hidden = btn.dataset.nutsView !== "gas";
+      });
     });
 
     const MONTH_NAMES = [
@@ -1785,10 +1931,10 @@
       });
     }
 
-    document.querySelectorAll(".view-toggle-btn").forEach((btn) => {
+    document.querySelectorAll("#availability-view-toggle .view-toggle-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         calViewMode = btn.dataset.view;
-        document.querySelectorAll(".view-toggle-btn").forEach((b) => {
+        document.querySelectorAll("#availability-view-toggle .view-toggle-btn").forEach((b) => {
           b.classList.toggle("active", b.dataset.view === calViewMode);
         });
         updateAvailabilityViewVisibility();
@@ -3098,6 +3244,155 @@
       });
     })();
 
+    // ===== Water/gas: manuele meterstanden, verbruik gelineariseerd tussen 2 metingen =====
+    function setupMeterUtility(type) {
+      const root = document.getElementById(`nuts-view-${type}`);
+      const form = document.getElementById(`${type}-reading-form`);
+      const dateInput = document.getElementById(`${type}-reading-date`);
+      const valueInput = document.getElementById(`${type}-reading-value`);
+      const errorEl = document.getElementById(`${type}-reading-error`);
+      const listEl = document.getElementById(`${type}-reading-list`);
+      const listEmptyEl = document.getElementById(`${type}-list-empty`);
+      const chartEmptyEl = document.getElementById(`${type}-chart-empty`);
+      const canvas = document.getElementById(`${type}-chart`);
+      const yearNavEl = document.getElementById(`${type}-year-nav`);
+      const yearLabelEl = document.getElementById(`${type}-year-label`);
+
+      let readings = [];
+      let periodMode = "monthly";
+      let chartYear = new Date().getFullYear();
+      let chart = null;
+
+      function renderList() {
+        const sorted = [...readings].sort((a, b) => b.date.localeCompare(a.date));
+        listEmptyEl.hidden = sorted.length !== 0;
+        listEl.innerHTML = sorted
+          .map(
+            (r) => `
+              <li class="meter-reading-item" data-id="${r.id}">
+                <span>${new Date(r.date + "T00:00:00").toLocaleDateString("nl-BE", { day: "numeric", month: "short", year: "numeric" })} — ${r.reading} m³</span>
+                <button type="button" data-action="delete" aria-label="Verwijderen">🗑</button>
+              </li>
+            `
+          )
+          .join("");
+      }
+
+      async function renderChart() {
+        const { Chart } = await loadNutsChartJs();
+        let labels, values;
+        if (periodMode === "monthly") {
+          yearNavEl.hidden = false;
+          yearLabelEl.textContent = String(chartYear);
+          labels = MONTH_NAMES.map((m) => m.slice(0, 3));
+          values = buildMonthlyConsumption(readings, chartYear);
+        } else {
+          yearNavEl.hidden = true;
+          const yearly = buildYearlyConsumption(readings);
+          labels = yearly.map((y) => y.year);
+          values = yearly.map((y) => y.total);
+        }
+        const roundedValues = values.map((v) => Math.round(v * 100) / 100);
+        const hasData = roundedValues.some((v) => v > 0);
+        chartEmptyEl.hidden = hasData;
+        canvas.closest(".nuts-chart-wrap").hidden = !hasData;
+        if (!hasData) return;
+        if (chart) chart.destroy();
+        chart = new Chart(canvas, {
+          type: "bar",
+          data: {
+            labels,
+            datasets: [{
+              label: "Verbruik (m³)",
+              data: roundedValues,
+              backgroundColor: "#A9B8E0",
+              borderColor: "#4F6FB0",
+              borderWidth: 1,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { callback: (v) => v + " m³" } } },
+          },
+        });
+      }
+
+      function render() {
+        renderList();
+        renderChart();
+      }
+
+      onSnapshot(
+        collection(db, `${type}Readings`),
+        (snap) => {
+          readings = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          render();
+        },
+        (err) => console.error(`Kon ${type}-metingen niet laden:`, err)
+      );
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        errorEl.classList.remove("active");
+        const candidate = { date: dateInput.value, reading: valueInput.value };
+        const result = validateMeterReading(readings, candidate);
+        if (!result.valid) {
+          errorEl.textContent = result.errors.date || result.errors.reading;
+          errorEl.classList.add("active");
+          return;
+        }
+        try {
+          const batch = writeBatch(db);
+          const ref = doc(collection(db, `${type}Readings`));
+          const created = {
+            date: candidate.date,
+            reading: Number(candidate.reading),
+            createdBy: auth.currentUser.email,
+            createdAt: serverTimestamp(),
+          };
+          batch.set(ref, created);
+          addAuditEntry(batch, `${type}Readings`, ref.id, "create", null, created);
+          await batch.commit();
+          form.reset();
+        } catch (err) {
+          errorEl.textContent = "Opslaan mislukt: " + (err.message || err);
+          errorEl.classList.add("active");
+        }
+      });
+
+      listEl.addEventListener("click", (e) => {
+        const btn = e.target.closest('button[data-action="delete"]');
+        if (!btn) return;
+        const id = btn.closest(".meter-reading-item").dataset.id;
+        const existing = readings.find((r) => r.id === id);
+        const batch = writeBatch(db);
+        batch.delete(doc(db, `${type}Readings`, id));
+        addAuditEntry(batch, `${type}Readings`, id, "delete", existing, null);
+        batch.commit().catch((err) => console.error(`Kon ${type}-meting niet verwijderen:`, err));
+      });
+
+      root.querySelectorAll("[data-meter-period]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          periodMode = btn.dataset.meterPeriod;
+          root.querySelectorAll("[data-meter-period]").forEach((b) => b.classList.toggle("active", b === btn));
+          renderChart();
+        });
+      });
+
+      yearNavEl.querySelector(`#${type}-year-prev`).addEventListener("click", () => { chartYear -= 1; renderChart(); });
+      yearNavEl.querySelector(`#${type}-year-next`).addEventListener("click", () => { chartYear += 1; renderChart(); });
+    }
+
+    let meterUtilitiesStarted = false;
+    function startMeterUtilities() {
+      if (meterUtilitiesStarted) return;
+      meterUtilitiesStarted = true;
+      setupMeterUtility("water");
+      setupMeterUtility("gas");
+    }
+
     // signOut() after a denied login re-fires onAuthStateChanged(null); this flag
     // stops that from bouncing the user back to the login screen automatically.
     let denied = false;
@@ -3146,6 +3441,7 @@
       loadSyncedBlocks().catch((err) => console.error("Kon gesynchroniseerde blokken niet laden:", err));
       loadIcalFeeds().catch((err) => console.error("Kon iCal-instellingen niet laden:", err));
       startChecklists();
+      startMeterUtilities();
     });
   </script>
 </body>

@@ -29,5 +29,7 @@ service cloud.firestore {
     match /icalFeeds/{docId} { allow read, write: if isAllowedUser(); }
     match /meta/{docId} { allow read, write: if isAllowedUser(); }
     match /cache/{docId} { allow read, write: if isAllowedUser(); }
+    match /waterReadings/{docId} { allow read, write: if isAllowedUser(); }
+    match /gasReadings/{docId} { allow read, write: if isAllowedUser(); }
   }
 }

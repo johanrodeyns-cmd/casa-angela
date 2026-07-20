@@ -9,10 +9,12 @@ const {
   findUnmatchedBookings, findUnmatchedSyncedBlocks, dayDisplayLabel, weekdayAbbreviation,
   sortChecklistItems, addChecklistItem, renameChecklistItem, removeChecklistItem,
   toggleChecklistItem, resetChecklistItems, moveChecklistItem, escapeHtml, diffSyncedBlocks,
+  computeMeterIntervals, extrapolateDailyConsumption, buildMonthlyConsumption,
+  buildYearlyConsumption, validateMeterReading,
 } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.34.0');
+  assert.equal(getVersion(), '0.35.0');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -933,4 +935,112 @@ test('escapeHtml escapes the 5 HTML-sensitive characters', () => {
     escapeHtml(`<script>alert("x")</script> & 'quotes'`),
     '&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt; &amp; &#39;quotes&#39;'
   );
+});
+
+test('computeMeterIntervals returns one interval per consecutive pair of readings, sorted by date', () => {
+  const readings = [
+    { date: '2026-03-01', reading: 100 },
+    { date: '2026-01-01', reading: 40 },
+    { date: '2026-02-01', reading: 70 },
+  ];
+  assert.deepEqual(computeMeterIntervals(readings), [
+    { dateFrom: '2026-01-01', dateTo: '2026-02-01', days: 31, consumption: 30, avgPerDay: 30 / 31 },
+    { dateFrom: '2026-02-01', dateTo: '2026-03-01', days: 28, consumption: 30, avgPerDay: 30 / 28 },
+  ]);
+});
+
+test('computeMeterIntervals returns an empty array for fewer than 2 readings', () => {
+  assert.deepEqual(computeMeterIntervals([]), []);
+  assert.deepEqual(computeMeterIntervals([{ date: '2026-01-01', reading: 40 }]), []);
+});
+
+test('computeMeterIntervals skips a pair with duplicate/out-of-order dates instead of dividing by zero', () => {
+  const readings = [
+    { date: '2026-01-01', reading: 40 },
+    { date: '2026-01-01', reading: 41 },
+    { date: '2026-02-01', reading: 70 },
+  ];
+  assert.deepEqual(computeMeterIntervals(readings), [
+    { dateFrom: '2026-01-01', dateTo: '2026-02-01', days: 31, consumption: 29, avgPerDay: 29 / 31 },
+  ]);
+});
+
+test('extrapolateDailyConsumption spreads each interval evenly over its days, excluding the closing day (owned by the next interval)', () => {
+  const readings = [
+    { date: '2026-01-01', reading: 0 },
+    { date: '2026-01-04', reading: 6 },
+  ];
+  assert.deepEqual(extrapolateDailyConsumption(readings), {
+    '2026-01-01': 2,
+    '2026-01-02': 2,
+    '2026-01-03': 2,
+  });
+});
+
+test('buildMonthlyConsumption returns 12 monthly totals for the given year, extrapolated from readings', () => {
+  const readings = [
+    { date: '2026-01-01', reading: 0 },
+    { date: '2026-03-01', reading: 59 },
+  ];
+  const totals = buildMonthlyConsumption(readings, 2026);
+  assert.equal(totals.length, 12);
+  assert.equal(totals[0], 31);
+  assert.equal(totals[1], 28);
+  assert.equal(totals[2], 0);
+});
+
+test('buildMonthlyConsumption ignores days that fall outside the requested year', () => {
+  const readings = [
+    { date: '2025-12-01', reading: 0 },
+    { date: '2026-01-11', reading: 41 },
+  ];
+  const totals = buildMonthlyConsumption(readings, 2026);
+  assert.equal(totals[0], 10);
+});
+
+test('buildYearlyConsumption returns totals per calendar year, sorted ascending', () => {
+  const readings = [
+    { date: '2025-12-01', reading: 0 },
+    { date: '2026-01-01', reading: 31 },
+    { date: '2026-02-01', reading: 62 },
+  ];
+  const totals = buildYearlyConsumption(readings);
+  assert.deepEqual(totals.map((t) => t.year), ['2025', '2026']);
+  assert.equal(totals[0].total, 31);
+  assert.equal(totals[1].total, 31);
+});
+
+test('validateMeterReading requires a date and a numeric reading', () => {
+  const result = validateMeterReading([], { date: '', reading: '' });
+  assert.equal(result.valid, false);
+  assert.equal(result.errors.date, 'Datum is verplicht.');
+  assert.equal(result.errors.reading, 'Meterstand is verplicht.');
+});
+
+test('validateMeterReading accepts a first reading with no history', () => {
+  const result = validateMeterReading([], { date: '2026-01-01', reading: 100 });
+  assert.equal(result.valid, true);
+});
+
+test('validateMeterReading rejects a reading lower than the previous (older) reading', () => {
+  const existing = [{ date: '2026-01-01', reading: 100 }];
+  const result = validateMeterReading(existing, { date: '2026-02-01', reading: 90 });
+  assert.equal(result.valid, false);
+  assert.match(result.errors.reading, /minstens 100/);
+});
+
+test('validateMeterReading rejects a reading higher than the next (newer) reading', () => {
+  const existing = [{ date: '2026-03-01', reading: 100 }];
+  const result = validateMeterReading(existing, { date: '2026-02-01', reading: 110 });
+  assert.equal(result.valid, false);
+  assert.match(result.errors.reading, /hoogstens 100/);
+});
+
+test('validateMeterReading accepts a reading correctly between an older and newer reading', () => {
+  const existing = [
+    { date: '2026-01-01', reading: 100 },
+    { date: '2026-03-01', reading: 160 },
+  ];
+  const result = validateMeterReading(existing, { date: '2026-02-01', reading: 130 });
+  assert.equal(result.valid, true);
 });
