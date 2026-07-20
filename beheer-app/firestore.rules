@@ -31,6 +31,5 @@ service cloud.firestore {
     match /cache/{docId} { allow read, write: if isAllowedUser(); }
     match /waterReadings/{docId} { allow read, write: if isAllowedUser(); }
     match /gasReadings/{docId} { allow read, write: if isAllowedUser(); }
-    match /netstroomReadings/{docId} { allow read, write: if isAllowedUser(); }
   }
 }

@@ -282,56 +282,38 @@ export const casaAngelaEnergy = onCall({ timeoutSeconds: 30 }, async (request) =
   return { values: Array.isArray(data) ? data : [] };
 });
 
-// Netstroom ("geëxporteerd"/sEnergy): dit veld zit NIET in de officiële, ondertekende Open
-// API hierboven (die geeft enkel productie-kWh terug) — enkel in het interne dashboard van
-// de EMA-website, en die vereist een ingelogde sessie (cookie), geen App ID/Secret. Fragieler
-// dan de Open API: de sessie verloopt en moet dan manueel vernieuwd worden (zie Instellingen
-// in de Netstroom-tab) — vandaar ook de val-terug op manuele meterstand-invoer in de UI.
-const EMA_DASHBOARD_URL = 'https://apsystemsema.com/ema/ajax/getDashboardApiAjax/getDashboardProductionInfoAjax';
-
-async function emaDashboardFetch(cookie) {
-  let res;
-  try {
-    res = await fetch(EMA_DASHBOARD_URL, {
-      method: 'POST',
-      headers: {
-        Cookie: cookie,
-        Origin: 'https://apsystemsema.com',
-        Referer: 'https://apsystemsema.com/ema/security/optmainmenu/intoLargeDashboard.action?locale=en_US',
-        'X-Requested-With': 'XMLHttpRequest',
-        Accept: 'application/json, text/javascript, */*; q=0.01',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      },
-    });
-  } catch (err) {
-    console.error('EMA network error:', err.message);
-    throw new HttpsError('unavailable', `Netwerkfout: ${err.message}`);
-  }
-  const bodyText = await res.text();
-  let parsed;
-  try {
-    parsed = JSON.parse(bodyText);
-  } catch {
-    throw new HttpsError('unauthenticated', 'EMA-sessie verlopen of ongeldig — vernieuw de cookie in Instellingen.');
-  }
-  const data = parsed.data || parsed;
-  if (typeof data.sEnergy === 'undefined' || typeof data.sLifetimeEnergy === 'undefined') {
-    throw new HttpsError('unauthenticated', 'EMA-sessie verlopen of ongeldig — vernieuw de cookie in Instellingen.');
-  }
-  return data;
-}
-
-export const casaAngelaGridEnergy = onCall({ timeoutSeconds: 30 }, async (request) => {
+// Netstroom (exported): Meter-level Data API, toegevoegd aan de officiële, ondertekende
+// Open API sinds diens v1.3 — Johan vond de documentatie terug (was niet gekend/gebruikt
+// toen Zonnestroom gebouwd werd, vandaar dat er eerst geen netstroom-veld gevonden werd bij
+// het nalopen van casaAngelaSummary/-Energy hierboven). Zelfde credentials/HMAC-signing als
+// Zonnestroom, enkel een ander pad-namespace (installer/api/v2 i.p.v. user/api/v2) en een
+// "meter"-eid i.p.v. het inverter/ECU-eid — in de praktijk vaak dezelfde ECU (type 'ECU
+// with meter activated'), dus hergebruikt de UI voorlopig hetzelfde EID-veld als Zonnestroom.
+// level: daily (date_range=YYYY-MM) | monthly (date_range=YYYY) | yearly (geen date_range).
+export const casaAngelaMeterEnergy = onCall({ timeoutSeconds: 30 }, async (request) => {
   requireAllowedUser(request);
-  const { cookie } = request.data || {};
-  if (typeof cookie !== 'string' || cookie.trim() === '') {
-    throw new HttpsError('invalid-argument', 'cookie ontbreekt.');
+  const { id, appSecret, systemId } = nutsRequireCreds(request.data);
+  const { eid, level, dateRange } = request.data || {};
+  if (typeof eid !== 'string' || eid.trim() === '') {
+    throw new HttpsError('invalid-argument', 'eid ontbreekt.');
   }
-  const data = await emaDashboardFetch(cookie);
-  return {
-    sEnergy: Number(data.sEnergy),
-    sLifetimeEnergy: Number(data.sLifetimeEnergy),
-  };
+  if (!['daily', 'monthly', 'yearly'].includes(level)) {
+    throw new HttpsError('invalid-argument', 'level moet daily, monthly of yearly zijn.');
+  }
+  const meterEid = eid.trim();
+  let qs = `?energy_level=${level}`;
+  if (level !== 'yearly') {
+    if (typeof dateRange !== 'string' || !/^\d{4}(-\d{2})?$/.test(dateRange)) {
+      throw new HttpsError('invalid-argument', 'dateRange ontbreekt of heeft fout formaat.');
+    }
+    qs += `&date_range=${dateRange}`;
+  }
+  const headers = await buildHeaders(id, appSecret, meterEid, 'GET');
+  const data = await nutsGetJson(
+    `${APSYSTEMS_BASE_URL}/installer/api/v2/systems/${systemId}/devices/meter/period/${meterEid}${qs}`,
+    headers,
+  ) || {};
+  return { values: Array.isArray(data.exported) ? data.exported : [] };
 });
 
 // Stuur een storings- of herstelmail via Gmail SMTP. account = het Gmail-adres dat het
