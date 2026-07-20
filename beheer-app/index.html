@@ -1520,8 +1520,9 @@
             </div>
             <p id="netstroom-history-status" class="empty-state">Kies een periode om de historie te laden.</p>
             <div id="netstroom-history-block" class="nuts-chart-wrap" hidden><canvas id="netstroom-history-chart"></canvas></div>
+            <h3 class="nuts-section-title">Netstroom vandaag</h3>
+            <p id="netstroom-today-status" class="empty-state" hidden></p>
             <div id="netstroom-today-block" hidden>
-              <h3 class="nuts-section-title">Netstroom vandaag</h3>
               <div class="nuts-chart-wrap"><canvas id="netstroom-today-chart"></canvas></div>
             </div>
           </div>
@@ -1631,6 +1632,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.39.1", date: "2026-07-20", description: "Bugfix: 'Netstroom vandaag' toonde bij een fout of ontbrekende data stilzwijgend niets — nu zichtbare status/foutmelding, zoals bij de andere grafieken." },
       { version: "0.39.0", date: "2026-07-20", description: "Netstroom: grafiek 'Netstroom vandaag' toegevoegd (per-minuut geëxporteerde energie, volledige dag 00:00-23:59), net als bij Zonnestroom." },
       { version: "0.38.0", date: "2026-07-20", description: "Netstroom werkt nu via de officiële APsystems-koppeling (dezelfde App ID/Secret als Zonnestroom) i.p.v. een EMA-website-sessiecookie — Johan vond de juiste, officiële documentatie terug. Toont Dag/Maand/Jaar-historiek van het geëxporteerde vermogen, net als bij Zonnestroom. Geen apart instellingenscherm, geen meterstanden meer manueel in te geven voor Netstroom." },
       { version: "0.37.1", date: "2026-07-20", description: "Bugfix: de Netstroom-sub-tab werkte helemaal niet (geen enkele knop reageerde) door een verkeerd elementid — de metingenlijst/grafiek en de EMA-sessie-knoppen (Opslaan/Ophalen) crashten stil bij het openen van de tab." },
@@ -3425,15 +3427,21 @@
     // ligt dichter bij wat de gebruiker vroeg ("exported").
     let netstroomTodayChart = null;
     async function renderNetstroomTodayChart() {
+      const statusEl = document.getElementById("netstroom-today-status");
       const block = document.getElementById("netstroom-today-block");
       const appId = document.getElementById("nuts-appid").value.trim();
       const appSecret = document.getElementById("nuts-secret").value;
       const sid = document.getElementById("nuts-sid").value.trim();
       const eid = document.getElementById("nuts-eid").value.trim();
       if (!appId || !appSecret || !sid || !eid) {
+        statusEl.textContent = "Vul eerst je APsystems-gegevens in (inclusief EID) bij Zonnestroom > Instellingen.";
+        statusEl.hidden = false;
         block.hidden = true;
         return;
       }
+      statusEl.textContent = "Laden…";
+      statusEl.hidden = false;
+      block.hidden = true;
       let data;
       try {
         const localDate = new Date().toLocaleDateString("en-CA");
@@ -3441,9 +3449,18 @@
           () => casaAngelaMeterTodayFn({ appId, appSecret, sid, eid, date: localDate }).then((r) => r.data),
           false);
       } catch (err) {
+        statusEl.textContent = "Kon vandaag niet laden: " + (err.message || err);
+        statusEl.hidden = false;
         block.hidden = true;
         return;
       }
+      if (!Array.isArray(data.time) || data.time.length === 0) {
+        statusEl.textContent = "Nog geen data voor vandaag beschikbaar.";
+        statusEl.hidden = false;
+        block.hidden = true;
+        return;
+      }
+      statusEl.hidden = true;
       block.hidden = false;
       const { labels, values } = padTodaySeries(data.time || [], (data.exported || []).map((v) => Number(v)));
       const { Chart } = await loadNutsChartJs();
