@@ -191,10 +191,17 @@
     }
     .tab-content {
       flex: 1;
-      max-width: 900px;
+      min-width: 0;
     }
     .tab-panel {
       padding: 1.5rem 2rem;
+      max-width: 900px;
+    }
+    #tab-kalender {
+      /* De jaartabel is best breed (42 dagkolommen) — op een groot scherm mag ze de volledige
+         beschikbare breedte gebruiken i.p.v. vast te lopen op de 900px-leesbaarheidsgrens van
+         de andere tabs. */
+      max-width: none;
     }
   }
   .spinner {
@@ -1353,6 +1360,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.33.3", date: "2026-07-20", description: "Kalender-tabblad gebruikt op een breed scherm nu de volledige beschikbare breedte (voorheen vastgezet op 900px zoals de andere tabs), zodat de jaartabel minder snel moet scrollen." },
       { version: "0.33.2", date: "2026-07-20", description: "Jaartabel: dagen met een gastenwissel (vertrek + aankomst dezelfde dag) tonen nu ook een diagonale split, zonder de (te drukke) namen erin." },
       { version: "0.33.1", date: "2026-07-20", description: "Jaartabel: aankomst- en vertrekdagen tonen nu dezelfde diagonale kleursplit als de andere kalenders (zonder gastnaam erin, enkel de volledig bezette dagen ertussen tonen de naam)." },
       { version: "0.33.0", date: "2026-07-20", description: "Jaartabel: weekends vallen nu verticaal samen over alle maanden (elke rij begint met wat opvulling zodat kolommen altijd dezelfde weekdag voorstellen), i.p.v. dat dag 1 altijd in dezelfde kolom staat." },
