@@ -1520,6 +1520,10 @@
             </div>
             <p id="netstroom-history-status" class="empty-state">Kies een periode om de historie te laden.</p>
             <div id="netstroom-history-block" class="nuts-chart-wrap" hidden><canvas id="netstroom-history-chart"></canvas></div>
+            <div id="netstroom-today-block" hidden>
+              <h3 class="nuts-section-title">Netstroom vandaag</h3>
+              <div class="nuts-chart-wrap"><canvas id="netstroom-today-chart"></canvas></div>
+            </div>
           </div>
 
           <div id="nuts-view-water" hidden>
@@ -1627,6 +1631,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.39.0", date: "2026-07-20", description: "Netstroom: grafiek 'Netstroom vandaag' toegevoegd (per-minuut geëxporteerde energie, volledige dag 00:00-23:59), net als bij Zonnestroom." },
       { version: "0.38.0", date: "2026-07-20", description: "Netstroom werkt nu via de officiële APsystems-koppeling (dezelfde App ID/Secret als Zonnestroom) i.p.v. een EMA-website-sessiecookie — Johan vond de juiste, officiële documentatie terug. Toont Dag/Maand/Jaar-historiek van het geëxporteerde vermogen, net als bij Zonnestroom. Geen apart instellingenscherm, geen meterstanden meer manueel in te geven voor Netstroom." },
       { version: "0.37.1", date: "2026-07-20", description: "Bugfix: de Netstroom-sub-tab werkte helemaal niet (geen enkele knop reageerde) door een verkeerd elementid — de metingenlijst/grafiek en de EMA-sessie-knoppen (Opslaan/Ophalen) crashten stil bij het openen van de tab." },
       { version: "0.37.0", date: "2026-07-20", description: "Netstroom-tab werkt nu: metingen (kWh) invoeren + grafiek per maand/jaar (net als Water/Gas), plus een 'Ophalen'-knop die de netstroom-meterstand automatisch haalt uit het EMA-dashboard. Let op: dit gebruikt (bij gebrek aan een officieel netstroom-veld in de APsystems-koppeling) een ingelogde EMA-sessie i.p.v. de App ID/Secret — die sessie kan af en toe verlopen en moet dan manueel vernieuwd worden bij Instellingen; handmatige invoer blijft intussen gewoon werken." },
@@ -1701,6 +1706,7 @@
     const casaAngelaTodayFn = httpsCallable(functionsClient, "casaAngelaToday");
     const casaAngelaEnergyFn = httpsCallable(functionsClient, "casaAngelaEnergy");
     const casaAngelaMeterEnergyFn = httpsCallable(functionsClient, "casaAngelaMeterEnergy");
+    const casaAngelaMeterTodayFn = httpsCallable(functionsClient, "casaAngelaMeterToday");
     const casaAngelaMonitorTestFn = httpsCallable(functionsClient, "casaAngelaMonitorTest");
     const casaAngelaMonitorRunNowFn = httpsCallable(functionsClient, "casaAngelaMonitorRunNow");
 
@@ -1769,6 +1775,7 @@
         if (btn.dataset.nutsView === "net" && !netstroomHistoryLoaded) {
           netstroomHistoryLoaded = true;
           renderNetstroomHistory("monthly");
+          renderNetstroomTodayChart();
         }
       });
     });
@@ -2946,7 +2953,7 @@
     let nutsTodayChart = null;
     async function renderNutsPowerChart(time, power) {
       const { Chart } = await loadNutsChartJs();
-      const { labels, values } = padTodayPowerSeries(time || [], (power || []).map((v) => Number(v)));
+      const { labels, values } = padTodaySeries(time || [], (power || []).map((v) => Number(v)));
       if (nutsTodayChart) nutsTodayChart.destroy();
       nutsTodayChart = new Chart(document.getElementById("nuts-power-chart"), {
         type: "line",
@@ -3407,6 +3414,66 @@
           scales: {
             y: { beginAtZero: true, ticks: { callback: (v) => v + " kWh" } },
             x: { grid: { display: false }, ticks: { maxTicksLimit: 16 } },
+          },
+        },
+      });
+    }
+
+    // "Netstroom vandaag" — mirror van renderNutsPowerChart, maar per-minuut geëxporteerde
+    // energie (kWh) i.p.v. vermogen (W): de meter-API geeft geen apart "exported"-vermogen
+    // terug, enkel een gecombineerd netto import/export-vermogen, dus de kWh-energiereeks
+    // ligt dichter bij wat de gebruiker vroeg ("exported").
+    let netstroomTodayChart = null;
+    async function renderNetstroomTodayChart() {
+      const block = document.getElementById("netstroom-today-block");
+      const appId = document.getElementById("nuts-appid").value.trim();
+      const appSecret = document.getElementById("nuts-secret").value;
+      const sid = document.getElementById("nuts-sid").value.trim();
+      const eid = document.getElementById("nuts-eid").value.trim();
+      if (!appId || !appSecret || !sid || !eid) {
+        block.hidden = true;
+        return;
+      }
+      let data;
+      try {
+        const localDate = new Date().toLocaleDateString("en-CA");
+        data = await nutsCached("meter_today_" + localDate,
+          () => casaAngelaMeterTodayFn({ appId, appSecret, sid, eid, date: localDate }).then((r) => r.data),
+          false);
+      } catch (err) {
+        block.hidden = true;
+        return;
+      }
+      block.hidden = false;
+      const { labels, values } = padTodaySeries(data.time || [], (data.exported || []).map((v) => Number(v)));
+      const { Chart } = await loadNutsChartJs();
+      if (netstroomTodayChart) netstroomTodayChart.destroy();
+      netstroomTodayChart = new Chart(document.getElementById("netstroom-today-chart"), {
+        type: "line",
+        data: {
+          labels,
+          datasets: [{
+            label: "Netstroom (kWh)",
+            data: values,
+            borderColor: "#4F6FB0",
+            backgroundColor: "#A9B8E0",
+            tension: 0.3,
+            fill: true,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.y} kWh` } },
+          },
+          scales: {
+            y: { beginAtZero: true, ticks: { callback: (v) => v + " kWh" } },
+            x: { grid: { display: false }, ticks: { maxTicksLimit: 12 } },
           },
         },
       });

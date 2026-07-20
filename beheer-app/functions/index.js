@@ -316,6 +316,32 @@ export const casaAngelaMeterEnergy = onCall({ timeoutSeconds: 30 }, async (reque
   return { values: Array.isArray(data.exported) ? data.exported : [] };
 });
 
+// Netstroom vandaag (minutely, per-minuut geëxporteerde energie) — mirror van
+// casaAngelaToday, maar voor de meter i.p.v. de ECU/inverters.
+export const casaAngelaMeterToday = onCall({ timeoutSeconds: 30 }, async (request) => {
+  requireAllowedUser(request);
+  const { id, appSecret, systemId } = nutsRequireCreds(request.data);
+  const { eid, date } = request.data || {};
+  if (typeof eid !== 'string' || eid.trim() === '') {
+    throw new HttpsError('invalid-argument', 'eid ontbreekt.');
+  }
+  const meterEid = eid.trim();
+  const dateRange = (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date))
+    ? date
+    : new Date().toISOString().slice(0, 10);
+  const headers = await buildHeaders(id, appSecret, meterEid, 'GET');
+  const data = await nutsGetJson(
+    `${APSYSTEMS_BASE_URL}/installer/api/v2/systems/${systemId}/devices/meter/period/${meterEid}` +
+      `?energy_level=minutely&date_range=${dateRange}`,
+    headers,
+  ) || {};
+  const energy = data.energy || {};
+  return {
+    time: Array.isArray(data.time) ? data.time : [],
+    exported: Array.isArray(energy.exported) ? energy.exported : [],
+  };
+});
+
 // Stuur een storings- of herstelmail via Gmail SMTP. account = het Gmail-adres dat het
 // app-wachtwoord bezit (= afzender = ontvanger). Secret nooit loggen.
 async function sendNutsAlertMail(account, kind, ctx) {

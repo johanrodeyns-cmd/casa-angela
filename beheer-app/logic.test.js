@@ -11,11 +11,11 @@ const {
   toggleChecklistItem, resetChecklistItems, moveChecklistItem, escapeHtml, diffSyncedBlocks,
   computeMeterIntervals, extrapolateDailyConsumption, buildMonthlyConsumption,
   buildYearlyConsumption, validateMeterReading, daysInMonth, padSeriesValues,
-  padTodayPowerSeries,
+  padTodaySeries,
 } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.38.0');
+  assert.equal(getVersion(), '0.39.0');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -1065,8 +1065,8 @@ test('padSeriesValues truncates an array longer than the requested length', () =
   assert.deepEqual(padSeriesValues([1, 2, 3, 4, 5], 3), [1, 2, 3]);
 });
 
-test('padTodayPowerSeries fills a full day (00:00-23:55) at the observed step, with 0 outside the known range', () => {
-  const { labels, values } = padTodayPowerSeries(['06:40', '06:45', '06:50'], [10, 20, 30]);
+test('padTodaySeries fills a full day (00:00-23:55) at the observed step, with 0 outside the known range', () => {
+  const { labels, values } = padTodaySeries(['06:40', '06:45', '06:50'], [10, 20, 30]);
   assert.equal(labels[0], '00:00');
   assert.equal(labels[labels.length - 1], '23:55');
   assert.equal(labels.length, 288); // 24h / 5 min
@@ -1077,8 +1077,8 @@ test('padTodayPowerSeries fills a full day (00:00-23:55) at the observed step, w
   assert.equal(values[values.length - 1], 0);
 });
 
-test('padTodayPowerSeries defaults to a 5-minute step when fewer than 2 data points are available', () => {
-  const { labels, values } = padTodayPowerSeries([], []);
+test('padTodaySeries defaults to a 5-minute step when fewer than 2 data points are available', () => {
+  const { labels, values } = padTodaySeries([], []);
   assert.equal(labels.length, 288);
   assert.ok(values.every((v) => v === 0));
 });

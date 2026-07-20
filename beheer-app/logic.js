@@ -1,4 +1,4 @@
-const VERSION = '0.38.0';
+const VERSION = '0.39.0';
 
 function getVersion() {
   return VERSION;
@@ -504,20 +504,20 @@ function formatHm(totalMinutes) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-// Pads today's minutely power readings to a full 00:00-23:55 day, using the step
-// observed between the first two readings (falls back to 5 min if fewer than 2 points —
-// APsystems' own granularity).
-function padTodayPowerSeries(time, power) {
+// Pads today's minutely readings (power in W, or energy in kWh — same shape either way)
+// to a full 00:00-23:55 day, using the step observed between the first two readings
+// (falls back to 5 min if fewer than 2 points — APsystems' own granularity).
+function padTodaySeries(time, values) {
   const stepMinutes = (time.length >= 2 ? parseHm(time[1]) - parseHm(time[0]) : 0) || 5;
-  const known = new Map(time.map((t, i) => [t, Number(power[i]) || 0]));
+  const known = new Map(time.map((t, i) => [t, Number(values[i]) || 0]));
   const labels = [];
-  const values = [];
+  const padded = [];
   for (let m = 0; m < 24 * 60; m += stepMinutes) {
     const label = formatHm(m);
     labels.push(label);
-    values.push(known.has(label) ? known.get(label) : 0);
+    padded.push(known.has(label) ? known.get(label) : 0);
   }
-  return { labels, values };
+  return { labels, values: padded };
 }
 
 // Meters only count up, so a candidate reading must fit between its chronological
@@ -555,6 +555,6 @@ if (typeof module !== 'undefined' && module.exports) {
     toggleChecklistItem, resetChecklistItems, moveChecklistItem, escapeHtml,
     computeMeterIntervals, extrapolateDailyConsumption, buildMonthlyConsumption,
     buildYearlyConsumption, validateMeterReading, daysInMonth, padSeriesValues,
-    padTodayPowerSeries,
+    padTodaySeries,
   };
 }
