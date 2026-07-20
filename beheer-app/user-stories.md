@@ -327,7 +327,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 ---
 
 ### US-4.2 ☑ Afvinken en resetten (M) — v0.24.0
-**Als** Johan of Tinneke **wil ik** items kunnen afvinken via mijn GSM en de lijst kunnen resetten voor een volgend bezoek **zodat** ik telkens opnieuw met een lege lijst start.
+> Vervolg in v0.32.3: op vraag van Johan de checklist-rijen compacter gemaakt (minder padding/marge, kleinere lettergrootte, kortere ▲/▼-knopjes) zodat er meer items op één scherm passen — het vinkje zelf blijft op 44×44px staan (tapgebied-eis uit onderstaande AC blijft gelden).
 
 **Acceptatiecriteria:**
 - Given een checklist-item, when ik erop tik, then wisselt het tussen afgevinkt en niet-afgevinkt, met duidelijke visuele feedback (bv. doorstreept + vinkje).

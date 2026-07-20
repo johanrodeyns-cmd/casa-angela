@@ -909,18 +909,18 @@
   .checklist-item {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.3rem;
     background: var(--sand);
     border-radius: 6px;
-    padding: 0.4rem;
-    margin-bottom: 0.5rem;
+    padding: 0.15rem 0.3rem;
+    margin-bottom: 0.3rem;
   }
   .checklist-item-check {
     min-width: 44px;
     min-height: 44px;
     background: none;
     color: var(--olive);
-    font-size: 1.4rem;
+    font-size: 1.15rem;
     padding: 0;
   }
   .checklist-item.checked .checklist-item-check {
@@ -932,9 +932,9 @@
     text-align: left;
     background: none;
     color: var(--charcoal);
-    padding: 0.4rem;
+    padding: 0.2rem;
     min-height: 44px;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     word-break: break-word;
     white-space: normal;
   }
@@ -949,14 +949,14 @@
   .checklist-item-moves {
     display: flex;
     flex-direction: column;
-    gap: 0.1rem;
+    gap: 0.05rem;
   }
   .checklist-item-move {
-    min-width: 36px;
-    min-height: 30px;
+    min-width: 32px;
+    min-height: 21px;
     background: none;
     color: var(--azure);
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     padding: 0;
   }
   .checklist-item-move:disabled {
@@ -966,9 +966,9 @@
   .checklist-item-delete {
     background: none;
     color: var(--primary);
-    min-width: 44px;
-    min-height: 44px;
-    font-size: 1.1rem;
+    min-width: 40px;
+    min-height: 40px;
+    font-size: 1rem;
     padding: 0;
   }
   .checklist-item-delete:hover {
@@ -1337,6 +1337,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.32.3", date: "2026-07-20", description: "Checklist-items compacter: minder witruimte per regel, zodat er meer items tegelijk op het scherm passen. Het vinkje blijft 44×44px (duimvriendelijk tapgebied)." },
       { version: "0.32.2", date: "2026-07-18", description: "Airbnb/Booking.com/Rechtstreeks/Vrienden staan nu altijd op één rij naast elkaar, ook op smalle schermen (voorheen 2×2 op mobiel)." },
       { version: "0.32.1", date: "2026-07-18", description: "Audit-log/Periode/Prijsformule staan nu netjes naast elkaar in 3 gelijke kolommen i.p.v. te wrappen naar een 2e regel." },
       { version: "0.32.0", date: "2026-07-18", description: "Audit-log-knop verhuisd van Boekingen naar Prijzen (links van Periode)." },
