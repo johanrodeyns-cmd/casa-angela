@@ -1511,7 +1511,7 @@
           </details>
           </div>
 
-          <div id="nuts-view-net" hidden>
+          <div id="nuts-view-netstroom" hidden>
             <h3 class="nuts-section-title">Netstroom</h3>
             <form id="netstroom-reading-form" class="meter-reading-form">
               <div class="meter-reading-field">
@@ -1657,6 +1657,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.37.1", date: "2026-07-20", description: "Bugfix: de Netstroom-sub-tab werkte helemaal niet (geen enkele knop reageerde) door een verkeerd elementid — de metingenlijst/grafiek en de EMA-sessie-knoppen (Opslaan/Ophalen) crashten stil bij het openen van de tab." },
       { version: "0.37.0", date: "2026-07-20", description: "Netstroom-tab werkt nu: metingen (kWh) invoeren + grafiek per maand/jaar (net als Water/Gas), plus een 'Ophalen'-knop die de netstroom-meterstand automatisch haalt uit het EMA-dashboard. Let op: dit gebruikt (bij gebrek aan een officieel netstroom-veld in de APsystems-koppeling) een ingelogde EMA-sessie i.p.v. de App ID/Secret — die sessie kan af en toe verlopen en moet dan manueel vernieuwd worden bij Instellingen; handmatige invoer blijft intussen gewoon werken." },
       { version: "0.36.0", date: "2026-07-20", description: "Zonnestroom-tab herzien: de 5 kaartjes (huidig vermogen t.e.m. lifetime) zijn weg, de grafiek 'Opbrengst per maand' (jan-dec, altijd het volledige jaar) staat nu bovenaan en is meteen zichtbaar, 'Vermogen vandaag' staat eronder en toont nu de hele dag (00:00-23:59) i.p.v. te stoppen bij het huidige tijdstip. Dagweergave toont voortaan ook altijd de volledige maand. De 'Vernieuwen'-knop is weg (een pagina-herlaad ververst toch)." },
       { version: "0.35.0", date: "2026-07-20", description: "Nuts opgesplitst in 4 onderdelen (Zonnestroom/Netstroom/Water/Gas). Zonnestroom is de bestaande APsystems-integratie. Water en Gas: meterstanden manueel ingeven, met verbruiksgrafieken per maand/jaar. Netstroom volgt later (wacht op de juiste EMA-gegevens)." },
@@ -1791,7 +1792,7 @@
           b.classList.toggle("active", b === btn);
         });
         document.getElementById("nuts-view-zon").hidden = btn.dataset.nutsView !== "zon";
-        document.getElementById("nuts-view-net").hidden = btn.dataset.nutsView !== "net";
+        document.getElementById("nuts-view-netstroom").hidden = btn.dataset.nutsView !== "net";
         document.getElementById("nuts-view-water").hidden = btn.dataset.nutsView !== "water";
         document.getElementById("nuts-view-gas").hidden = btn.dataset.nutsView !== "gas";
       });
