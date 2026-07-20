@@ -318,6 +318,18 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
+### US-3.5 ☑ Eigen verblijf visueel onderscheiden (S) — v0.41.0
+**Als** Johan of Tinneke **wil ik** in het Kalender-tabblad in één oogopslag zien welke bezette periodes een eigen verblijf zijn (niet een betalende gast) **zodat** ik dat niet moet verwarren met een echte boeking.
+
+**Acceptatiecriteria:**
+- Given een boeking waarvan de naam "Johan" en/of "Tinneke" bevat (hoofdletterongevoelig), then krijgt die dag/periode in zowel de Maand- als de Jaarweergave een warme geel/bruine kleur i.p.v. de gewone blauwe bezet-kleur.
+- Given een aankomst-, vertrek- of eenzelfde-dag-wisseldag van zo'n eigen verblijf, then krijgt die dezelfde diagonale kleursplit-stijl als een gewone boeking, enkel met de geel/bruine kleur i.p.v. blauw.
+- Given een andere boeking (gastnaam bevat geen "Johan"/"Tinneke"), then blijft die de gewone blauwe kleur behouden — geen wijziging.
+
+**Technische notities:** puur visuele herkenning via een regex-check (`/johan|tinneke/i`) op de al berekende `dayDisplayLabel`/`cell.label`-tekst in `renderAvailabilityMonth`/`renderYearView` (`index.html`) — geen wijziging aan `logic.js` of het datamodel, want er is geen apart veld dat een boeking als "eigen verblijf" markeert. Nieuwe CSS-variabelen `--honey`/`--honey-light`, nieuwe classes `.cal-day.eigen`/`.year-cell.eigen` (gecombineerd met de bestaande `bezet`/`aankomst`/`vertrek`/`turnover`-classes). Geldt enkel in het Kalender-tabblad (Beschikbaarheid), niet in de Prijzen-tab.
+
+---
+
 ## Epic 4 — Checklists
 
 ### US-4.1 ☑ Checklist-items beheren (CRUD) (M) — v0.24.0

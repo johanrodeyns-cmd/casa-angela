@@ -19,6 +19,8 @@
     --sand-dark: #E6D5C3;
     --cream: #FFFBF5;
     --charcoal: #2C2C2C;
+    --honey: #C4862E;
+    --honey-light: #E8C078;
   }
   body {
     margin: 0;
@@ -303,6 +305,18 @@
     color: var(--charcoal);
     text-shadow: 0 0 4px rgba(255, 255, 255, 0.8);
   }
+  /* Eigen verblijf (Johan/Tinneke), enkel in het Kalender-tabblad (Beschikbaarheid) — zelfde
+     opbouw als de gewone bezet/aankomst/vertrek-kleuring, maar met een warme geel/bruine tint
+     i.p.v. het standaard blauw, zodat een eigen verblijf in één oogopslag opvalt. */
+  .cal-day.eigen.bezet {
+    background: var(--honey);
+  }
+  .cal-day.eigen.aankomst {
+    background: linear-gradient(135deg, var(--sand) 50%, var(--honey) 50%);
+  }
+  .cal-day.eigen.vertrek {
+    background: linear-gradient(135deg, var(--honey) 50%, var(--sand) 50%);
+  }
   #mode-hint {
     display: none;
     background: var(--azure-light);
@@ -492,6 +506,21 @@
   .year-cell.turnover {
     background: linear-gradient(135deg, var(--primary) 50%, var(--primary-light) 50%);
     cursor: pointer;
+  }
+  .year-cell.eigen.booked {
+    background: var(--honey);
+  }
+  .year-cell.eigen.booked:hover {
+    background: var(--honey-light);
+  }
+  .year-cell.eigen.aankomst {
+    background: linear-gradient(135deg, var(--sand) 50%, var(--honey) 50%);
+  }
+  .year-cell.eigen.vertrek {
+    background: linear-gradient(135deg, var(--honey) 50%, var(--sand) 50%);
+  }
+  .year-cell.eigen.turnover {
+    background: linear-gradient(135deg, var(--honey) 50%, var(--honey-light) 50%);
   }
   .year-cell.free {
     cursor: pointer;
@@ -1632,6 +1661,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.41.0", date: "2026-07-20", description: "Kalender-tabblad (Beschikbaarheid, Maand en Jaar): boekingen op naam van Johan en/of Tinneke krijgen nu een warme geel/bruine kleur i.p.v. het gewone blauw, zodat een eigen verblijf meteen opvalt tussen de gastboekingen." },
       { version: "0.40.0", date: "2026-07-20", description: "Netstroom vandaag: de per-minuut-variant gaf een serverfout (APsystems ondersteunt 'minutely' blijkbaar niet betrouwbaar voor de meter, ondanks documentatie) — vervangen door een per-uur-grafiek van vandaag, die dezelfde beproefde weg gebruikt als de Maand/Jaar-historie." },
       { version: "0.39.1", date: "2026-07-20", description: "Bugfix: 'Netstroom vandaag' toonde bij een fout of ontbrekende data stilzwijgend niets — nu zichtbare status/foutmelding, zoals bij de andere grafieken." },
       { version: "0.39.0", date: "2026-07-20", description: "Netstroom: grafiek 'Netstroom vandaag' toegevoegd (per-minuut geëxporteerde energie, volledige dag 00:00-23:59), net als bij Zonnestroom." },
@@ -1842,8 +1872,9 @@
           if (!date) return '<span class="cal-day cal-day-empty"></span>';
           const day = Number(date.slice(8, 10));
           const state = dayOccupancyState(date, occupancyMap);
-          const stateClass = state !== "vrij" ? ` ${state}` : "";
           const label = dayDisplayLabel(date, occupancyMap, state);
+          const isOwnStay = state !== "vrij" && /johan|tinneke/i.test(label);
+          const stateClass = state !== "vrij" ? ` ${state}${isOwnStay ? " eigen" : ""}` : "";
           return `
             <button type="button" class="cal-day${stateClass}" data-date="${date}">
               <span class="cal-day-num">${day}</span>
@@ -1891,13 +1922,14 @@
                 return `<div class="year-cell free${weekendClass}" data-date="${date}"${title}>${cell.day}</div>`;
               }
               const safeLabel = escapeHtml(cell.label);
+              const ownClass = /johan|tinneke/i.test(cell.label) ? " eigen" : "";
               if (cell.type === "edge") {
-                return `<div class="year-cell ${cell.edge}" data-date="${date}" title="${safeLabel}"></div>`;
+                return `<div class="year-cell ${cell.edge}${ownClass}" data-date="${date}" title="${safeLabel}"></div>`;
               }
               if (cell.type === "turnover") {
-                return `<div class="year-cell turnover" data-date="${date}" title="${safeLabel}"></div>`;
+                return `<div class="year-cell turnover${ownClass}" data-date="${date}" title="${safeLabel}"></div>`;
               }
-              return `<div class="year-cell booked" style="grid-column: span ${cell.span}" data-date="${date}" title="${safeLabel}">${safeLabel}</div>`;
+              return `<div class="year-cell booked${ownClass}" style="grid-column: span ${cell.span}" data-date="${date}" title="${safeLabel}">${safeLabel}</div>`;
             })
             .join("");
           return `<div class="year-row"><div class="year-month-name">${MONTH_NAMES[month - 1]}</div>${segments}</div>`;
