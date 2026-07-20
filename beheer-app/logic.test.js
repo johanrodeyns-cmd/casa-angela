@@ -12,7 +12,7 @@ const {
 } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.33.0');
+  assert.equal(getVersion(), '0.33.1');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -129,26 +129,43 @@ test('buildMonthTimeline returns one free entry per real day when there is no oc
   assert.equal(freeDays.length, 29);
 });
 
-test('buildMonthTimeline groups consecutive days with the same guest into one booked segment', () => {
+test('buildMonthTimeline splits off the check-in/check-out day as a standalone edge cell, merging only the fully-booked days in between', () => {
   const bookings = [{ id: 'b1', dateFrom: '2026-07-10', dateTo: '2026-07-14', name: 'Jan' }];
   const occupancyMap = buildOccupancyMap(bookings, []);
   const timeline = buildMonthTimeline(2026, 7, occupancyMap);
-  const booked = timeline.filter((c) => c.type === 'booked');
-  assert.deepEqual(booked, [{ type: 'booked', day: 10, span: 5, label: 'Jan' }]);
+  const relevant = timeline.filter((c) => c.type === 'edge' || c.type === 'booked');
+  assert.deepEqual(relevant, [
+    { type: 'edge', day: 10, edge: 'aankomst', label: 'Jan' },
+    { type: 'booked', day: 11, span: 3, label: 'Jan' },
+    { type: 'edge', day: 14, edge: 'vertrek', label: 'Jan' },
+  ]);
 });
 
-test('buildMonthTimeline keeps back-to-back bookings by different guests as separate segments', () => {
+test('buildMonthTimeline keeps back-to-back bookings by different guests as separate segments, with standalone arrival/departure edges', () => {
   const bookings = [
     { id: 'b1', dateFrom: '2026-07-05', dateTo: '2026-07-10', name: 'Jan' },
     { id: 'b2', dateFrom: '2026-07-10', dateTo: '2026-07-15', name: 'Mieke' },
   ];
   const occupancyMap = buildOccupancyMap(bookings, []);
   const timeline = buildMonthTimeline(2026, 7, occupancyMap);
-  const booked = timeline.filter((c) => c.type === 'booked');
-  assert.deepEqual(booked, [
-    { type: 'booked', day: 5, span: 5, label: 'Jan' },
+  const relevant = timeline.filter((c) => c.type === 'edge' || c.type === 'booked');
+  assert.deepEqual(relevant, [
+    { type: 'edge', day: 5, edge: 'aankomst', label: 'Jan' },
+    { type: 'booked', day: 6, span: 4, label: 'Jan' },
     { type: 'booked', day: 10, span: 1, label: 'Jan / Mieke' },
-    { type: 'booked', day: 11, span: 5, label: 'Mieke' },
+    { type: 'booked', day: 11, span: 4, label: 'Mieke' },
+    { type: 'edge', day: 15, edge: 'vertrek', label: 'Mieke' },
+  ]);
+});
+
+test('buildMonthTimeline treats a 1-night stay as two adjacent, un-merged edge cells (no bezet day in between)', () => {
+  const bookings = [{ id: 'b1', dateFrom: '2026-07-10', dateTo: '2026-07-11', name: 'Jan' }];
+  const occupancyMap = buildOccupancyMap(bookings, []);
+  const timeline = buildMonthTimeline(2026, 7, occupancyMap);
+  const relevant = timeline.filter((c) => c.type === 'edge' || c.type === 'booked');
+  assert.deepEqual(relevant, [
+    { type: 'edge', day: 10, edge: 'aankomst', label: 'Jan' },
+    { type: 'edge', day: 11, edge: 'vertrek', label: 'Jan' },
   ]);
 });
 

@@ -1,4 +1,4 @@
-const VERSION = '0.33.0';
+const VERSION = '0.33.1';
 
 function getVersion() {
   return VERSION;
@@ -348,12 +348,19 @@ function buildMonthTimeline(year, month, occupancyMap) {
       continue;
     }
     const label = dayDisplayLabel(date, occupancyMap, state);
+    // Aan-/vertrekdagen zijn altijd een eigen 1-dagscel (diagonale split, geen naam) — enkel
+    // volledig bezette dagen (state 'bezet') met identiek label smelten samen tot één balk.
+    if (state === 'aankomst' || state === 'vertrek') {
+      cells.push({ type: 'edge', day, edge: state, label });
+      i += 1;
+      continue;
+    }
     let span = 1;
     while (i + span < flatDates.length) {
       const nextDate = flatDates[i + span];
       if (!nextDate) break;
       const nextState = dayOccupancyState(nextDate, occupancyMap);
-      if (nextState === 'vrij' || dayDisplayLabel(nextDate, occupancyMap, nextState) !== label) break;
+      if (nextState !== 'bezet' || dayDisplayLabel(nextDate, occupancyMap, nextState) !== label) break;
       span += 1;
     }
     cells.push({ type: 'booked', day, span, label });
