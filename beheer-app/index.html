@@ -482,6 +482,10 @@
     background: linear-gradient(135deg, var(--primary) 50%, var(--sand) 50%);
     cursor: pointer;
   }
+  .year-cell.turnover {
+    background: linear-gradient(135deg, var(--primary) 50%, var(--primary-light) 50%);
+    cursor: pointer;
+  }
   .year-cell.free {
     cursor: pointer;
   }
@@ -1349,6 +1353,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.33.2", date: "2026-07-20", description: "Jaartabel: dagen met een gastenwissel (vertrek + aankomst dezelfde dag) tonen nu ook een diagonale split, zonder de (te drukke) namen erin." },
       { version: "0.33.1", date: "2026-07-20", description: "Jaartabel: aankomst- en vertrekdagen tonen nu dezelfde diagonale kleursplit als de andere kalenders (zonder gastnaam erin, enkel de volledig bezette dagen ertussen tonen de naam)." },
       { version: "0.33.0", date: "2026-07-20", description: "Jaartabel: weekends vallen nu verticaal samen over alle maanden (elke rij begint met wat opvulling zodat kolommen altijd dezelfde weekdag voorstellen), i.p.v. dat dag 1 altijd in dezelfde kolom staat." },
       { version: "0.32.3", date: "2026-07-20", description: "Checklist-items compacter: minder witruimte per regel, zodat er meer items tegelijk op het scherm passen. Het vinkje blijft 44×44px (duimvriendelijk tapgebied)." },
@@ -1572,6 +1577,9 @@
               const safeLabel = escapeHtml(cell.label);
               if (cell.type === "edge") {
                 return `<div class="year-cell ${cell.edge}" data-date="${date}" title="${safeLabel}"></div>`;
+              }
+              if (cell.type === "turnover") {
+                return `<div class="year-cell turnover" data-date="${date}" title="${safeLabel}"></div>`;
               }
               return `<div class="year-cell booked" style="grid-column: span ${cell.span}" data-date="${date}" title="${safeLabel}">${safeLabel}</div>`;
             })

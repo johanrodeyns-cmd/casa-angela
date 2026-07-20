@@ -1,4 +1,4 @@
-const VERSION = '0.33.1';
+const VERSION = '0.33.2';
 
 function getVersion() {
   return VERSION;
@@ -352,6 +352,14 @@ function buildMonthTimeline(year, month, occupancyMap) {
     // volledig bezette dagen (state 'bezet') met identiek label smelten samen tot één balk.
     if (state === 'aankomst' || state === 'vertrek') {
       cells.push({ type: 'edge', day, edge: state, label });
+      i += 1;
+      continue;
+    }
+    // Een eenzelfde-dag-wissel (vertrek + aankomst van twee verschillende boekingen) is altijd
+    // een eigen 1-dagscel — nooit samengevoegd, en zonder naam (te druk voor zo'n smalle cel).
+    const bookingEntries = (occupancyMap[date] || []).filter((e) => e.type === 'booking');
+    if (bookingEntries.length > 1) {
+      cells.push({ type: 'turnover', day, label });
       i += 1;
       continue;
     }
