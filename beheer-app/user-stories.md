@@ -392,47 +392,58 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 ---
 
 ### US-6.2 ☑ Dagoverzicht (M) — v0.34.0
+> Vervolg in v0.36.0: op vraag van Johan zijn de 5 kaartjes (huidig vermogen/vandaag/deze maand/dit jaar/lifetime) verwijderd — die informatie zit al in de grafieken eronder (Historie + Vermogen vandaag), de kaartjes waren dubbel. `casaAngelaSummary` wordt sindsdien enkel nog aangeroepen door "Verbinding testen" in Instellingen, niet meer voor het dashboard zelf.
+
 **Als** Johan of Tinneke **wil ik** bij het openen van Nuts meteen zien: huidig vermogen (W), opbrengst vandaag (kWh), deze maand (kWh), dit jaar (kWh) en lifetime (kWh).
 
 **Acceptatiecriteria:**
-- Given geldige credentials, when ik de Nuts-tab open, then toont het dashboard 5 kaarten: huidig vermogen, vandaag, deze maand, dit jaar, lifetime.
-- Given geen credentials ingevuld, then toont de tab een duidelijke prompt om eerst Instellingen te openen, i.p.v. lege/foutieve kaarten.
+- ~~Given geldige credentials, when ik de Nuts-tab open, then toont het dashboard 5 kaarten: huidig vermogen, vandaag, deze maand, dit jaar, lifetime.~~ (vervallen sinds v0.36.0, zie hierboven)
+- Given geen credentials ingevuld, then toont de tab een duidelijke prompt om eerst Instellingen te openen, i.p.v. lege/foutieve grafieken.
 - Given een API- of netwerkfout, then toont de tab een duidelijke foutmelding i.p.v. een stille lege staat.
 
-**Technische notities:** `casaAngelaSummary` (Cloud Function, CORS-proxy naar APsystems) voor today/month/year/lifetime; `casaAngelaToday` voor het huidig vermogen (laatste waarde van de vandaag-reeks, enkel als EID gekend is).
+**Technische notities:** `casaAngelaToday` voor het vermogen vandaag (US-6.3); `casaAngelaEnergy` voor de historie (US-6.4).
 
 ---
 
 ### US-6.3 ☑ Grafiek van vandaag (M) — v0.34.0
-**Als** Johan of Tinneke **wil ik** een grafiek zien van het vermogen per tijdstip vandaag (lijngrafiek W over tijd).
+> Vervolg in v0.36.0: verplaatst naar de tweede positie (onder de Historie-grafiek, zie US-6.4) en toont nu altijd de volledige dag (00:00-23:59) i.p.v. te stoppen bij het huidige tijdstip — de ontbrekende (nog niet verstreken) tijdstippen worden aangevuld met 0 W, aan dezelfde tijdstap als de echte metingen (fallback 5 minuten als er te weinig datapunten zijn om de stap af te leiden).
+
+**Als** Johan of Tinneke **wil ik** een grafiek zien van het vermogen per tijdstip vandaag (lijngrafiek W over tijd), met de volledige dag zichtbaar.
 
 **Acceptatiecriteria:**
-- Given een gekende EID, then toont de Nuts-tab onder de kaarten een lijngrafiek van het vermogen (W) doorheen de dag.
+- Given een gekende EID, then toont de Nuts-tab een lijngrafiek van het vermogen (W) over de volledige dag (00:00 t.e.m. 23:59), niet enkel tot het huidige tijdstip.
 - Given geen EID gekend, then blijft de grafiek verborgen (geen lege/foutieve chart).
 
-**Technische notities:** Chart.js 4.4.1 via lazy `import()` (jsdelivr `+esm`), enkel geladen wanneer de Nuts-tab effectief data toont.
+**Technische notities:** Chart.js 4.4.1 via lazy `import()` (jsdelivr `+esm`), enkel geladen wanneer de Nuts-tab effectief data toont. `logic.padTodayPowerSeries(time, power)` (pure, TDD) vult de tijdreeks aan tot een volledige dag.
 
 ---
 
 ### US-6.4 ☑ Historische data (M) — v0.34.0
-**Als** Johan of Tinneke **wil ik** kunnen schakelen tussen dag/maand/jaar-weergave met een grafiek per periode.
+> Vervolg in v0.36.0: op vraag van Johan staat deze grafiek nu als eerste (bovenaan, vóór "Vermogen vandaag"), met "Maand" als standaard-actieve periode bij het openen van de tab (voorheen moest je eerst zelf een periode kiezen). Bugfix: Maand en Dag toonden enkel de al-verstreken periode (bv. jan-jul i.p.v. jan-dec, of dag 1-21 i.p.v. 1-31) — APsystems geeft immers enkel data terug tot "nu". Beide worden nu aangevuld tot de volledige periode (12 maanden resp. alle dagen van de maand) met 0 voor wat nog niet verstreken is. De jaarweergave blijft ongewijzigd (toont sowieso enkel de jaren waarvoor er data bestaat).
+
+**Als** Johan of Tinneke **wil ik** kunnen schakelen tussen dag/maand/jaar-weergave met een grafiek per periode, met de volledige periode zichtbaar (ook de dagen/maanden die nog moeten komen).
 
 **Acceptatiecriteria:**
 - Given 3 knoppen "Dag"/"Maand"/"Jaar" onder Historie, when ik op een ervan klik, then toont een staafgrafiek de opbrengst (kWh) per periode-eenheid (dagen van de huidige maand, maanden van het huidig jaar, of jaren).
-- Given de actieve periode-knop, then is die visueel gemarkeerd als actief.
+- Given de actieve periode-knop, then is die visueel gemarkeerd als actief; "Maand" is default actief bij het openen van de tab.
+- Given "Maand", then toont de grafiek altijd alle 12 maanden (jan-dec) van het huidige jaar, ook de nog niet verstreken maanden (als 0 kWh).
+- Given "Dag", then toont de grafiek altijd alle dagen van de huidige maand, ook de nog niet verstreken dagen (als 0 kWh).
 
-**Technische notities:** `casaAngelaEnergy` (level: daily/monthly/yearly).
+**Technische notities:** `casaAngelaEnergy` (level: daily/monthly/yearly). `logic.padSeriesValues(values, length)` + `logic.daysInMonth(year, month)` (beide pure, TDD) vullen Maand/Dag aan tot een vaste lengte.
 
 ---
 
 ### US-6.5 ☑ Slimme caching (M) — v0.34.0
+> Vervolg in v0.36.0: de "Vernieuwen"-knop is verwijderd (op vraag van Johan — een pagina-herlaad haalt sowieso alles opnieuw op). De cache blijft bestaan en wordt nu enkel nog geforceerd omzeild na het opslaan van nieuwe Instellingen (`refreshNuts(true)`).
+
 **Als** Johan of Tinneke **wil ik** dat de app niet meer dan 1 API-call per 30 minuten doet voor dezelfde data **zodat** we binnen de gratis APsystems-quota (1000 calls/maand) blijven.
 
 **Acceptatiecriteria:**
 - Given data die al binnen de laatste 30 minuten opgehaald is, when ik de Nuts-tab opnieuw open, then komt de data uit cache (geen nieuwe APsystems-call).
-- Given een "Vernieuwen"-knop, when ik erop klik, then wordt de cache genegeerd en verse data opgehaald.
+- ~~Given een "Vernieuwen"-knop, when ik erop klik, then wordt de cache genegeerd en verse data opgehaald.~~ (knop vervallen sinds v0.36.0)
+- Given het opslaan van nieuwe APsystems-instellingen, then wordt de cache genegeerd en verse data opgehaald.
 
-**Technische notities:** `nutsCached(key, fetchFn, force)` — cache in `cache/apsystems` (Firestore-reads tellen niet tegen de quota), TTL 30 min, aparte cache-key per databron (`summary`, `today_{date}`, `energy_{level}_{range}`).
+**Technische notities:** `nutsCached(key, fetchFn, force)` — cache in `cache/apsystems` (Firestore-reads tellen niet tegen de quota), TTL 30 min, aparte cache-key per databron (`today_{date}`, `energy_{level}_{range}`) — `casaAngelaSummary` wordt sinds v0.36.0 enkel nog rechtstreeks (ongecacht) aangeroepen door "Verbinding testen", niet meer via deze cache.
 
 ---
 

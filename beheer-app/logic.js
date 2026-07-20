@@ -1,4 +1,4 @@
-const VERSION = '0.35.0';
+const VERSION = '0.36.0';
 
 function getVersion() {
   return VERSION;
@@ -481,6 +481,45 @@ function buildYearlyConsumption(readings) {
     .map((year) => ({ year, total: totals[year] }));
 }
 
+function daysInMonth(year, month) {
+  return new Date(year, month, 0).getDate();
+}
+
+// APsystems history/today-power APIs only return data up to "now" (or up to the last
+// elapsed day/month) — the rest of the period simply isn't in the response. Padding to a
+// fixed length lets the chart always show the full period (e.g. Jan-Dec) with 0 for
+// what hasn't happened yet, instead of a truncated x-axis.
+function padSeriesValues(values, length) {
+  return Array.from({ length }, (_, i) => Number(values[i]) || 0);
+}
+
+function parseHm(hm) {
+  const [h, m] = hm.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function formatHm(totalMinutes) {
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+// Pads today's minutely power readings to a full 00:00-23:55 day, using the step
+// observed between the first two readings (falls back to 5 min if fewer than 2 points —
+// APsystems' own granularity).
+function padTodayPowerSeries(time, power) {
+  const stepMinutes = (time.length >= 2 ? parseHm(time[1]) - parseHm(time[0]) : 0) || 5;
+  const known = new Map(time.map((t, i) => [t, Number(power[i]) || 0]));
+  const labels = [];
+  const values = [];
+  for (let m = 0; m < 24 * 60; m += stepMinutes) {
+    const label = formatHm(m);
+    labels.push(label);
+    values.push(known.has(label) ? known.get(label) : 0);
+  }
+  return { labels, values };
+}
+
 // Meters only count up, so a candidate reading must fit between its chronological
 // neighbours — readings can be entered in any order (the user reports them "at whatever
 // moment they happen to check"), not just appended at the end.
@@ -515,6 +554,7 @@ if (typeof module !== 'undefined' && module.exports) {
     sortChecklistItems, addChecklistItem, renameChecklistItem, removeChecklistItem,
     toggleChecklistItem, resetChecklistItems, moveChecklistItem, escapeHtml,
     computeMeterIntervals, extrapolateDailyConsumption, buildMonthlyConsumption,
-    buildYearlyConsumption, validateMeterReading,
+    buildYearlyConsumption, validateMeterReading, daysInMonth, padSeriesValues,
+    padTodayPowerSeries,
   };
 }

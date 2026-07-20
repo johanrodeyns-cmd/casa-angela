@@ -10,11 +10,12 @@ const {
   sortChecklistItems, addChecklistItem, renameChecklistItem, removeChecklistItem,
   toggleChecklistItem, resetChecklistItems, moveChecklistItem, escapeHtml, diffSyncedBlocks,
   computeMeterIntervals, extrapolateDailyConsumption, buildMonthlyConsumption,
-  buildYearlyConsumption, validateMeterReading,
+  buildYearlyConsumption, validateMeterReading, daysInMonth, padSeriesValues,
+  padTodayPowerSeries,
 } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.35.0');
+  assert.equal(getVersion(), '0.36.0');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -1043,4 +1044,41 @@ test('validateMeterReading accepts a reading correctly between an older and newe
   ];
   const result = validateMeterReading(existing, { date: '2026-02-01', reading: 130 });
   assert.equal(result.valid, true);
+});
+
+test('daysInMonth returns the correct day count, including February in a leap vs. non-leap year', () => {
+  assert.equal(daysInMonth(2026, 1), 31);
+  assert.equal(daysInMonth(2026, 2), 28);
+  assert.equal(daysInMonth(2024, 2), 29);
+  assert.equal(daysInMonth(2026, 4), 30);
+});
+
+test('padSeriesValues pads a shorter array with zeros up to the requested length', () => {
+  assert.deepEqual(padSeriesValues([1, 2, 3], 7), [1, 2, 3, 0, 0, 0, 0]);
+});
+
+test('padSeriesValues returns exactly the requested length even when values is empty', () => {
+  assert.deepEqual(padSeriesValues([], 3), [0, 0, 0]);
+});
+
+test('padSeriesValues truncates an array longer than the requested length', () => {
+  assert.deepEqual(padSeriesValues([1, 2, 3, 4, 5], 3), [1, 2, 3]);
+});
+
+test('padTodayPowerSeries fills a full day (00:00-23:55) at the observed step, with 0 outside the known range', () => {
+  const { labels, values } = padTodayPowerSeries(['06:40', '06:45', '06:50'], [10, 20, 30]);
+  assert.equal(labels[0], '00:00');
+  assert.equal(labels[labels.length - 1], '23:55');
+  assert.equal(labels.length, 288); // 24h / 5 min
+  assert.equal(values[labels.indexOf('06:40')], 10);
+  assert.equal(values[labels.indexOf('06:45')], 20);
+  assert.equal(values[labels.indexOf('06:50')], 30);
+  assert.equal(values[0], 0);
+  assert.equal(values[values.length - 1], 0);
+});
+
+test('padTodayPowerSeries defaults to a 5-minute step when fewer than 2 data points are available', () => {
+  const { labels, values } = padTodayPowerSeries([], []);
+  assert.equal(labels.length, 288);
+  assert.ok(values.every((v) => v === 0));
 });

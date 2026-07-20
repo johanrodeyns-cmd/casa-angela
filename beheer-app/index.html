@@ -1016,43 +1016,6 @@
     opacity: 0.7;
     font-size: 0.9rem;
   }
-  .nuts-cards {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-  }
-  @media (min-width: 480px) {
-    .nuts-cards {
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    }
-  }
-  .nuts-card {
-    background: var(--sand);
-    border-radius: 8px;
-    padding: 0.9rem 1rem;
-  }
-  .nuts-card-label {
-    font-size: 0.7rem;
-    color: var(--olive-dark);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-  .nuts-card-value {
-    font-size: 1.3rem;
-    font-weight: bold;
-    color: var(--charcoal);
-    margin-top: 0.25rem;
-  }
-  .nuts-card-value::after {
-    content: " kWh";
-    font-size: 0.75rem;
-    font-weight: normal;
-    color: var(--olive-dark);
-  }
-  .nuts-card-value.nuts-watt::after {
-    content: " W";
-  }
   .nuts-section-title {
     margin: 1.25rem 0 0.75rem;
     font-size: 1rem;
@@ -1060,9 +1023,6 @@
   .nuts-chart-wrap {
     position: relative;
     height: 240px;
-  }
-  #nuts-refresh-btn {
-    margin-top: 0.75rem;
   }
   .nuts-period-toggle {
     display: flex;
@@ -1506,18 +1466,6 @@
           <div id="nuts-view-zon">
           <p id="nuts-overview-error" class="error-message"></p>
           <p id="nuts-overview-prompt" class="empty-state">Stel eerst je APsystems-gegevens in (open Instellingen hieronder).</p>
-          <div class="nuts-cards" id="nuts-cards" hidden>
-            <div class="nuts-card"><div class="nuts-card-label">Huidig vermogen</div><div class="nuts-card-value nuts-watt" id="nuts-power">—</div></div>
-            <div class="nuts-card"><div class="nuts-card-label">Vandaag</div><div class="nuts-card-value" id="nuts-today">—</div></div>
-            <div class="nuts-card"><div class="nuts-card-label">Deze maand</div><div class="nuts-card-value" id="nuts-month">—</div></div>
-            <div class="nuts-card"><div class="nuts-card-label">Dit jaar</div><div class="nuts-card-value" id="nuts-year">—</div></div>
-            <div class="nuts-card"><div class="nuts-card-label">Lifetime</div><div class="nuts-card-value" id="nuts-lifetime">—</div></div>
-          </div>
-          <div id="nuts-chart-block" hidden>
-            <h3 class="nuts-section-title">Vermogen vandaag</h3>
-            <div class="nuts-chart-wrap"><canvas id="nuts-power-chart"></canvas></div>
-          </div>
-          <button type="button" id="nuts-refresh-btn" class="button-secondary">Vernieuwen</button>
           <div id="nuts-history-section" hidden>
             <h3 class="nuts-section-title">Historie</h3>
             <div class="nuts-period-toggle">
@@ -1527,6 +1475,10 @@
             </div>
             <p id="nuts-history-status" class="empty-state">Kies een periode om de historie te laden.</p>
             <div id="nuts-history-block" class="nuts-chart-wrap" hidden><canvas id="nuts-history-chart"></canvas></div>
+          </div>
+          <div id="nuts-chart-block" hidden>
+            <h3 class="nuts-section-title">Vermogen vandaag</h3>
+            <div class="nuts-chart-wrap"><canvas id="nuts-power-chart"></canvas></div>
           </div>
           <details class="nuts-settings">
             <summary>Instellingen</summary>
@@ -1668,6 +1620,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.36.0", date: "2026-07-20", description: "Zonnestroom-tab herzien: de 5 kaartjes (huidig vermogen t.e.m. lifetime) zijn weg, de grafiek 'Opbrengst per maand' (jan-dec, altijd het volledige jaar) staat nu bovenaan en is meteen zichtbaar, 'Vermogen vandaag' staat eronder en toont nu de hele dag (00:00-23:59) i.p.v. te stoppen bij het huidige tijdstip. Dagweergave toont voortaan ook altijd de volledige maand. De 'Vernieuwen'-knop is weg (een pagina-herlaad ververst toch)." },
       { version: "0.35.0", date: "2026-07-20", description: "Nuts opgesplitst in 4 onderdelen (Zonnestroom/Netstroom/Water/Gas). Zonnestroom is de bestaande APsystems-integratie. Water en Gas: meterstanden manueel ingeven, met verbruiksgrafieken per maand/jaar. Netstroom volgt later (wacht op de juiste EMA-gegevens)." },
       { version: "0.34.0", date: "2026-07-20", description: "Nieuw tabblad 'Nuts': zonnepaneel-opbrengst via APsystems (dashboard, grafiek van vandaag, historie dag/maand/jaar, instellingen) + storingsmonitor met e-mailalert. Geport uit de Huishouden-app." },
       { version: "0.33.3", date: "2026-07-20", description: "Kalender-tabblad gebruikt op een breed scherm nu de volledige beschikbare breedte (voorheen vastgezet op 900px zoals de andere tabs), zodat de jaartabel minder snel moet scrollen." },
@@ -2977,12 +2930,12 @@
     let nutsTodayChart = null;
     async function renderNutsPowerChart(time, power) {
       const { Chart } = await loadNutsChartJs();
-      const values = (power || []).map((v) => Number(v));
+      const { labels, values } = padTodayPowerSeries(time || [], (power || []).map((v) => Number(v)));
       if (nutsTodayChart) nutsTodayChart.destroy();
       nutsTodayChart = new Chart(document.getElementById("nuts-power-chart"), {
         type: "line",
         data: {
-          labels: time || [],
+          labels,
           datasets: [{
             label: "Vermogen (W)",
             data: values,
@@ -3047,6 +3000,12 @@
       statusEl.hidden = true;
       block.hidden = false;
 
+      // APsystems geeft enkel data terug tot "nu" (bv. jan-jul i.p.v. jan-dec, of 1-21 i.p.v.
+      // 1-31) — de rest van de periode ontbreekt gewoon i.p.v. op 0 te staan. Aanvullen tot
+      // de volledige periode zodat de as altijd het hele jaar/maand toont.
+      if (level === "monthly") values = padSeriesValues(values, 12);
+      else if (level === "daily") values = padSeriesValues(values, daysInMonth(now.getFullYear(), now.getMonth() + 1));
+
       let labels;
       if (level === "daily") {
         labels = values.map((_, i) => String(i + 1));
@@ -3076,9 +3035,8 @@
       });
     }
 
-    // force=true → cache omzeilen (Vernieuwen-knop).
+    // force=true → cache omzeilen (bv. na het opslaan van nieuwe instellingen).
     async function refreshNuts(force = false) {
-      const cardsEl = document.getElementById("nuts-cards");
       const promptEl = document.getElementById("nuts-overview-prompt");
       const errEl = document.getElementById("nuts-overview-error");
       errEl.classList.remove("active");
@@ -3100,33 +3058,18 @@
       document.getElementById("nuts-alert-email").value = s.alertEmail || (auth.currentUser && auth.currentUser.email) || "";
 
       const historySection = document.getElementById("nuts-history-section");
+      const chartBlock = document.getElementById("nuts-chart-block");
       if (!s.appId || !s.appSecret || !s.sid) {
         promptEl.hidden = false;
-        cardsEl.hidden = true;
         historySection.hidden = true;
+        chartBlock.hidden = true;
         return;
       }
       promptEl.hidden = true;
-      cardsEl.hidden = false;
       historySection.hidden = false;
+      renderNutsHistory("monthly"); // standaard eerste weergave: opbrengst per maand, jan-dec
 
-      try {
-        const data = await nutsCached("summary",
-          () => casaAngelaSummaryFn({ appId: s.appId, appSecret: s.appSecret, sid: s.sid }).then((r) => r.data),
-          force);
-        document.getElementById("nuts-today").textContent = data.today ?? "—";
-        document.getElementById("nuts-month").textContent = data.month ?? "—";
-        document.getElementById("nuts-year").textContent = data.year ?? "—";
-        document.getElementById("nuts-lifetime").textContent = data.lifetime ?? "—";
-      } catch (err) {
-        errEl.textContent = "Kon opbrengst niet ophalen: " + (err.message || err);
-        errEl.classList.add("active");
-      }
-
-      const powerEl = document.getElementById("nuts-power");
-      const chartBlock = document.getElementById("nuts-chart-block");
       if (!s.eid) {
-        powerEl.textContent = "—";
         chartBlock.hidden = true;
         return;
       }
@@ -3135,13 +3078,9 @@
         const data = await nutsCached("today_" + localDate,
           () => casaAngelaTodayFn({ appId: s.appId, appSecret: s.appSecret, sid: s.sid, eid: s.eid, date: localDate }).then((r) => r.data),
           force);
-        const power = Array.isArray(data.power) ? data.power : [];
-        const last = power.length ? power[power.length - 1] : null;
-        powerEl.textContent = last != null ? Math.round(Number(last)).toString() : "—";
         chartBlock.hidden = false;
-        await renderNutsPowerChart(data.time, power);
+        await renderNutsPowerChart(data.time, data.power);
       } catch (err) {
-        powerEl.textContent = "—";
         chartBlock.hidden = true;
         errEl.textContent = "Kon vermogen vandaag niet ophalen: " + (err.message || err);
         errEl.classList.add("active");
@@ -3151,7 +3090,6 @@
     (function setupNuts() {
       const saveBtn = document.getElementById("nuts-save-btn");
       const testBtn = document.getElementById("nuts-testconn-btn");
-      const refreshBtn = document.getElementById("nuts-refresh-btn");
       const statusEl = document.getElementById("nuts-settings-status");
 
       function readNutsForm() {
@@ -3205,8 +3143,6 @@
           showNutsStatus("EID ophalen mislukt: " + (err.message || err));
         }
       });
-
-      refreshBtn.addEventListener("click", () => refreshNuts(true));
 
       document.querySelectorAll("[data-nuts-period]").forEach((btn) => {
         btn.addEventListener("click", () => renderNutsHistory(btn.dataset.nutsPeriod));
