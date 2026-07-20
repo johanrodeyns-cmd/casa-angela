@@ -11,11 +11,11 @@ const {
   toggleChecklistItem, resetChecklistItems, moveChecklistItem, escapeHtml, diffSyncedBlocks,
   computeMeterIntervals, extrapolateDailyConsumption, buildMonthlyConsumption,
   buildYearlyConsumption, validateMeterReading, daysInMonth, padSeriesValues,
-  padTodaySeries,
+  padTodaySeries, nutsCacheTtlMs,
 } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.41.0');
+  assert.equal(getVersion(), '0.42.0');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -1081,4 +1081,15 @@ test('padTodaySeries defaults to a 5-minute step when fewer than 2 data points a
   const { labels, values } = padTodaySeries([], []);
   assert.equal(labels.length, 288);
   assert.ok(values.every((v) => v === 0));
+});
+
+test('nutsCacheTtlMs returns a 30-minute TTL for live/current-day data', () => {
+  assert.equal(nutsCacheTtlMs('hourly'), 30 * 60 * 1000);
+  assert.equal(nutsCacheTtlMs(undefined), 30 * 60 * 1000);
+});
+
+test('nutsCacheTtlMs returns longer TTLs for slower-changing history levels', () => {
+  assert.equal(nutsCacheTtlMs('daily'), 6 * 60 * 60 * 1000);
+  assert.equal(nutsCacheTtlMs('monthly'), 24 * 60 * 60 * 1000);
+  assert.equal(nutsCacheTtlMs('yearly'), 7 * 24 * 60 * 60 * 1000);
 });

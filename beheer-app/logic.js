@@ -1,4 +1,4 @@
-const VERSION = '0.41.0';
+const VERSION = '0.42.0';
 
 function getVersion() {
   return VERSION;
@@ -520,6 +520,17 @@ function padTodaySeries(time, values) {
   return { labels, values: padded };
 }
 
+// APsystems-historie op "daily"/"monthly"/"yearly" bevat vrijwel enkel al-afgesloten
+// periodes (enkel de huidige dag/maand/jaar binnen de array kan nog wijzigen) — die
+// mogen dus veel langer client-side gecached blijven dan het live vermogen/uur-verbruik
+// van vandaag, om de APsystems-quota (1000 calls/maand) te sparen.
+function nutsCacheTtlMs(level) {
+  if (level === 'yearly') return 7 * 24 * 60 * 60 * 1000;
+  if (level === 'monthly') return 24 * 60 * 60 * 1000;
+  if (level === 'daily') return 6 * 60 * 60 * 1000;
+  return 30 * 60 * 1000;
+}
+
 // Meters only count up, so a candidate reading must fit between its chronological
 // neighbours — readings can be entered in any order (the user reports them "at whatever
 // moment they happen to check"), not just appended at the end.
@@ -555,6 +566,6 @@ if (typeof module !== 'undefined' && module.exports) {
     toggleChecklistItem, resetChecklistItems, moveChecklistItem, escapeHtml,
     computeMeterIntervals, extrapolateDailyConsumption, buildMonthlyConsumption,
     buildYearlyConsumption, validateMeterReading, daysInMonth, padSeriesValues,
-    padTodaySeries,
+    padTodaySeries, nutsCacheTtlMs,
   };
 }

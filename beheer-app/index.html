@@ -1661,6 +1661,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.42.0", date: "2026-07-20", description: "Zonnestroom/Netstroom-historie (Dag/Maand/Jaar) blijft nu veel langer client-side gecached (6u/24u/7 dagen i.p.v. 30 min), omdat die grafieken vrijwel enkel al-afgesloten periodes tonen — spaart APsystems-quota. Het live vermogen/uur-verbruik van vandaag blijft wel elke 30 min verversen." },
       { version: "0.41.0", date: "2026-07-20", description: "Kalender-tabblad (Beschikbaarheid, Maand en Jaar): boekingen op naam van Johan en/of Tinneke krijgen nu een warme geel/bruine kleur i.p.v. het gewone blauw, zodat een eigen verblijf meteen opvalt tussen de gastboekingen." },
       { version: "0.40.0", date: "2026-07-20", description: "Netstroom vandaag: de per-minuut-variant gaf een serverfout (APsystems ondersteunt 'minutely' blijkbaar niet betrouwbaar voor de meter, ondanks documentatie) — vervangen door een per-uur-grafiek van vandaag, die dezelfde beproefde weg gebruikt als de Maand/Jaar-historie." },
       { version: "0.39.1", date: "2026-07-20", description: "Bugfix: 'Netstroom vandaag' toonde bij een fout of ontbrekende data stilzwijgend niets — nu zichtbare status/foutmelding, zoals bij de andere grafieken." },
@@ -2954,16 +2955,19 @@
     // ===== Nuts (zonnepanelen via APsystems) — geport uit de Huishouden-app =====
     function nutsSettingsDoc() { return doc(db, "settings", "apsystems"); }
 
-    // Client-cache in Firestore (30 min TTL) — Firestore-reads tellen niet tegen de
-    // APsystems-quota (1000 calls/maand), dit voorkomt herhaalde API-calls per tab-bezoek.
-    const NUTS_CACHE_TTL_MS = 30 * 60 * 1000;
+    // Client-cache in Firestore — Firestore-reads tellen niet tegen de APsystems-quota
+    // (1000 calls/maand), dit voorkomt herhaalde API-calls per tab-bezoek. De TTL hangt af
+    // van het niveau (zie nutsCacheTtlMs in logic.js): dag/maand/jaar-historie bevat vrijwel
+    // enkel al-afgesloten periodes en mag dus veel langer gecached blijven dan het live
+    // vermogen/uur-verbruik van vandaag.
     function nutsCacheDoc() { return doc(db, "cache", "apsystems"); }
-    async function nutsCached(key, fetchFn, force) {
+    async function nutsCached(key, fetchFn, force, level) {
+      const ttlMs = nutsCacheTtlMs(level);
       if (!force) {
         try {
           const snap = await getDoc(nutsCacheDoc());
           const e = snap.exists() ? snap.data()[key] : null;
-          if (e && e.fetchedAt && (Date.now() - e.fetchedAt) < NUTS_CACHE_TTL_MS) return e.data;
+          if (e && e.fetchedAt && (Date.now() - e.fetchedAt) < ttlMs) return e.data;
         } catch { /* val terug op directe fetch */ }
       }
       const data = await fetchFn();
@@ -3047,7 +3051,7 @@
       try {
         const vals = await nutsCached("energy_" + level + "_" + (dateRange || "all"),
           () => casaAngelaEnergyFn({ appId, appSecret, sid, level, dateRange }).then((r) => r.data.values),
-          false);
+          false, level);
         values = (vals || []).map((v) => Number(v));
       } catch (err) {
         statusEl.textContent = "Kon historie niet laden: " + (err.message || err);
@@ -3411,7 +3415,7 @@
       try {
         const vals = await nutsCached("meter_energy_" + level + "_" + (dateRange || "all"),
           () => casaAngelaMeterEnergyFn({ appId, appSecret, sid, eid, level, dateRange }).then((r) => r.data.values),
-          false);
+          false, level);
         values = (vals || []).map((v) => Number(v));
       } catch (err) {
         statusEl.textContent = "Kon historie niet laden: " + (err.message || err);

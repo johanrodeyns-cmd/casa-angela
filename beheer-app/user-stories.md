@@ -432,6 +432,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ### US-6.4 ☑ Historische data (M) — v0.34.0
 > Vervolg in v0.36.0: op vraag van Johan staat deze grafiek nu als eerste (bovenaan, vóór "Vermogen vandaag"), met "Maand" als standaard-actieve periode bij het openen van de tab (voorheen moest je eerst zelf een periode kiezen). Bugfix: Maand en Dag toonden enkel de al-verstreken periode (bv. jan-jul i.p.v. jan-dec, of dag 1-21 i.p.v. 1-31) — APsystems geeft immers enkel data terug tot "nu". Beide worden nu aangevuld tot de volledige periode (12 maanden resp. alle dagen van de maand) met 0 voor wat nog niet verstreken is. De jaarweergave blijft ongewijzigd (toont sowieso enkel de jaren waarvoor er data bestaat).
+> Vervolg in v0.42.0: naar aanleiding van herhaalde HTTP 500's (vermoedelijk APsystems-quota/rate-limiting) is de client-side Firestore-cache-TTL per niveau ingesteld i.p.v. een vaste 30 min voor alles — Dag 6u, Maand 24u, Jaar 7 dagen (`logic.nutsCacheTtlMs`, pure/TDD), want die grafieken tonen vrijwel enkel al-afgesloten periodes die toch niet meer wijzigen. "Vermogen vandaag" en "Netstroom vandaag" (US-6.10) blijven op 30 min, want die tonen wél nog lopende data. Zelfde mechanisme geldt voor Netstroom's historie, die dezelfde `nutsCached`-helper hergebruikt.
 
 **Als** Johan of Tinneke **wil ik** kunnen schakelen tussen dag/maand/jaar-weergave met een grafiek per periode, met de volledige periode zichtbaar (ook de dagen/maanden die nog moeten komen).
 
