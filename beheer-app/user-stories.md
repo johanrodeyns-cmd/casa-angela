@@ -378,7 +378,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 > Geport uit de Huishouden-app (tabblad "Casa Angela" daar) naar een eigen tabblad "Nuts" hier, op vraag van Johan. Eerst hier aan het werk krijgen, pas daarna de versie in Huishouden verwijderen.
 
-### US-6.1 ◐ Credentials beheren (M)
+### US-6.1 ☑ Credentials beheren (M) — v0.34.0
 **Als** Johan of Tinneke **wil ik** mijn APsystems App ID, App Secret, SID en EID kunnen invoeren en wijzigen vanuit een instellingen-sectie binnen de Nuts-tab **zodat** ik geen code hoef aan te passen.
 
 **Acceptatiecriteria:**
@@ -391,7 +391,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
-### US-6.2 ◐ Dagoverzicht (M)
+### US-6.2 ☑ Dagoverzicht (M) — v0.34.0
 **Als** Johan of Tinneke **wil ik** bij het openen van Nuts meteen zien: huidig vermogen (W), opbrengst vandaag (kWh), deze maand (kWh), dit jaar (kWh) en lifetime (kWh).
 
 **Acceptatiecriteria:**
@@ -403,7 +403,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
-### US-6.3 ◐ Grafiek van vandaag (M)
+### US-6.3 ☑ Grafiek van vandaag (M) — v0.34.0
 **Als** Johan of Tinneke **wil ik** een grafiek zien van het vermogen per tijdstip vandaag (lijngrafiek W over tijd).
 
 **Acceptatiecriteria:**
@@ -414,7 +414,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
-### US-6.4 ◐ Historische data (M)
+### US-6.4 ☑ Historische data (M) — v0.34.0
 **Als** Johan of Tinneke **wil ik** kunnen schakelen tussen dag/maand/jaar-weergave met een grafiek per periode.
 
 **Acceptatiecriteria:**
@@ -425,7 +425,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
-### US-6.5 ◐ Slimme caching (M)
+### US-6.5 ☑ Slimme caching (M) — v0.34.0
 **Als** Johan of Tinneke **wil ik** dat de app niet meer dan 1 API-call per 30 minuten doet voor dezelfde data **zodat** we binnen de gratis APsystems-quota (1000 calls/maand) blijven.
 
 **Acceptatiecriteria:**
@@ -436,7 +436,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
-### US-6.6 ◐ Foutafhandeling (M)
+### US-6.6 ☑ Foutafhandeling (M) — v0.34.0
 **Als** Johan of Tinneke **wil ik** duidelijke meldingen zien bij quota-overschrijding, foute credentials of netwerkproblemen.
 
 **Acceptatiecriteria:**
@@ -447,7 +447,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
-### US-6.7 ◐ Storingsmonitor met e-mailalert (M)
+### US-6.7 ☑ Storingsmonitor met e-mailalert (M) — v0.34.0
 **Als** Johan of Tinneke **wil ik** een e-mail krijgen als de zonnepanelen overdag geen productiedata meer doorsturen **zodat** we snel weten of bv. de zekering is afgeslagen, ook als we niet in Casa Angela zijn.
 
 **Acceptatiecriteria:**
