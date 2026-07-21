@@ -1547,6 +1547,7 @@
             </div>
             <p id="nuts-settings-status" class="empty-state"></p>
             <p id="nuts-archive-status" class="empty-state"></p>
+            <button type="button" id="nuts-archive-runnow-btn" class="button-secondary">Forceer archivering nu</button>
           </details>
           </div>
 
@@ -1672,6 +1673,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.47.0", date: "2026-07-21", description: "Zonnestroom > Instellingen: nieuwe knop 'Forceer archivering nu' voert de dagelijkse energie-archivering meteen uit i.p.v. te wachten tot 03:00 's nachts — handig om te checken dat het archief werkt." },
       { version: "0.46.0", date: "2026-07-21", description: "Zonnestroom- en Netstroom-historie (Dag/Maand/Jaar) leest nu rechtstreeks uit het permanente archief i.p.v. telkens APsystems te bevragen — sneller en spaart de API-quota volledig uit. Kleine bijwerking: deze grafieken tonen data t.e.m. gisteren (vandaag verschijnt na de nachtelijke archivering). 'Vermogen vandaag' en 'Netstroom vandaag' blijven ongewijzigd live." },
       { version: "0.45.0", date: "2026-07-21", description: "Zonnestroom > Instellingen toont nu een 'Archief'-statusregel: hoever de dagelijkse achtergrond-archivering van zonnestroom-/netstroomdata (energyHistory) al staat, zonder dat je daarvoor de Firestore-console moet openen." },
       { version: "0.44.0", date: "2026-07-20", description: "Boekingen-tab: 'Kopieer voor contactpersoon' vervangen door '🖼️ Afbeelding voor contactpersoon' — een tabel-afbeelding (JPG) i.p.v. platte tekst, want WhatsApp weigerde lange boekingenlijsten wegens het maximum aantal tekens per bericht. Op mobiel opent dit meteen het deelvenster naar WhatsApp; anders wordt de afbeelding gedownload." },
@@ -1758,6 +1760,7 @@
     const casaAngelaMeterEnergyFn = httpsCallable(functionsClient, "casaAngelaMeterEnergy");
     const casaAngelaMonitorTestFn = httpsCallable(functionsClient, "casaAngelaMonitorTest");
     const casaAngelaMonitorRunNowFn = httpsCallable(functionsClient, "casaAngelaMonitorRunNow");
+    const casaAngelaArchiveEnergyRunNowFn = httpsCallable(functionsClient, "casaAngelaArchiveEnergyRunNow");
 
     // US-5.1: every create/update/delete on an audited collection gets an auditLog entry,
     // written in the SAME batch as the actual data change (atomic — either both succeed or
@@ -3190,13 +3193,14 @@
     let energyHistoryDocs = null;
     let energyHistoryOldestMonth = null;
     let energyHistoryEarliestAvailable = null;
-    async function loadEnergyHistory() {
-      if (energyHistoryDocs) return energyHistoryDocs;
+    async function loadEnergyHistory(force = false) {
+      if (energyHistoryDocs && !force) return energyHistoryDocs;
       const [snap, metaSnap] = await Promise.all([
         getDocs(query(collection(db, "energyHistory"), orderBy(documentId()))),
         getDoc(doc(db, "energyHistory", "_meta")),
       ]);
       const docs = {};
+      energyHistoryOldestMonth = null;
       snap.forEach((d) => {
         if (d.id === "_meta") return;
         docs[d.id] = d.data();
@@ -3476,6 +3480,28 @@
           }
         } catch (err) {
           alertStatusEl.textContent = "Fout: " + (err.message || err);
+        }
+      });
+
+      const archiveRunNowBtn = document.getElementById("nuts-archive-runnow-btn");
+      const archiveStatusEl = document.getElementById("nuts-archive-status");
+      archiveRunNowBtn.addEventListener("click", async () => {
+        archiveStatusEl.textContent = "Archivering uitvoeren…"; archiveStatusEl.hidden = false;
+        archiveRunNowBtn.disabled = true;
+        try {
+          const { data } = await casaAngelaArchiveEnergyRunNowFn({});
+          if (data.skipped) {
+            archiveStatusEl.textContent = `Overgeslagen: ${data.reason}`;
+          } else {
+            await loadEnergyHistory(true);
+            renderNutsArchiveStatus();
+            renderNutsHistory(document.querySelector("[data-nuts-period].active")?.dataset.nutsPeriod || "monthly");
+            renderNetstroomHistory(document.querySelector("[data-netstroom-period].active")?.dataset.netstroomPeriod || "monthly");
+          }
+        } catch (err) {
+          archiveStatusEl.textContent = "Fout: " + (err.message || err);
+        } finally {
+          archiveRunNowBtn.disabled = false;
         }
       });
     })();

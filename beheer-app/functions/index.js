@@ -507,54 +507,81 @@ async function archiveMonth(creds, yyyymm, todayIso) {
   return { status: 'stored' };
 }
 
+// Gedeeld door de dagelijkse cron en de "Forceer archivering nu"-knop (casaAngelaArchiveEnergyRunNow
+// hieronder) — zelfde reden als processNutsMonitor hierboven.
+async function runEnergyArchive() {
+  const settingsSnap = await nutsSettingsDoc().get();
+  const s = settingsSnap.data() || {};
+  if (!s.appId || !s.appSecret || !s.sid || !s.eid) {
+    return { skipped: true, reason: 'App ID/Secret/SID/EID nog niet ingesteld.' };
+  }
+  const creds = {
+    appId: String(s.appId).trim(), appSecret: s.appSecret,
+    sid: String(s.sid).trim(), eid: String(s.eid).trim(),
+  };
+  const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' });
+  const thisMonth = todayIso.slice(0, 7);
+  const lastMonth = previousYyyyMm(thisMonth);
+
+  const thisMonthResult = await archiveMonth(creds, thisMonth, todayIso);
+  if (thisMonthResult.status !== 'stored') {
+    console.error('Energy-archive: huidige maand niet ververst:', thisMonthResult);
+  }
+
+  let lastMonthResult = { status: 'skipped' };
+  const lastMonthSnap = await energyHistoryDoc(lastMonth).get();
+  if (!lastMonthSnap.exists || !lastMonthSnap.data().complete) {
+    lastMonthResult = await archiveMonth(creds, lastMonth, todayIso);
+    if (lastMonthResult.status !== 'stored') {
+      console.error('Energy-archive: vorige maand niet ververst:', lastMonthResult);
+    }
+  }
+
+  const metaSnap = await energyHistoryMetaDoc().get();
+  const earliestKnown = metaSnap.exists ? metaSnap.data().earliestAvailableMonth : null;
+  let cursor = previousYyyyMm(lastMonth);
+  let monthsBackfilled = 0;
+  let stoppedReason = 'cap';
+  for (let i = 0; i < MAX_BACKFILL_MONTHS_PER_RUN; i++) {
+    if (earliestKnown && cursor < earliestKnown) { stoppedReason = 'known-boundary'; break; }
+    const existing = await energyHistoryDoc(cursor).get();
+    if (existing.exists && existing.data().complete) { stoppedReason = 'already-complete'; break; }
+
+    const result = await archiveMonth(creds, cursor, todayIso);
+    if (result.status === 'no-data') {
+      await energyHistoryMetaDoc().set({ earliestAvailableMonth: cursor }, { merge: true });
+      stoppedReason = 'no-data';
+      break;
+    }
+    if (result.status === 'error') {
+      console.error('Energy-archive: backfill gestopt bij', cursor, result.error);
+      stoppedReason = 'error: ' + result.error;
+      break;
+    }
+    monthsBackfilled += 1;
+    cursor = previousYyyyMm(cursor);
+  }
+
+  return {
+    skipped: false,
+    thisMonth: { month: thisMonth, status: thisMonthResult.status },
+    lastMonth: { month: lastMonth, status: lastMonthResult.status },
+    monthsBackfilled,
+    stoppedReason,
+  };
+}
+
 export const casaAngelaArchiveEnergy = onSchedule(
   { schedule: '0 3 * * *', timeZone: 'Europe/Madrid', timeoutSeconds: 300 },
-  async () => {
-    const settingsSnap = await nutsSettingsDoc().get();
-    const s = settingsSnap.data() || {};
-    if (!s.appId || !s.appSecret || !s.sid || !s.eid) {
-      console.log('Energy-archive: App ID/Secret/SID/EID nog niet ingesteld, overgeslagen.');
-      return;
-    }
-    const creds = {
-      appId: String(s.appId).trim(), appSecret: s.appSecret,
-      sid: String(s.sid).trim(), eid: String(s.eid).trim(),
-    };
-    const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' });
-    const thisMonth = todayIso.slice(0, 7);
-    const lastMonth = previousYyyyMm(thisMonth);
+  async () => { await runEnergyArchive(); },
+);
 
-    const thisMonthResult = await archiveMonth(creds, thisMonth, todayIso);
-    if (thisMonthResult.status !== 'stored') {
-      console.error('Energy-archive: huidige maand niet ververst:', thisMonthResult);
-    }
-
-    const lastMonthSnap = await energyHistoryDoc(lastMonth).get();
-    if (!lastMonthSnap.exists || !lastMonthSnap.data().complete) {
-      const lastMonthResult = await archiveMonth(creds, lastMonth, todayIso);
-      if (lastMonthResult.status !== 'stored') {
-        console.error('Energy-archive: vorige maand niet ververst:', lastMonthResult);
-      }
-    }
-
-    const metaSnap = await energyHistoryMetaDoc().get();
-    const earliestKnown = metaSnap.exists ? metaSnap.data().earliestAvailableMonth : null;
-    let cursor = previousYyyyMm(lastMonth);
-    for (let i = 0; i < MAX_BACKFILL_MONTHS_PER_RUN; i++) {
-      if (earliestKnown && cursor < earliestKnown) break;
-      const existing = await energyHistoryDoc(cursor).get();
-      if (existing.exists && existing.data().complete) break;
-
-      const result = await archiveMonth(creds, cursor, todayIso);
-      if (result.status === 'no-data') {
-        await energyHistoryMetaDoc().set({ earliestAvailableMonth: cursor }, { merge: true });
-        break;
-      }
-      if (result.status === 'error') {
-        console.error('Energy-archive: backfill gestopt bij', cursor, result.error);
-        break;
-      }
-      cursor = previousYyyyMm(cursor);
-    }
+// "Forceer archivering nu"-knop (Zonnestroom > Instellingen) — zelfde patroon als
+// casaAngelaMonitorRunNow, om niet op de nachtelijke cron te moeten wachten.
+export const casaAngelaArchiveEnergyRunNow = onCall(
+  { timeoutSeconds: 300 },
+  async (request) => {
+    requireAllowedUser(request);
+    return await runEnergyArchive();
   },
 );
