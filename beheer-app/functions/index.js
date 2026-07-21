@@ -6,7 +6,7 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import nodemailer from 'nodemailer';
 import { buildHeaders } from './lib/apsystemsSign.js';
 import { decideAlertState } from './lib/casaAngelaMonitor.js';
-import { daysInMonth, previousYyyyMm, isMonthComplete, padMonthArray } from './lib/energyArchive.js';
+import { daysInMonth, previousYyyyMm, isMonthComplete, padMonthArray, archiveThroughDate } from './lib/energyArchive.js';
 
 initializeApp();
 const db = getFirestore();
@@ -502,6 +502,7 @@ async function archiveMonth(creds, yyyymm, todayIso) {
     grid: padMonthArray(gridArr, days),
     daysInMonth: days,
     complete: isMonthComplete(yyyymm, todayIso),
+    throughDate: archiveThroughDate(yyyymm, todayIso),
     updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true });
   return { status: 'stored' };

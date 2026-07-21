@@ -1673,6 +1673,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.47.1", date: "2026-07-21", description: "De 'Archief'-statusregel (Zonnestroom > Instellingen) toont nu ook de laatst gearchiveerde dag ('... van XXXX-XX tot en met JJJJ-MM-DD') i.p.v. enkel het vage 'tot nu'." },
       { version: "0.47.0", date: "2026-07-21", description: "Zonnestroom > Instellingen: nieuwe knop 'Forceer archivering nu' voert de dagelijkse energie-archivering meteen uit i.p.v. te wachten tot 03:00 's nachts — handig om te checken dat het archief werkt." },
       { version: "0.46.0", date: "2026-07-21", description: "Zonnestroom- en Netstroom-historie (Dag/Maand/Jaar) leest nu rechtstreeks uit het permanente archief i.p.v. telkens APsystems te bevragen — sneller en spaart de API-quota volledig uit. Kleine bijwerking: deze grafieken tonen data t.e.m. gisteren (vandaag verschijnt na de nachtelijke archivering). 'Vermogen vandaag' en 'Netstroom vandaag' blijven ongewijzigd live." },
       { version: "0.45.0", date: "2026-07-21", description: "Zonnestroom > Instellingen toont nu een 'Archief'-statusregel: hoever de dagelijkse achtergrond-archivering van zonnestroom-/netstroomdata (energyHistory) al staat, zonder dat je daarvoor de Firestore-console moet openen." },
@@ -3193,6 +3194,7 @@
     let energyHistoryDocs = null;
     let energyHistoryOldestMonth = null;
     let energyHistoryEarliestAvailable = null;
+    let energyHistoryThroughDate = null;
     async function loadEnergyHistory(force = false) {
       if (energyHistoryDocs && !force) return energyHistoryDocs;
       const [snap, metaSnap] = await Promise.all([
@@ -3201,10 +3203,14 @@
       ]);
       const docs = {};
       energyHistoryOldestMonth = null;
+      energyHistoryThroughDate = null;
       snap.forEach((d) => {
         if (d.id === "_meta") return;
         docs[d.id] = d.data();
         if (!energyHistoryOldestMonth) energyHistoryOldestMonth = d.id;
+        // orderBy(documentId()) is oplopend, dus de laatst overlopen maand is de meest
+        // recente — throughDate daarvan is de laatste dag waarvoor er echt data is.
+        if (d.data().throughDate) energyHistoryThroughDate = d.data().throughDate;
       });
       energyHistoryDocs = docs;
       energyHistoryEarliestAvailable = metaSnap.exists() ? metaSnap.data().earliestAvailableMonth : null;
@@ -3327,10 +3333,13 @@
       const statusEl = document.getElementById("nuts-archive-status");
       if (!energyHistoryOldestMonth) {
         statusEl.textContent = "Archief: nog geen data (eerste run vannacht 03:00).";
-      } else if (energyHistoryEarliestAvailable) {
-        statusEl.textContent = `Archief: volledige beschikbare historie geladen, van ${energyHistoryEarliestAvailable} tot nu.`;
+        return;
+      }
+      const until = energyHistoryThroughDate || "?";
+      if (energyHistoryEarliestAvailable) {
+        statusEl.textContent = `Archief: volledige beschikbare historie geladen, van ${energyHistoryEarliestAvailable} tot en met ${until}.`;
       } else {
-        statusEl.textContent = `Archief: data beschikbaar van ${energyHistoryOldestMonth} tot nu — backfill loopt nog verder terug.`;
+        statusEl.textContent = `Archief: data beschikbaar van ${energyHistoryOldestMonth} tot en met ${until} — backfill loopt nog verder terug.`;
       }
     }
 

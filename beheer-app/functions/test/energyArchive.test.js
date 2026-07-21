@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { daysInMonth, previousYyyyMm, isMonthComplete, padMonthArray } from "../lib/energyArchive.js";
+import { daysInMonth, previousYyyyMm, isMonthComplete, padMonthArray, archiveThroughDate } from "../lib/energyArchive.js";
 
 test("daysInMonth returns the correct day count, including leap years", () => {
   assert.equal(daysInMonth(2026, 2), 28);
@@ -30,4 +30,20 @@ test("padMonthArray truncates an array longer than the requested length", () => 
 
 test("padMonthArray coerces non-finite entries to 0", () => {
   assert.deepEqual(padMonthArray([1, null, undefined, NaN, "3"], 5), [1, 0, 0, 0, 3]);
+});
+
+test("archiveThroughDate returns the last day of a fully-elapsed month", () => {
+  assert.equal(archiveThroughDate("2026-06", "2026-07-21"), "2026-06-30");
+});
+
+test("archiveThroughDate returns yesterday for the current, still-open month", () => {
+  assert.equal(archiveThroughDate("2026-07", "2026-07-21"), "2026-07-20");
+});
+
+test("archiveThroughDate handles a month boundary for yesterday", () => {
+  assert.equal(archiveThroughDate("2026-07", "2026-08-01"), "2026-07-31");
+});
+
+test("archiveThroughDate returns null when the month has no archived days yet (today is day 1)", () => {
+  assert.equal(archiveThroughDate("2026-08", "2026-08-01"), null);
 });
