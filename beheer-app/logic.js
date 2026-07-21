@@ -1,4 +1,4 @@
-const VERSION = '0.45.0';
+const VERSION = '0.46.0';
 
 function getVersion() {
   return VERSION;
@@ -517,15 +517,61 @@ function padTodaySeries(time, values) {
   return { labels, values: padded };
 }
 
-// APsystems-historie op "daily"/"monthly"/"yearly" bevat vrijwel enkel al-afgesloten
-// periodes (enkel de huidige dag/maand/jaar binnen de array kan nog wijzigen) — die
-// mogen dus veel langer client-side gecached blijven dan het live vermogen/uur-verbruik
-// van vandaag, om de APsystems-quota (1000 calls/maand) te sparen.
-function nutsCacheTtlMs(level) {
-  if (level === 'yearly') return 7 * 24 * 60 * 60 * 1000;
-  if (level === 'monthly') return 24 * 60 * 60 * 1000;
-  if (level === 'daily') return 6 * 60 * 60 * 1000;
-  return 30 * 60 * 1000;
+// Werkt op de client-side gecachte energyHistory-collectie (US-6.11/US-6.12) i.p.v. live
+// APsystems-calls: dag/maand/jaar-historie en de gemiddeld-verbruik-per-boeking-berekening
+// tonen vrijwel enkel al-afgesloten periodes, die permanent door casaAngelaArchiveEnergy
+// (functions/index.js) worden gearchiveerd. docsByMonth = { [yyyymm]: { solar, grid, ... } },
+// field ∈ 'solar'|'grid'. Enkel het live vermogen/uur-verbruik van vandaag blijft een
+// APsystems-call nodig hebben (intraday-detail wordt bewust niet gearchiveerd).
+function getArchiveDailySeries(docsByMonth, yyyymm, field) {
+  const doc = docsByMonth[yyyymm];
+  return doc && Array.isArray(doc[field]) ? doc[field] : [];
+}
+
+function sumFinite(values) {
+  return values.reduce((total, v) => total + (Number.isFinite(Number(v)) ? Number(v) : 0), 0);
+}
+
+function buildMonthlySeriesFromArchive(docsByMonth, year, field) {
+  const result = [];
+  for (let m = 1; m <= 12; m++) {
+    const yyyymm = `${year}-${String(m).padStart(2, '0')}`;
+    result.push(sumFinite(getArchiveDailySeries(docsByMonth, yyyymm, field)));
+  }
+  return result;
+}
+
+function buildYearlySeriesFromArchive(docsByMonth, field) {
+  const totals = {};
+  for (const yyyymm of Object.keys(docsByMonth)) {
+    const year = yyyymm.slice(0, 4);
+    const monthSum = sumFinite(getArchiveDailySeries(docsByMonth, yyyymm, field));
+    totals[year] = (totals[year] || 0) + monthSum;
+  }
+  const years = Object.keys(totals).sort();
+  return { years, values: years.map((y) => totals[y]) };
+}
+
+// [dateFrom, dateToExclusive) — checkoutdag telt niet mee, consistent met nightsBetween.
+function sumArchiveDateRange(docsByMonth, dateFrom, dateToExclusive, field) {
+  let total = 0;
+  const cursor = new Date(dateFrom + 'T00:00:00');
+  const end = new Date(dateToExclusive + 'T00:00:00');
+  while (cursor < end) {
+    const yyyymm = toIsoDate(cursor.getFullYear(), cursor.getMonth() + 1, 1).slice(0, 7);
+    const day = cursor.getDate();
+    const values = getArchiveDailySeries(docsByMonth, yyyymm, field);
+    const v = Number(values[day - 1]);
+    total += Number.isFinite(v) ? v : 0;
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return total;
+}
+
+function averageDailyConsumption(booking, docsByMonth) {
+  const nights = nightsBetween(booking.dateFrom, booking.dateTo);
+  if (nights <= 0) return null;
+  return sumArchiveDateRange(docsByMonth, booking.dateFrom, booking.dateTo, 'grid') / nights;
 }
 
 // Meters only count up, so a candidate reading must fit between its chronological
@@ -563,6 +609,7 @@ if (typeof module !== 'undefined' && module.exports) {
     toggleChecklistItem, resetChecklistItems, moveChecklistItem, escapeHtml,
     computeMeterIntervals, extrapolateDailyConsumption, buildMonthlyConsumption,
     buildYearlyConsumption, validateMeterReading, daysInMonth, padSeriesValues,
-    padTodaySeries, nutsCacheTtlMs,
+    padTodaySeries, getArchiveDailySeries, buildMonthlySeriesFromArchive,
+    buildYearlySeriesFromArchive, sumArchiveDateRange, averageDailyConsumption,
   };
 }

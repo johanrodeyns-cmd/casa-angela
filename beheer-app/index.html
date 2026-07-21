@@ -1672,6 +1672,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.46.0", date: "2026-07-21", description: "Zonnestroom- en Netstroom-historie (Dag/Maand/Jaar) leest nu rechtstreeks uit het permanente archief i.p.v. telkens APsystems te bevragen — sneller en spaart de API-quota volledig uit. Kleine bijwerking: deze grafieken tonen data t.e.m. gisteren (vandaag verschijnt na de nachtelijke archivering). 'Vermogen vandaag' en 'Netstroom vandaag' blijven ongewijzigd live." },
       { version: "0.45.0", date: "2026-07-21", description: "Zonnestroom > Instellingen toont nu een 'Archief'-statusregel: hoever de dagelijkse achtergrond-archivering van zonnestroom-/netstroomdata (energyHistory) al staat, zonder dat je daarvoor de Firestore-console moet openen." },
       { version: "0.44.0", date: "2026-07-20", description: "Boekingen-tab: 'Kopieer voor contactpersoon' vervangen door '🖼️ Afbeelding voor contactpersoon' — een tabel-afbeelding (JPG) i.p.v. platte tekst, want WhatsApp weigerde lange boekingenlijsten wegens het maximum aantal tekens per bericht. Op mobiel opent dit meteen het deelvenster naar WhatsApp; anders wordt de afbeelding gedownload." },
       { version: "0.43.0", date: "2026-07-20", description: "Kalender-tabblad (Beschikbaarheid, Maand en Jaar): de huidige dag krijgt nu een dikke rode kader, zodat 'vandaag' altijd meteen opvalt." },
@@ -1752,7 +1753,8 @@
     const casaAngelaSummaryFn = httpsCallable(functionsClient, "casaAngelaSummary");
     const casaAngelaInvertersFn = httpsCallable(functionsClient, "casaAngelaInverters");
     const casaAngelaTodayFn = httpsCallable(functionsClient, "casaAngelaToday");
-    const casaAngelaEnergyFn = httpsCallable(functionsClient, "casaAngelaEnergy");
+    // casaAngelaMeterEnergyFn: sinds v0.46.0 client-side enkel nog voor level "hourly"
+    // (Netstroom vandaag) — de Dag/Maand/Jaar-historie leest rechtstreeks uit energyHistory.
     const casaAngelaMeterEnergyFn = httpsCallable(functionsClient, "casaAngelaMeterEnergy");
     const casaAngelaMonitorTestFn = httpsCallable(functionsClient, "casaAngelaMonitorTest");
     const casaAngelaMonitorRunNowFn = httpsCallable(functionsClient, "casaAngelaMonitorRunNow");
@@ -3160,19 +3162,19 @@
     // ===== Nuts (zonnepanelen via APsystems) — geport uit de Huishouden-app =====
     function nutsSettingsDoc() { return doc(db, "settings", "apsystems"); }
 
-    // Client-cache in Firestore — Firestore-reads tellen niet tegen de APsystems-quota
-    // (1000 calls/maand), dit voorkomt herhaalde API-calls per tab-bezoek. De TTL hangt af
-    // van het niveau (zie nutsCacheTtlMs in logic.js): dag/maand/jaar-historie bevat vrijwel
-    // enkel al-afgesloten periodes en mag dus veel langer gecached blijven dan het live
-    // vermogen/uur-verbruik van vandaag.
+    // Client-cache in Firestore (30 min TTL) — Firestore-reads tellen niet tegen de
+    // APsystems-quota (1000 calls/maand). Sinds v0.46.0 enkel nog gebruikt voor het live
+    // vermogen/uur-verbruik van vandaag (nooit gearchiveerd, zie hieronder); de Dag/Maand/
+    // Jaar-historie leest sindsdien rechtstreeks uit de permanente energyHistory-archivering
+    // (US-6.11) i.p.v. hier nog een gedifferentieerde TTL per niveau nodig te hebben.
+    const NUTS_CACHE_TTL_MS = 30 * 60 * 1000;
     function nutsCacheDoc() { return doc(db, "cache", "apsystems"); }
-    async function nutsCached(key, fetchFn, force, level) {
-      const ttlMs = nutsCacheTtlMs(level);
+    async function nutsCached(key, fetchFn, force) {
       if (!force) {
         try {
           const snap = await getDoc(nutsCacheDoc());
           const e = snap.exists() ? snap.data()[key] : null;
-          if (e && e.fetchedAt && (Date.now() - e.fetchedAt) < ttlMs) return e.data;
+          if (e && e.fetchedAt && (Date.now() - e.fetchedAt) < NUTS_CACHE_TTL_MS) return e.data;
         } catch { /* val terug op directe fetch */ }
       }
       const data = await fetchFn();
@@ -3180,6 +3182,49 @@
         await setDoc(nutsCacheDoc(), { [key]: { data, fetchedAt: Date.now() } }, { merge: true });
       } catch { /* cache-write faalt → niet fataal */ }
       return data;
+    }
+
+    // Permanente energyHistory-archivering (US-6.11, casaAngelaArchiveEnergy) client-side
+    // laden — eenmalig per sessie (zelfde patroon als loadBookings/loadSyncedBlocks), want
+    // dit is een rechtstreekse Firestore-read i.p.v. een API-call: geen TTL-afweging nodig.
+    let energyHistoryDocs = null;
+    let energyHistoryOldestMonth = null;
+    let energyHistoryEarliestAvailable = null;
+    async function loadEnergyHistory() {
+      if (energyHistoryDocs) return energyHistoryDocs;
+      const [snap, metaSnap] = await Promise.all([
+        getDocs(query(collection(db, "energyHistory"), orderBy(documentId()))),
+        getDoc(doc(db, "energyHistory", "_meta")),
+      ]);
+      const docs = {};
+      snap.forEach((d) => {
+        if (d.id === "_meta") return;
+        docs[d.id] = d.data();
+        if (!energyHistoryOldestMonth) energyHistoryOldestMonth = d.id;
+      });
+      energyHistoryDocs = docs;
+      energyHistoryEarliestAvailable = metaSnap.exists() ? metaSnap.data().earliestAvailableMonth : null;
+      return docs;
+    }
+
+    // Bouwt de Dag/Maand/Jaar-reeks + bijhorende labels uit de gearchiveerde data — gedeeld
+    // door Zonnestroom (field "solar") en Netstroom (field "grid"), want dit is sinds
+    // v0.46.0 het enige verschil tussen de twee historie-grafieken.
+    function buildArchiveSeriesAndLabels(level, field) {
+      const now = new Date();
+      if (level === "yearly") {
+        const { years, values } = buildYearlySeriesFromArchive(energyHistoryDocs, field);
+        return { values, labels: years };
+      }
+      if (level === "monthly") {
+        const values = buildMonthlySeriesFromArchive(energyHistoryDocs, now.getFullYear(), field);
+        const m = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+        return { values, labels: values.map((_, i) => m[i]) };
+      }
+      const yyyymm = now.toLocaleDateString("en-CA").slice(0, 7);
+      const raw = getArchiveDailySeries(energyHistoryDocs, yyyymm, field).map((v) => Number(v));
+      const values = padSeriesValues(raw, daysInMonth(now.getFullYear(), now.getMonth() + 1));
+      return { values, labels: values.map((_, i) => String(i + 1)) };
     }
 
     let nutsChartJsModule = null;
@@ -3230,34 +3275,22 @@
     }
 
     let nutsHistoryChart = null;
+    // Sinds v0.46.0: leest de Dag/Maand/Jaar-historie rechtstreeks uit de permanente
+    // energyHistory-archivering (Firestore, US-6.11) i.p.v. een live APsystems-call — enkel
+    // "vandaag" (renderNutsPowerChart hieronder) blijft live, want intraday-detail wordt
+    // bewust niet gearchiveerd.
     async function renderNutsHistory(level) {
       const statusEl = document.getElementById("nuts-history-status");
       const block = document.getElementById("nuts-history-block");
-      const appId = document.getElementById("nuts-appid").value.trim();
-      const appSecret = document.getElementById("nuts-secret").value;
-      const sid = document.getElementById("nuts-sid").value.trim();
-      if (!appId || !appSecret || !sid) {
-        statusEl.textContent = "Vul eerst je gegevens in.";
-        statusEl.hidden = false;
-        block.hidden = true;
-        return;
-      }
       document.querySelectorAll("[data-nuts-period]").forEach((b) =>
         b.classList.toggle("active", b.dataset.nutsPeriod === level));
 
-      const now = new Date();
-      let dateRange = "";
-      if (level === "daily") dateRange = now.toLocaleDateString("en-CA").slice(0, 7); // YYYY-MM
-      else if (level === "monthly") dateRange = String(now.getFullYear());
-
       statusEl.textContent = "Laden…";
       statusEl.hidden = false;
-      let values;
+      let values, labels;
       try {
-        const vals = await nutsCached("energy_" + level + "_" + (dateRange || "all"),
-          () => casaAngelaEnergyFn({ appId, appSecret, sid, level, dateRange }).then((r) => r.data.values),
-          false, level);
-        values = (vals || []).map((v) => Number(v));
+        await loadEnergyHistory();
+        ({ values, labels } = buildArchiveSeriesAndLabels(level, "solar"));
       } catch (err) {
         statusEl.textContent = "Kon historie niet laden: " + (err.message || err);
         block.hidden = true;
@@ -3265,24 +3298,6 @@
       }
       statusEl.hidden = true;
       block.hidden = false;
-
-      // APsystems geeft enkel data terug tot "nu" (bv. jan-jul i.p.v. jan-dec, of 1-21 i.p.v.
-      // 1-31) — de rest van de periode ontbreekt gewoon i.p.v. op 0 te staan. Aanvullen tot
-      // de volledige periode zodat de as altijd het hele jaar/maand toont.
-      if (level === "monthly") values = padSeriesValues(values, 12);
-      else if (level === "daily") values = padSeriesValues(values, daysInMonth(now.getFullYear(), now.getMonth() + 1));
-
-      let labels;
-      if (level === "daily") {
-        labels = values.map((_, i) => String(i + 1));
-      } else if (level === "monthly") {
-        const m = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
-        labels = values.map((_, i) => m[i] || String(i + 1));
-      } else {
-        const cur = now.getFullYear();
-        const n = values.length;
-        labels = values.map((_, i) => String(cur - (n - 1) + i));
-      }
 
       const { Chart } = await loadNutsChartJs();
       if (nutsHistoryChart) nutsHistoryChart.destroy();
@@ -3301,33 +3316,27 @@
       });
     }
 
-    // force=true → cache omzeilen (bv. na het opslaan van nieuwe instellingen).
     // Zichtbaar maken hoever de dagelijkse energyHistory-archivering (US-6.11, functions/index.js
-    // casaAngelaArchiveEnergy) al staat, zonder dat je daarvoor de Firestore-console moet openen.
-    async function renderNutsArchiveStatus() {
+    // casaAngelaArchiveEnergy) al staat, zonder dat je daarvoor de Firestore-console moet openen —
+    // hergebruikt de al geladen energyHistoryDocs (loadEnergyHistory), geen aparte Firestore-read.
+    function renderNutsArchiveStatus() {
       const statusEl = document.getElementById("nuts-archive-status");
-      try {
-        const [metaSnap, oldestSnap] = await Promise.all([
-          getDoc(doc(db, "energyHistory", "_meta")),
-          getDocs(query(collection(db, "energyHistory"), orderBy(documentId()), limit(1))),
-        ]);
-        if (oldestSnap.empty) {
-          statusEl.textContent = "Archief: nog geen data (eerste run vannacht 03:00).";
-          return;
-        }
-        const oldestMonth = oldestSnap.docs[0].id;
-        if (metaSnap.exists()) {
-          statusEl.textContent = `Archief: volledige beschikbare historie geladen, van ${metaSnap.data().earliestAvailableMonth} tot nu.`;
-        } else {
-          statusEl.textContent = `Archief: data beschikbaar van ${oldestMonth} tot nu — backfill loopt nog verder terug.`;
-        }
-      } catch (err) {
-        statusEl.textContent = "Archief-status kon niet geladen worden: " + (err.message || err);
+      if (!energyHistoryOldestMonth) {
+        statusEl.textContent = "Archief: nog geen data (eerste run vannacht 03:00).";
+      } else if (energyHistoryEarliestAvailable) {
+        statusEl.textContent = `Archief: volledige beschikbare historie geladen, van ${energyHistoryEarliestAvailable} tot nu.`;
+      } else {
+        statusEl.textContent = `Archief: data beschikbaar van ${energyHistoryOldestMonth} tot nu — backfill loopt nog verder terug.`;
       }
     }
 
     async function refreshNuts(force = false) {
-      renderNutsArchiveStatus();
+      try {
+        await loadEnergyHistory();
+        renderNutsArchiveStatus();
+      } catch (err) {
+        document.getElementById("nuts-archive-status").textContent = "Archief-status kon niet geladen worden: " + (err.message || err);
+      }
       const promptEl = document.getElementById("nuts-overview-prompt");
       const errEl = document.getElementById("nuts-overview-error");
       errEl.classList.remove("active");
@@ -3612,41 +3621,22 @@
       yearNavEl.querySelector(`#${type}-year-next`).addEventListener("click", () => { chartYear += 1; renderChart(); });
     }
 
-    // Netstroom (exported): Meter-level Data API — zelfde credentials/signing als
-    // Zonnestroom (App ID/Secret/SID uit hetzelfde settings/apsystems-document), enkel een
-    // ander pad en een meter-eid (in de praktijk vaak dezelfde ECU als het Zonnestroom-EID
-    // hierboven). Exact hetzelfde patroon als renderNutsHistory, incl. de padSeriesValues-
-    // aanvulling voor Maand/Dag (zie v0.36.0) — Jaar wordt bewust niet aangevuld.
+    // Netstroom historie — sinds v0.46.0 exact hetzelfde patroon als renderNutsHistory
+    // hierboven (rechtstreeks uit energyHistory, field "grid" i.p.v. "solar"), geen live
+    // APsystems-call meer nodig.
     let netstroomHistoryChart = null;
     async function renderNetstroomHistory(level) {
       const statusEl = document.getElementById("netstroom-history-status");
       const block = document.getElementById("netstroom-history-block");
-      const appId = document.getElementById("nuts-appid").value.trim();
-      const appSecret = document.getElementById("nuts-secret").value;
-      const sid = document.getElementById("nuts-sid").value.trim();
-      const eid = document.getElementById("nuts-eid").value.trim();
-      if (!appId || !appSecret || !sid || !eid) {
-        statusEl.textContent = "Vul eerst je APsystems-gegevens in (inclusief EID) bij Zonnestroom > Instellingen.";
-        statusEl.hidden = false;
-        block.hidden = true;
-        return;
-      }
       document.querySelectorAll("[data-netstroom-period]").forEach((b) =>
         b.classList.toggle("active", b.dataset.netstroomPeriod === level));
 
-      const now = new Date();
-      let dateRange = "";
-      if (level === "daily") dateRange = now.toLocaleDateString("en-CA").slice(0, 7);
-      else if (level === "monthly") dateRange = String(now.getFullYear());
-
       statusEl.textContent = "Laden…";
       statusEl.hidden = false;
-      let values;
+      let values, labels;
       try {
-        const vals = await nutsCached("meter_energy_" + level + "_" + (dateRange || "all"),
-          () => casaAngelaMeterEnergyFn({ appId, appSecret, sid, eid, level, dateRange }).then((r) => r.data.values),
-          false, level);
-        values = (vals || []).map((v) => Number(v));
+        await loadEnergyHistory();
+        ({ values, labels } = buildArchiveSeriesAndLabels(level, "grid"));
       } catch (err) {
         statusEl.textContent = "Kon historie niet laden: " + (err.message || err);
         block.hidden = true;
@@ -3654,21 +3644,6 @@
       }
       statusEl.hidden = true;
       block.hidden = false;
-
-      if (level === "monthly") values = padSeriesValues(values, 12);
-      else if (level === "daily") values = padSeriesValues(values, daysInMonth(now.getFullYear(), now.getMonth() + 1));
-
-      let labels;
-      if (level === "daily") {
-        labels = values.map((_, i) => String(i + 1));
-      } else if (level === "monthly") {
-        const m = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
-        labels = values.map((_, i) => m[i] || String(i + 1));
-      } else {
-        const cur = now.getFullYear();
-        const n = values.length;
-        labels = values.map((_, i) => String(cur - (n - 1) + i));
-      }
 
       const { Chart } = await loadNutsChartJs();
       if (netstroomHistoryChart) netstroomHistoryChart.destroy();

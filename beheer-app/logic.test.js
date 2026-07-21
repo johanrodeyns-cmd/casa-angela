@@ -6,16 +6,18 @@ const {
   getDateRange, getPreviousYearDate, nightsBetween, validateBooking, overlapsExistingBooking,
   parseIcalEvents, mergeSyncedBlocks, buildOccupancyMap, dayOccupancyState,
   upcomingBookings, buildContactImageRows, formatBookingsListForGardener,
+  getArchiveDailySeries, buildMonthlySeriesFromArchive, buildYearlySeriesFromArchive,
+  sumArchiveDateRange, averageDailyConsumption,
   findUnmatchedBookings, findUnmatchedSyncedBlocks, dayDisplayLabel, weekdayAbbreviation,
   sortChecklistItems, addChecklistItem, renameChecklistItem, removeChecklistItem,
   toggleChecklistItem, resetChecklistItems, moveChecklistItem, escapeHtml, diffSyncedBlocks,
   computeMeterIntervals, extrapolateDailyConsumption, buildMonthlyConsumption,
   buildYearlyConsumption, validateMeterReading, daysInMonth, padSeriesValues,
-  padTodaySeries, nutsCacheTtlMs,
+  padTodaySeries,
 } = require('./logic.js');
 
 test('getVersion returns the current app version', () => {
-  assert.equal(getVersion(), '0.45.0');
+  assert.equal(getVersion(), '0.46.0');
 });
 
 test('isAllowedEmail returns true for an email in the whitelist', () => {
@@ -1069,13 +1071,78 @@ test('padTodaySeries defaults to a 5-minute step when fewer than 2 data points a
   assert.ok(values.every((v) => v === 0));
 });
 
-test('nutsCacheTtlMs returns a 30-minute TTL for live/current-day data', () => {
-  assert.equal(nutsCacheTtlMs('hourly'), 30 * 60 * 1000);
-  assert.equal(nutsCacheTtlMs(undefined), 30 * 60 * 1000);
+test('getArchiveDailySeries returns the requested field of a month document', () => {
+  const docs = { '2026-07': { solar: [1, 2, 3], grid: [4, 5, 6] } };
+  assert.deepEqual(getArchiveDailySeries(docs, '2026-07', 'solar'), [1, 2, 3]);
+  assert.deepEqual(getArchiveDailySeries(docs, '2026-07', 'grid'), [4, 5, 6]);
 });
 
-test('nutsCacheTtlMs returns longer TTLs for slower-changing history levels', () => {
-  assert.equal(nutsCacheTtlMs('daily'), 6 * 60 * 60 * 1000);
-  assert.equal(nutsCacheTtlMs('monthly'), 24 * 60 * 60 * 1000);
-  assert.equal(nutsCacheTtlMs('yearly'), 7 * 24 * 60 * 60 * 1000);
+test('getArchiveDailySeries returns an empty array for a missing month', () => {
+  assert.deepEqual(getArchiveDailySeries({}, '2026-07', 'solar'), []);
+});
+
+test('buildMonthlySeriesFromArchive sums each month of a year, using 0 for months without a document', () => {
+  const docs = {
+    '2026-01': { solar: [1, 2, 3] },
+    '2026-03': { solar: [10, 10] },
+  };
+  const result = buildMonthlySeriesFromArchive(docs, 2026, 'solar');
+  assert.equal(result.length, 12);
+  assert.equal(result[0], 6);
+  assert.equal(result[1], 0);
+  assert.equal(result[2], 20);
+  assert.equal(result[11], 0);
+});
+
+test('buildMonthlySeriesFromArchive coerces non-finite entries to 0 while summing', () => {
+  const docs = { '2026-05': { grid: [1, null, 'x', 2] } };
+  assert.equal(buildMonthlySeriesFromArchive(docs, 2026, 'grid')[4], 3);
+});
+
+test('buildYearlySeriesFromArchive sums all months per year and sorts years ascending', () => {
+  const docs = {
+    '2025-12': { grid: [5] },
+    '2026-01': { grid: [1, 2] },
+    '2026-02': { grid: [3] },
+  };
+  const result = buildYearlySeriesFromArchive(docs, 'grid');
+  assert.deepEqual(result.years, ['2025', '2026']);
+  assert.deepEqual(result.values, [5, 6]);
+});
+
+test('buildYearlySeriesFromArchive returns empty arrays when there is no archive data', () => {
+  const result = buildYearlySeriesFromArchive({}, 'grid');
+  assert.deepEqual(result.years, []);
+  assert.deepEqual(result.values, []);
+});
+
+test('sumArchiveDateRange sums a range within a single month, excluding the exclusive end date', () => {
+  const docs = { '2026-07': { grid: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] } };
+  // dagen 8 t.e.m. 10 (index 7,8,9) van juli, dateTo exclusief
+  assert.equal(sumArchiveDateRange(docs, '2026-07-08', '2026-07-11', 'grid'), 8 + 9 + 10);
+});
+
+test('sumArchiveDateRange sums across a month boundary', () => {
+  const docs = {
+    '2026-07': { grid: new Array(31).fill(1) },
+    '2026-08': { grid: new Array(31).fill(2) },
+  };
+  // 30 en 31 juli (2×1) + 1 augustus (1×2), dateTo exclusief
+  assert.equal(sumArchiveDateRange(docs, '2026-07-30', '2026-08-02', 'grid'), 1 + 1 + 2);
+});
+
+test('sumArchiveDateRange treats missing months/days as 0', () => {
+  assert.equal(sumArchiveDateRange({}, '2026-07-01', '2026-07-05', 'grid'), 0);
+});
+
+test('averageDailyConsumption divides the summed grid consumption by the number of nights', () => {
+  const docs = { '2026-07': { grid: [0, 0, 0, 0, 0, 0, 0, 10, 20, 30] } };
+  // 8-11 juli = 3 nachten (checkoutdag 11 telt niet mee), dagen 8/9/10 -> 10+20+30
+  const booking = { dateFrom: '2026-07-08', dateTo: '2026-07-11' };
+  assert.equal(averageDailyConsumption(booking, docs), 20);
+});
+
+test('averageDailyConsumption returns null for a same-day (0-night) booking', () => {
+  const booking = { dateFrom: '2026-07-08', dateTo: '2026-07-08' };
+  assert.equal(averageDailyConsumption(booking, {}), null);
 });
