@@ -544,6 +544,8 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 ---
 
 ### US-6.11 ☑ Permanente dagarchivering van zonnestroom-/netstroom-verbruik (M) — function-only deploy, 2026-07-21 (geen app-versie: puur interne infrastructuur, nog geen zichtbaar gedrag)
+> Vervolg in v0.45.0: Johan wilde de voortgang van de archivering kunnen checken zonder de Firestore-console te moeten openen. Zonnestroom > Instellingen toont nu een "Archief"-statusregel (`renderNutsArchiveStatus()`): "nog geen data" (vóór de eerste run), "data beschikbaar van XXXX-XX tot nu — backfill loopt nog verder terug" (`energyHistory/_meta` bestaat nog niet), of "volledige beschikbare historie geladen, van XXXX-XX tot nu" (zodra `_meta.earliestAvailableMonth` de grens heeft vastgelegd). Oudste maand gevonden via `orderBy(documentId())` + `limit(1)` op de `energyHistory`-collectie (`_meta` sorteert vanzelf na alle `YYYY-MM`-namen, dus geen aparte filtering nodig).
+
 > Aanleiding: Johan wil een gemiddeld elektriciteitsverbruik per gast/boeking kunnen berekenen (dagverbruik tijdens `[dateFrom, dateTo)` ÷ nachten), maar dat zou voor elke herberekening opnieuw APsystems-calls vergen tegen de 1000/maand-quota. Op voorstel van Johan wordt dagverbruik (geen intraday-detail nodig) daarom permanent in Firestore gearchiveerd zodra een dag voorbij is, zodat latere rapportages enkel nog Firestore-reads nodig hebben.
 
 **Als** Johan of Tinneke **wil ik** dat dagelijks zonnestroom- en netstroomverbruik permanent wordt opgeslagen **zodat** toekomstige rapportages (bv. gemiddeld verbruik per gast) niet telkens opnieuw tegen de APsystems-quota lopen.

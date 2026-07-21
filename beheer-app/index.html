@@ -1546,6 +1546,7 @@
               <button type="button" id="nuts-testconn-btn" class="button-secondary">Verbinding testen</button>
             </div>
             <p id="nuts-settings-status" class="empty-state"></p>
+            <p id="nuts-archive-status" class="empty-state"></p>
           </details>
           </div>
 
@@ -1655,6 +1656,7 @@
       deleteDoc,
       serverTimestamp,
       onSnapshot,
+      documentId,
     } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
     import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-functions.js";
 
@@ -1670,6 +1672,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.45.0", date: "2026-07-21", description: "Zonnestroom > Instellingen toont nu een 'Archief'-statusregel: hoever de dagelijkse achtergrond-archivering van zonnestroom-/netstroomdata (energyHistory) al staat, zonder dat je daarvoor de Firestore-console moet openen." },
       { version: "0.44.0", date: "2026-07-20", description: "Boekingen-tab: 'Kopieer voor contactpersoon' vervangen door '🖼️ Afbeelding voor contactpersoon' — een tabel-afbeelding (JPG) i.p.v. platte tekst, want WhatsApp weigerde lange boekingenlijsten wegens het maximum aantal tekens per bericht. Op mobiel opent dit meteen het deelvenster naar WhatsApp; anders wordt de afbeelding gedownload." },
       { version: "0.43.0", date: "2026-07-20", description: "Kalender-tabblad (Beschikbaarheid, Maand en Jaar): de huidige dag krijgt nu een dikke rode kader, zodat 'vandaag' altijd meteen opvalt." },
       { version: "0.42.0", date: "2026-07-20", description: "Zonnestroom/Netstroom-historie (Dag/Maand/Jaar) blijft nu veel langer client-side gecached (6u/24u/7 dagen i.p.v. 30 min), omdat die grafieken vrijwel enkel al-afgesloten periodes tonen — spaart APsystems-quota. Het live vermogen/uur-verbruik van vandaag blijft wel elke 30 min verversen." },
@@ -3299,7 +3302,32 @@
     }
 
     // force=true → cache omzeilen (bv. na het opslaan van nieuwe instellingen).
+    // Zichtbaar maken hoever de dagelijkse energyHistory-archivering (US-6.11, functions/index.js
+    // casaAngelaArchiveEnergy) al staat, zonder dat je daarvoor de Firestore-console moet openen.
+    async function renderNutsArchiveStatus() {
+      const statusEl = document.getElementById("nuts-archive-status");
+      try {
+        const [metaSnap, oldestSnap] = await Promise.all([
+          getDoc(doc(db, "energyHistory", "_meta")),
+          getDocs(query(collection(db, "energyHistory"), orderBy(documentId()), limit(1))),
+        ]);
+        if (oldestSnap.empty) {
+          statusEl.textContent = "Archief: nog geen data (eerste run vannacht 03:00).";
+          return;
+        }
+        const oldestMonth = oldestSnap.docs[0].id;
+        if (metaSnap.exists()) {
+          statusEl.textContent = `Archief: volledige beschikbare historie geladen, van ${metaSnap.data().earliestAvailableMonth} tot nu.`;
+        } else {
+          statusEl.textContent = `Archief: data beschikbaar van ${oldestMonth} tot nu — backfill loopt nog verder terug.`;
+        }
+      } catch (err) {
+        statusEl.textContent = "Archief-status kon niet geladen worden: " + (err.message || err);
+      }
+    }
+
     async function refreshNuts(force = false) {
+      renderNutsArchiveStatus();
       const promptEl = document.getElementById("nuts-overview-prompt");
       const errEl = document.getElementById("nuts-overview-error");
       errEl.classList.remove("active");

@@ -124,6 +124,11 @@ Nuts:           tab openen -> showTab() -> refreshNuts() -> settings/apsystems l
                    document of een "geen data"-fout van APsystems (energyHistory/_meta.
                    earliestAvailableMonth) — voedt toekomstige rapportages (bv. gemiddeld
                    verbruik per boeking) zonder herhaalde APsystems-calls
+                Archief-status (sinds v0.45.0): Zonnestroom > Instellingen -> renderNutsArchiveStatus()
+                   -> rechtstreekse Firestore-read op energyHistory (geen Cloud Function nodig) ->
+                   oudste maand via orderBy(documentId())+limit(1), "compleet" via energyHistory/_meta
+                   -> statusregel "nog geen data" / "... tot nu, backfill loopt nog verder terug" /
+                   "volledige beschikbare historie geladen"
 
 Netstroom (v0.37.0 historie, v0.40.0 vandaag-grafiek): sub-tab openen (eerste keer) ->
                 renderNetstroomHistory("monthly") + renderNetstroomTodayChart() ->
