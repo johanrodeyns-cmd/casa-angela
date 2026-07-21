@@ -543,7 +543,24 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
+### US-6.11 ☑ Permanente dagarchivering van zonnestroom-/netstroom-verbruik (M) — function-only deploy, 2026-07-21 (geen app-versie: puur interne infrastructuur, nog geen zichtbaar gedrag)
+> Aanleiding: Johan wil een gemiddeld elektriciteitsverbruik per gast/boeking kunnen berekenen (dagverbruik tijdens `[dateFrom, dateTo)` ÷ nachten), maar dat zou voor elke herberekening opnieuw APsystems-calls vergen tegen de 1000/maand-quota. Op voorstel van Johan wordt dagverbruik (geen intraday-detail nodig) daarom permanent in Firestore gearchiveerd zodra een dag voorbij is, zodat latere rapportages enkel nog Firestore-reads nodig hebben.
+
+**Als** Johan of Tinneke **wil ik** dat dagelijks zonnestroom- en netstroomverbruik permanent wordt opgeslagen **zodat** toekomstige rapportages (bv. gemiddeld verbruik per gast) niet telkens opnieuw tegen de APsystems-quota lopen.
+
+**Acceptatiecriteria:**
+- Given een nieuwe dagelijkse Cloud Function, then verschijnt er per kalendermaand met beschikbare data een document `energyHistory/{YYYY-MM}` met een dagreeks zonnestroom (`solar`) en netstroom (`grid`), in kWh.
+- Given een maand die volledig voorbij is, then wordt dat document nooit meer herschreven (`complete: true`) — enkel de huidige (nog lopende) maand wordt elke dag ververst.
+- Given het eerste gebruik van deze functie (nog geen historische data), then wordt automatisch — zonder handmatige actie — teruggewerkt tot APsystems een "geen data"-antwoord geeft (vóór de meter-installatie), gespreid over meerdere dagelijkse runs indien dat te veel maanden zijn voor één run.
+- Given App ID/Secret/SID/EID nog niet ingevuld in Instellingen, then slaat de functie die dag over i.p.v. te crashen.
+
+**Technische notities:** `casaAngelaArchiveEnergy` (`onSchedule`, dagelijks 03:00 Spaanse tijd, `timeoutSeconds: 300`) — leest credentials uit `settings/apsystems` (zelfde als de bestaande Nuts-functies), roept per maand zowel `casaAngelaEnergy`'s onderliggende endpoint (zonnestroom, `user/api/v2/systems/energy`) als `casaAngelaMeterEnergy`'s endpoint (netstroom, `installer/api/v2/.../meter/period`) aan met `energy_level=daily`, en schrijft beide dagreeksen samen naar `energyHistory/{YYYY-MM}`. Terugwaartse opbouw: loopt maand per maand terug (max. 60 per run) tot een reeds-compleet Firestore-document (normale situatie na de eerste keer) of een APsystems-foutcode 1001 ("geen data beschikbaar", vóór de meter-installatie — bewaard in `energyHistory/_meta.earliestAvailableMonth` zodat latere runs die grens niet blijven herbevragen). Pure helpers in `functions/lib/energyArchive.js` (`daysInMonth`, `previousYyyyMm`, `isMonthComplete`, `padMonthArray`), TDD-getest in `functions/test/energyArchive.test.js` — eigen kopie i.p.v. hergebruik van `logic.js`, zelfde reden als de iCal-parser (Cloud Functions deployen enkel de `functions/`-map). `firestore.rules`: `energyHistory/{docId}` enkel leesbaar voor de twee toegelaten gebruikers, nooit client-schrijfbaar (enkel de Cloud Function via de admin-SDK schrijft). De eigenlijke "gemiddeld verbruik per gast"-berekening en -visualisatie is nog niet gebouwd — zie backlog hieronder.
+
+---
+
 ## Nog te bevestigen / open punten
+
+- **Gemiddeld elektriciteitsverbruik per gast/boeking** (besproken 2026-07-21, nog te bouwen bovenop US-6.11's archief): per boeking = som van `energyHistory`-dagwaarden over `[dateFrom, dateTo)` ÷ nachten. Nog te beslissen vóór implementatie: (1) of het baseline-verbruik tijdens lege periodes (koelkast, stand-by) afgetrokken wordt om een eerlijkere "marginale" vergelijking tussen gasten te krijgen, of dat het ruwe totaalverbruik volstaat; (2) hoe een wisseldag (checkout+checkin dezelfde dag) meetelt — voorstel: bij geen van beide boekingen, consistent met hoe `nightsBetween` de checkoutdag al niet als volle nacht telt; (3) visualisatie — nog te bespreken met Johan.
 
 - Excel-voorbeeld met bestaande boekingsdata: nog te ontvangen indien gewenst als aanvulling op de hierboven afgesproken velden.
 - **Nuts (Epic 6)**: pas de "Casa Angela"-tab in de Huishouden-app verwijderen zodra deze hier volledig getest en werkend bevonden is (met échte APsystems-credentials en een échte testmail/forceer-check).

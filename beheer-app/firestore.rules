@@ -31,5 +31,12 @@ service cloud.firestore {
     match /cache/{docId} { allow read, write: if isAllowedUser(); }
     match /waterReadings/{docId} { allow read, write: if isAllowedUser(); }
     match /gasReadings/{docId} { allow read, write: if isAllowedUser(); }
+
+    // energyHistory is archief-data, enkel geschreven door de casaAngelaArchiveEnergy
+    // Cloud Function (admin SDK, omzeilt deze rules sowieso) — de app leest 'm enkel.
+    match /energyHistory/{docId} {
+      allow read: if isAllowedUser();
+      allow write: if false;
+    }
   }
 }

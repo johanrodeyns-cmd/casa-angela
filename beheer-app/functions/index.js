@@ -2,10 +2,11 @@ import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
 import { initializeApp } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import nodemailer from 'nodemailer';
 import { buildHeaders } from './lib/apsystemsSign.js';
 import { decideAlertState } from './lib/casaAngelaMonitor.js';
+import { daysInMonth, previousYyyyMm, isMonthComplete, padMonthArray } from './lib/energyArchive.js';
 
 initializeApp();
 const db = getFirestore();
@@ -425,5 +426,135 @@ export const casaAngelaMonitorTest = onCall(
       throw new HttpsError('internal', `Mail mislukt: ${err.message}`);
     }
     return { ok: true };
+  },
+);
+
+// Dagelijkse archivering van zonnestroom-/netstroom-dagverbruik in energyHistory/{YYYY-MM}
+// (US-6.11) — bedoeld om toekomstige rapportages (bv. gemiddeld verbruik per boeking) op
+// goedkope Firestore-reads te laten draaien i.p.v. telkens opnieuw APsystems-calls te doen
+// (1000/maand-quota). Enkel volledige dagen tellen mee, dus enkel "daily"-niveau per maand
+// (intraday-detail is hier niet nodig, zie US-6.11-bespreking). Elke run ververst de huidige
+// maand (nooit compleet, dus altijd opnieuw) en de vorige maand (enkel als die nog niet als
+// compleet in Firestore staat), en bouwt daarna terugwaarts de historie op tot APsystems een
+// "geen data"-antwoord geeft (vóór de meter-installatie) — zelf-hervattend over meerdere
+// dagelijkse runs via de MAX_BACKFILL_MONTHS_PER_RUN-cap, zodat één run nooit te lang duurt.
+const MAX_BACKFILL_MONTHS_PER_RUN = 60;
+const APSYSTEMS_NO_DATA_CODE = 1001;
+
+function energyHistoryDoc(yyyymm) {
+  return db.collection('energyHistory').doc(yyyymm);
+}
+function energyHistoryMetaDoc() {
+  return db.collection('energyHistory').doc('_meta');
+}
+
+// Zelfde vorm als nutsGetJson, maar gooit nooit — geeft een resultaat-object terug zodat de
+// backfill-lus zelf kan beslissen of "geen data" de terugwaartse grens betekent, dan wel een
+// gewone (mogelijk tijdelijke) fout is die morgen opnieuw geprobeerd moet worden.
+async function archiveFetchJson(url, headers) {
+  let res;
+  try {
+    res = await fetch(url, { method: 'GET', headers });
+  } catch (err) {
+    return { ok: false, noData: false, error: `Netwerkfout: ${err.message}` };
+  }
+  const bodyText = await res.text();
+  let parsed;
+  try {
+    parsed = JSON.parse(bodyText);
+  } catch {
+    return { ok: false, noData: false, error: `Onverwacht antwoord (HTTP ${res.status}).` };
+  }
+  if (parsed.code !== 0) {
+    return { ok: false, noData: parsed.code === APSYSTEMS_NO_DATA_CODE, error: nutsCodeMessage(parsed.code) };
+  }
+  return { ok: true, data: parsed.data };
+}
+
+// Haalt zonnestroom + netstroom dagverbruik op voor één kalendermaand en schrijft ze samen
+// weg. status: 'stored' (gelukt), 'no-data' (APsystems-grens bereikt, bv. vóór installatie)
+// of 'error' (tijdelijke/onbekende fout, morgen opnieuw proberen).
+async function archiveMonth(creds, yyyymm, todayIso) {
+  const solarHeaders = await buildHeaders(creds.appId, creds.appSecret, creds.sid, 'GET');
+  const solarRes = await archiveFetchJson(
+    `${APSYSTEMS_BASE_URL}/user/api/v2/systems/energy/${creds.sid}?energy_level=daily&date_range=${yyyymm}`,
+    solarHeaders,
+  );
+  const gridHeaders = await buildHeaders(creds.appId, creds.appSecret, creds.eid, 'GET');
+  const gridRes = await archiveFetchJson(
+    `${APSYSTEMS_BASE_URL}/installer/api/v2/systems/${creds.sid}/devices/meter/period/${creds.eid}?energy_level=daily&date_range=${yyyymm}`,
+    gridHeaders,
+  );
+
+  if (!solarRes.ok && !gridRes.ok && solarRes.noData && gridRes.noData) {
+    return { status: 'no-data' };
+  }
+  if (!solarRes.ok || !gridRes.ok) {
+    return { status: 'error', error: solarRes.error || gridRes.error };
+  }
+
+  const solarArr = Array.isArray(solarRes.data) ? solarRes.data : [];
+  const gridArr = Array.isArray(gridRes.data && gridRes.data.exported) ? gridRes.data.exported : [];
+  const [y, m] = yyyymm.split('-').map(Number);
+  const days = daysInMonth(y, m);
+  await energyHistoryDoc(yyyymm).set({
+    solar: padMonthArray(solarArr, days),
+    grid: padMonthArray(gridArr, days),
+    daysInMonth: days,
+    complete: isMonthComplete(yyyymm, todayIso),
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+  return { status: 'stored' };
+}
+
+export const casaAngelaArchiveEnergy = onSchedule(
+  { schedule: '0 3 * * *', timeZone: 'Europe/Madrid', timeoutSeconds: 300 },
+  async () => {
+    const settingsSnap = await nutsSettingsDoc().get();
+    const s = settingsSnap.data() || {};
+    if (!s.appId || !s.appSecret || !s.sid || !s.eid) {
+      console.log('Energy-archive: App ID/Secret/SID/EID nog niet ingesteld, overgeslagen.');
+      return;
+    }
+    const creds = {
+      appId: String(s.appId).trim(), appSecret: s.appSecret,
+      sid: String(s.sid).trim(), eid: String(s.eid).trim(),
+    };
+    const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' });
+    const thisMonth = todayIso.slice(0, 7);
+    const lastMonth = previousYyyyMm(thisMonth);
+
+    const thisMonthResult = await archiveMonth(creds, thisMonth, todayIso);
+    if (thisMonthResult.status !== 'stored') {
+      console.error('Energy-archive: huidige maand niet ververst:', thisMonthResult);
+    }
+
+    const lastMonthSnap = await energyHistoryDoc(lastMonth).get();
+    if (!lastMonthSnap.exists || !lastMonthSnap.data().complete) {
+      const lastMonthResult = await archiveMonth(creds, lastMonth, todayIso);
+      if (lastMonthResult.status !== 'stored') {
+        console.error('Energy-archive: vorige maand niet ververst:', lastMonthResult);
+      }
+    }
+
+    const metaSnap = await energyHistoryMetaDoc().get();
+    const earliestKnown = metaSnap.exists ? metaSnap.data().earliestAvailableMonth : null;
+    let cursor = previousYyyyMm(lastMonth);
+    for (let i = 0; i < MAX_BACKFILL_MONTHS_PER_RUN; i++) {
+      if (earliestKnown && cursor < earliestKnown) break;
+      const existing = await energyHistoryDoc(cursor).get();
+      if (existing.exists && existing.data().complete) break;
+
+      const result = await archiveMonth(creds, cursor, todayIso);
+      if (result.status === 'no-data') {
+        await energyHistoryMetaDoc().set({ earliestAvailableMonth: cursor }, { merge: true });
+        break;
+      }
+      if (result.status === 'error') {
+        console.error('Energy-archive: backfill gestopt bij', cursor, result.error);
+        break;
+      }
+      cursor = previousYyyyMm(cursor);
+    }
   },
 );
