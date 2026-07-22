@@ -1673,6 +1673,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.47.2", date: "2026-07-22", description: "Bugfix: Netstroom-archivering/-historie gaf een HTTP 500-fout — de meter-endpoint gebruikte het verkeerde API-pad (installer i.p.v. user-namespace). Rechtgezet." },
       { version: "0.47.1", date: "2026-07-21", description: "De 'Archief'-statusregel (Zonnestroom > Instellingen) toont nu ook de laatst gearchiveerde dag ('... van XXXX-XX tot en met JJJJ-MM-DD') i.p.v. enkel het vage 'tot nu'." },
       { version: "0.47.0", date: "2026-07-21", description: "Zonnestroom > Instellingen: nieuwe knop 'Forceer archivering nu' voert de dagelijkse energie-archivering meteen uit i.p.v. te wachten tot 03:00 's nachts — handig om te checken dat het archief werkt." },
       { version: "0.46.0", date: "2026-07-21", description: "Zonnestroom- en Netstroom-historie (Dag/Maand/Jaar) leest nu rechtstreeks uit het permanente archief i.p.v. telkens APsystems te bevragen — sneller en spaart de API-quota volledig uit. Kleine bijwerking: deze grafieken tonen data t.e.m. gisteren (vandaag verschijnt na de nachtelijke archivering). 'Vermogen vandaag' en 'Netstroom vandaag' blijven ongewijzigd live." },

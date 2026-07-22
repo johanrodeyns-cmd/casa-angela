@@ -283,18 +283,19 @@ export const casaAngelaEnergy = onCall({ timeoutSeconds: 30 }, async (request) =
   return { values: Array.isArray(data) ? data : [] };
 });
 
-// Netstroom (exported): Meter-level Data API, toegevoegd aan de officiële, ondertekende
-// Open API sinds diens v1.3 — Johan vond de documentatie terug (was niet gekend/gebruikt
-// toen Zonnestroom gebouwd werd, vandaar dat er eerst geen netstroom-veld gevonden werd bij
-// het nalopen van casaAngelaSummary/-Energy hierboven). Zelfde credentials/HMAC-signing als
-// Zonnestroom, enkel een ander pad-namespace (installer/api/v2 i.p.v. user/api/v2) en een
+// Netstroom (exported): Meter-level Data API, onderdeel van de officiële, ondertekende
+// Open API sinds diens v1.3. Zelfde credentials/HMAC-signing als Zonnestroom, enkel een
 // "meter"-eid i.p.v. het inverter/ECU-eid — in de praktijk vaak dezelfde ECU (type 'ECU
 // with meter activated'), dus hergebruikt de UI voorlopig hetzelfde EID-veld als Zonnestroom.
 // level: hourly (date_range=YYYY-MM-DD) | daily (date_range=YYYY-MM) | monthly (date_range=YYYY)
-// | yearly (geen date_range). "minutely" bestaat volgens de documentatie ook, maar geeft in de
-// praktijk een HTTP 500 terug voor deze meter — vermoedelijk een bug/beperking aan APsystems'
-// kant, dus bewust niet aangeboden; "hourly" (voor "vandaag per uur") gebruikt exact dezelfde,
-// al bevestigd werkende platte-array-vorm als daily/monthly/yearly.
+// | yearly (geen date_range).
+// LET OP (gevonden bij het naspeuren van HTTP 500-fouten in US-6.11): het pad hoort volgens
+// de officiële "APsystems OpenAPI User Manual" (§3.4.2) onder /user/api/v2/..., NIET onder
+// /installer/api/v2/... — dat laatste is enkel gedocumenteerd voor de storage/battery-
+// endpoints. Was hier eerder foutief gebruikt; "hourly" (vandaag-per-uur) werkte toevallig nog
+// via het foute pad, maar "minutely" en (na US-6.11) "daily"/"monthly" gaven allebei een
+// niet-JSON HTTP 500 terug — vermoedelijk crasht APsystems' server op de installer-namespace
+// zodra de aanvraag méér dan één dag data omvat.
 export const casaAngelaMeterEnergy = onCall({ timeoutSeconds: 30 }, async (request) => {
   requireAllowedUser(request);
   const { id, appSecret, systemId } = nutsRequireCreds(request.data);
@@ -315,7 +316,7 @@ export const casaAngelaMeterEnergy = onCall({ timeoutSeconds: 30 }, async (reque
   }
   const headers = await buildHeaders(id, appSecret, meterEid, 'GET');
   const data = await nutsGetJson(
-    `${APSYSTEMS_BASE_URL}/installer/api/v2/systems/${systemId}/devices/meter/period/${meterEid}${qs}`,
+    `${APSYSTEMS_BASE_URL}/user/api/v2/systems/${systemId}/devices/meter/period/${meterEid}${qs}`,
     headers,
   ) || {};
   return { values: Array.isArray(data.exported) ? data.exported : [] };
@@ -482,7 +483,7 @@ async function archiveMonth(creds, yyyymm, todayIso) {
   );
   const gridHeaders = await buildHeaders(creds.appId, creds.appSecret, creds.eid, 'GET');
   const gridRes = await archiveFetchJson(
-    `${APSYSTEMS_BASE_URL}/installer/api/v2/systems/${creds.sid}/devices/meter/period/${creds.eid}?energy_level=daily&date_range=${yyyymm}`,
+    `${APSYSTEMS_BASE_URL}/user/api/v2/systems/${creds.sid}/devices/meter/period/${creds.eid}?energy_level=daily&date_range=${yyyymm}`,
     gridHeaders,
   );
 
