@@ -1683,6 +1683,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.48.1", date: "2026-07-22", description: "Synchronisatie-overzicht toont voortaan geen boekingen meer uit het verleden — enkel nog lopende en toekomstige boekingen zonder overeenkomend Airbnb/Booking.com-blok verschijnen in de lijst." },
       { version: "0.48.0", date: "2026-07-22", description: "Zonnestroom en Netstroom > Historie > Maand: jaarnavigatie toegevoegd (◀/▶), zelfde als bij Water en Gas." },
       { version: "0.47.2", date: "2026-07-22", description: "Bugfix: Netstroom-archivering/-historie gaf een HTTP 500-fout — de meter-endpoint gebruikte het verkeerde API-pad (installer i.p.v. user-namespace). Rechtgezet." },
       { version: "0.47.1", date: "2026-07-21", description: "De 'Archief'-statusregel (Zonnestroom > Instellingen) toont nu ook de laatst gearchiveerde dag ('... van XXXX-XX tot en met JJJJ-MM-DD') i.p.v. enkel het vage 'tot nu'." },
@@ -2515,7 +2516,7 @@
 
     document.getElementById("sync-check-open").addEventListener("click", () => {
       const unmatchedBlocks = findUnmatchedSyncedBlocks(bookings, syncedBlocks);
-      const unmatchedBookings = findUnmatchedBookings(bookings, syncedBlocks);
+      const unmatchedBookings = findUnmatchedBookings(bookings, syncedBlocks, new Date().toLocaleDateString("en-CA"));
 
       syncCheckBlocksSection.classList.toggle("active", unmatchedBlocks.length > 0);
       syncCheckBookingsSection.classList.toggle("active", unmatchedBookings.length > 0);

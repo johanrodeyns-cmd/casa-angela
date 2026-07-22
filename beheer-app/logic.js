@@ -1,4 +1,4 @@
-const VERSION = '0.48.0';
+const VERSION = '0.48.1';
 
 function getVersion() {
   return VERSION;
@@ -284,9 +284,10 @@ function formatBookingsListForGardener(bookings, formatDate) {
 
 const SYNCABLE_PLATFORMS = ['airbnb', 'booking'];
 
-function findUnmatchedBookings(bookings, syncedBlocks) {
+function findUnmatchedBookings(bookings, syncedBlocks, today) {
   return bookings.filter((b) => {
     if (!SYNCABLE_PLATFORMS.includes(b.platform)) return false;
+    if (b.dateTo < today) return false;
     return !syncedBlocks.some(
       (block) => block.source === b.platform && block.dateFrom === b.dateFrom && block.dateTo === b.dateTo
     );
