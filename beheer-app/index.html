@@ -1511,6 +1511,11 @@
               <button type="button" class="button-secondary" data-nuts-period="monthly">Maand</button>
               <button type="button" class="button-secondary" data-nuts-period="yearly">Jaar</button>
             </div>
+            <div class="meter-year-nav" id="nuts-year-nav">
+              <button type="button" id="nuts-year-prev" class="button-secondary">◀</button>
+              <span id="nuts-year-label"></span>
+              <button type="button" id="nuts-year-next" class="button-secondary">▶</button>
+            </div>
             <p id="nuts-history-status" class="empty-state">Kies een periode om de historie te laden.</p>
             <div id="nuts-history-block" class="nuts-chart-wrap" hidden><canvas id="nuts-history-chart"></canvas></div>
           </div>
@@ -1557,6 +1562,11 @@
               <button type="button" class="button-secondary" data-netstroom-period="daily">Dag</button>
               <button type="button" class="button-secondary active" data-netstroom-period="monthly">Maand</button>
               <button type="button" class="button-secondary" data-netstroom-period="yearly">Jaar</button>
+            </div>
+            <div class="meter-year-nav" id="netstroom-year-nav">
+              <button type="button" id="netstroom-year-prev" class="button-secondary">◀</button>
+              <span id="netstroom-year-label"></span>
+              <button type="button" id="netstroom-year-next" class="button-secondary">▶</button>
             </div>
             <p id="netstroom-history-status" class="empty-state">Kies een periode om de historie te laden.</p>
             <div id="netstroom-history-block" class="nuts-chart-wrap" hidden><canvas id="netstroom-history-chart"></canvas></div>
@@ -1673,6 +1683,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.48.0", date: "2026-07-22", description: "Zonnestroom en Netstroom > Historie > Maand: jaarnavigatie toegevoegd (◀/▶), zelfde als bij Water en Gas." },
       { version: "0.47.2", date: "2026-07-22", description: "Bugfix: Netstroom-archivering/-historie gaf een HTTP 500-fout — de meter-endpoint gebruikte het verkeerde API-pad (installer i.p.v. user-namespace). Rechtgezet." },
       { version: "0.47.1", date: "2026-07-21", description: "De 'Archief'-statusregel (Zonnestroom > Instellingen) toont nu ook de laatst gearchiveerde dag ('... van XXXX-XX tot en met JJJJ-MM-DD') i.p.v. enkel het vage 'tot nu'." },
       { version: "0.47.0", date: "2026-07-21", description: "Zonnestroom > Instellingen: nieuwe knop 'Forceer archivering nu' voert de dagelijkse energie-archivering meteen uit i.p.v. te wachten tot 03:00 's nachts — handig om te checken dat het archief werkt." },
@@ -3220,15 +3231,16 @@
 
     // Bouwt de Dag/Maand/Jaar-reeks + bijhorende labels uit de gearchiveerde data — gedeeld
     // door Zonnestroom (field "solar") en Netstroom (field "grid"), want dit is sinds
-    // v0.46.0 het enige verschil tussen de twee historie-grafieken.
-    function buildArchiveSeriesAndLabels(level, field) {
+    // v0.46.0 het enige verschil tussen de twee historie-grafieken. "year" is enkel relevant
+    // voor "monthly" (jaarnavigatie, v0.48.0 — zelfde patroon als Water/Gas' chartYear).
+    function buildArchiveSeriesAndLabels(level, field, year) {
       const now = new Date();
       if (level === "yearly") {
         const { years, values } = buildYearlySeriesFromArchive(energyHistoryDocs, field);
         return { values, labels: years };
       }
       if (level === "monthly") {
-        const values = buildMonthlySeriesFromArchive(energyHistoryDocs, now.getFullYear(), field);
+        const values = buildMonthlySeriesFromArchive(energyHistoryDocs, year, field);
         const m = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
         return { values, labels: values.map((_, i) => m[i]) };
       }
@@ -3286,6 +3298,7 @@
     }
 
     let nutsHistoryChart = null;
+    let nutsHistoryYear = new Date().getFullYear();
     // Sinds v0.46.0: leest de Dag/Maand/Jaar-historie rechtstreeks uit de permanente
     // energyHistory-archivering (Firestore, US-6.11) i.p.v. een live APsystems-call — enkel
     // "vandaag" (renderNutsPowerChart hieronder) blijft live, want intraday-detail wordt
@@ -3293,15 +3306,18 @@
     async function renderNutsHistory(level) {
       const statusEl = document.getElementById("nuts-history-status");
       const block = document.getElementById("nuts-history-block");
+      const yearNavEl = document.getElementById("nuts-year-nav");
       document.querySelectorAll("[data-nuts-period]").forEach((b) =>
         b.classList.toggle("active", b.dataset.nutsPeriod === level));
+      yearNavEl.hidden = level !== "monthly";
+      document.getElementById("nuts-year-label").textContent = String(nutsHistoryYear);
 
       statusEl.textContent = "Laden…";
       statusEl.hidden = false;
       let values, labels;
       try {
         await loadEnergyHistory();
-        ({ values, labels } = buildArchiveSeriesAndLabels(level, "solar"));
+        ({ values, labels } = buildArchiveSeriesAndLabels(level, "solar", nutsHistoryYear));
       } catch (err) {
         statusEl.textContent = "Kon historie niet laden: " + (err.message || err);
         block.hidden = true;
@@ -3461,6 +3477,8 @@
       document.querySelectorAll("[data-nuts-period]").forEach((btn) => {
         btn.addEventListener("click", () => renderNutsHistory(btn.dataset.nutsPeriod));
       });
+      document.getElementById("nuts-year-prev").addEventListener("click", () => { nutsHistoryYear -= 1; renderNutsHistory("monthly"); });
+      document.getElementById("nuts-year-next").addEventListener("click", () => { nutsHistoryYear += 1; renderNutsHistory("monthly"); });
 
       const alertStatusEl = document.getElementById("nuts-alert-status");
       document.getElementById("nuts-alert-test-btn").addEventListener("click", async () => {
@@ -3661,18 +3679,22 @@
     // hierboven (rechtstreeks uit energyHistory, field "grid" i.p.v. "solar"), geen live
     // APsystems-call meer nodig.
     let netstroomHistoryChart = null;
+    let netstroomHistoryYear = new Date().getFullYear();
     async function renderNetstroomHistory(level) {
       const statusEl = document.getElementById("netstroom-history-status");
       const block = document.getElementById("netstroom-history-block");
+      const yearNavEl = document.getElementById("netstroom-year-nav");
       document.querySelectorAll("[data-netstroom-period]").forEach((b) =>
         b.classList.toggle("active", b.dataset.netstroomPeriod === level));
+      yearNavEl.hidden = level !== "monthly";
+      document.getElementById("netstroom-year-label").textContent = String(netstroomHistoryYear);
 
       statusEl.textContent = "Laden…";
       statusEl.hidden = false;
       let values, labels;
       try {
         await loadEnergyHistory();
-        ({ values, labels } = buildArchiveSeriesAndLabels(level, "grid"));
+        ({ values, labels } = buildArchiveSeriesAndLabels(level, "grid", netstroomHistoryYear));
       } catch (err) {
         statusEl.textContent = "Kon historie niet laden: " + (err.message || err);
         block.hidden = true;
@@ -3759,6 +3781,8 @@
     document.querySelectorAll("[data-netstroom-period]").forEach((btn) => {
       btn.addEventListener("click", () => renderNetstroomHistory(btn.dataset.netstroomPeriod));
     });
+    document.getElementById("netstroom-year-prev").addEventListener("click", () => { netstroomHistoryYear -= 1; renderNetstroomHistory("monthly"); });
+    document.getElementById("netstroom-year-next").addEventListener("click", () => { netstroomHistoryYear += 1; renderNetstroomHistory("monthly"); });
 
     let meterUtilitiesStarted = false;
     function startMeterUtilities() {
