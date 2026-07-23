@@ -245,6 +245,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 > Vervolg in v0.23.2: bugfix — `findUnmatchedSyncedBlocks` vereiste ook een exacte platform-match (`booking.platform === block.source`), waardoor een eigen verblijf dat als "Rechtstreeks" was ingevoerd (bv. Tinneke&Johan) tóch als "unmatched" Airbnb-blok verscheen, ook al kwamen de datums exact overeen. Lijst (1) matcht nu enkel nog op datums — een blok telt als "gedekt" zodra er een boeking bestaat met exact dezelfde `dateFrom`/`dateTo`, ongeacht platform. Lijst (2) (`findUnmatchedBookings`) blijft wél platform-gebonden, want die controleert specifiek Airbnb/Booking.com-boekingen tegen hun eigen bron.
 > Vervolg in v0.48.1: op vraag van Johan toont lijst (2) niet langer boekingen uit het verleden — `findUnmatchedBookings(bookings, syncedBlocks, today)` kreeg een derde parameter en sluit elke boeking met `dateTo < today` uit (zelfde grens als de bestaande `.past`-klasse in de boekingenlijst). Lijst (1) (`findUnmatchedSyncedBlocks`) is bewust ongewijzigd: een gesynchroniseerd blok zonder boeking blijft altijd tonen, ongeacht datum, want dat wijst op ontbrekende data-invoer die de moeite blijft om aan te vullen.
+> Vervolg in v0.48.2: tekstwijziging — beide lijst-titels noemen de blokken nu expliciet "Airbnb/Booking.com-blokken" i.p.v. kaal "blokken"/"blok", zodat meteen duidelijk is dat het om gesynchroniseerde iCal-data gaat en niet bv. om een kalenderblokkering.
 
 ---
 

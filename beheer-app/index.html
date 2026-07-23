@@ -1354,11 +1354,11 @@
     <h2>Synchronisatie-overzicht</h2>
     <p id="sync-check-all-ok" class="empty-state"></p>
     <div id="sync-check-blocks-section">
-      <h3>Gesynchroniseerde blokken zonder boeking</h3>
+      <h3>Gesynchroniseerde Airbnb/Booking.com-blokken zonder boeking</h3>
       <div id="sync-check-blocks-list"></div>
     </div>
     <div id="sync-check-bookings-section">
-      <h3>Boekingen zonder overeenkomend blok</h3>
+      <h3>Boekingen zonder overeenkomend Airbnb/Booking.com-blok</h3>
       <div id="sync-check-bookings-list"></div>
     </div>
     <div class="dialog-actions">
@@ -1683,6 +1683,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.48.2", date: "2026-07-23", description: "Synchronisatie-overzicht: 'blokken' hernoemd naar 'Airbnb/Booking.com-blokken' in beide lijst-titels, zodat duidelijk is waar die vandaan komen." },
       { version: "0.48.1", date: "2026-07-22", description: "Synchronisatie-overzicht toont voortaan geen boekingen meer uit het verleden — enkel nog lopende en toekomstige boekingen zonder overeenkomend Airbnb/Booking.com-blok verschijnen in de lijst." },
       { version: "0.48.0", date: "2026-07-22", description: "Zonnestroom en Netstroom > Historie > Maand: jaarnavigatie toegevoegd (◀/▶), zelfde als bij Water en Gas." },
       { version: "0.47.2", date: "2026-07-22", description: "Bugfix: Netstroom-archivering/-historie gaf een HTTP 500-fout — de meter-endpoint gebruikte het verkeerde API-pad (installer i.p.v. user-namespace). Rechtgezet." },
