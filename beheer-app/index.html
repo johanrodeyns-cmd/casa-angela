@@ -1062,43 +1062,6 @@
     position: relative;
     height: 240px;
   }
-  .verbruik-table-wrap {
-    overflow-x: auto;
-    margin-bottom: 0.5rem;
-  }
-  .verbruik-table {
-    border-collapse: collapse;
-    width: 100%;
-    font-size: 0.85rem;
-  }
-  .verbruik-table th,
-  .verbruik-table td {
-    padding: 0.4rem 0.6rem;
-    border-bottom: 1px solid var(--sand-dark);
-    text-align: left;
-    white-space: nowrap;
-  }
-  .verbruik-table th {
-    font-weight: 600;
-    color: var(--charcoal);
-  }
-  .verbruik-table td.num {
-    text-align: right;
-  }
-  .verbruik-table .vs-avg {
-    font-weight: 600;
-    padding: 0.1rem 0.5rem;
-    border-radius: 999px;
-    font-size: 0.78rem;
-  }
-  .verbruik-table .vs-avg.above {
-    background: color-mix(in srgb, var(--today-red) 18%, transparent);
-    color: var(--today-red);
-  }
-  .verbruik-table .vs-avg.below {
-    background: color-mix(in srgb, var(--olive-dark) 18%, transparent);
-    color: var(--olive-dark);
-  }
   .nuts-period-toggle {
     display: flex;
     gap: 0.4rem;
@@ -1677,26 +1640,8 @@
 
           <div id="nuts-view-verbruik" hidden>
             <h3 class="nuts-section-title">Gemiddeld verbruik per boeking</h3>
-            <p class="empty-state">Dit is een voorbeeldpagina met drie voorstellen en <strong>fictieve (dummy) cijfers</strong> — nog niet gekoppeld aan je echte archiefdata. Kies welke weergave je het meest aanspreekt, dan vullen we die aan met de echte netstroom-cijfers uit het archief.</p>
-
-            <h4 class="nuts-section-title">Optie A — Staafdiagram per boeking (chronologisch)</h4>
-            <p class="empty-state">Elke balk is één boeking, op volgorde van aankomstdatum. Kleur geeft aan of het verbruik boven (rood) of onder (groen) het gemiddelde van alle boekingen ligt.</p>
+            <p class="empty-state">Nog met <strong>fictieve (dummy) cijfers</strong> — nog niet gekoppeld aan je echte archiefdata. Elke balk is één boeking, gepositioneerd op haar échte aankomstdatum (geen gelijke afstanden) zodat seizoenspatronen (bv. meer airco-verbruik in de zomer) meteen zichtbaar zijn. Kleur geeft aan of het verbruik boven (rood) of onder (groen) het gemiddelde van alle boekingen ligt.</p>
             <div class="nuts-chart-wrap"><canvas id="verbruik-demo-bar"></canvas></div>
-
-            <h4 class="nuts-section-title">Optie B — Tabel met vergelijking</h4>
-            <p class="empty-state">Exacte cijfers per boeking, inclusief het verschil t.o.v. het gemiddelde van alle boekingen.</p>
-            <div class="verbruik-table-wrap">
-              <table class="verbruik-table">
-                <thead>
-                  <tr><th>Boeking</th><th>Periode</th><th>Nachten</th><th>Gem. kWh/dag</th><th>t.o.v. gemiddelde</th></tr>
-                </thead>
-                <tbody id="verbruik-demo-table-body"></tbody>
-              </table>
-            </div>
-
-            <h4 class="nuts-section-title">Optie C — Ranglijst (hoogste verbruik bovenaan)</h4>
-            <p class="empty-state">Zelfde cijfers, maar gesorteerd van hoogste naar laagste verbruiker — handig om uitschieters snel te zien.</p>
-            <div class="nuts-chart-wrap"><canvas id="verbruik-demo-rank"></canvas></div>
           </div>
         </div>
       </div>
@@ -1745,6 +1690,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.49.1", date: "2026-07-24", description: "Verbruik/boeking: keuze gemaakt voor het staafdiagram — de tabel en ranglijst zijn eraf gehaald. De balken staan nu op hun échte aankomstdatum op een tijdslijn (i.p.v. gelijke afstanden), zodat seizoenspatronen zoals meer airco-verbruik in de zomer meteen zichtbaar zijn. Nog steeds fictieve voorbeeldcijfers." },
       { version: "0.49.0", date: "2026-07-24", description: "Nuts: nieuwe 5e sub-tab 'Verbruik/boeking' met drie voorstellen om het gemiddeld netstroomverbruik per boeking visueel te maken (staafdiagram, tabel, ranglijst) — voorlopig met fictieve voorbeeldcijfers, in afwachting van een keuze voor de echte data." },
       { version: "0.48.2", date: "2026-07-23", description: "Synchronisatie-overzicht: 'blokken' hernoemd naar 'Airbnb/Booking.com-blokken' in beide lijst-titels, zodat duidelijk is waar die vandaan komen." },
       { version: "0.48.1", date: "2026-07-22", description: "Synchronisatie-overzicht toont voortaan geen boekingen meer uit het verleden — enkel nog lopende en toekomstige boekingen zonder overeenkomend Airbnb/Booking.com-blok verschijnen in de lijst." },
@@ -3854,19 +3800,20 @@
     // deze DUMMY_BOOKING_CONSUMPTION-array door echte cijfers via logic.averageDailyConsumption
     // (bookings + energyHistory, al aanwezig sinds v0.46.0) — de rendering hieronder blijft
     // dan grotendeels hetzelfde, enkel de databron verandert.
+    // Oplopend van lente (mild, weinig airco) naar hoogzomer (warm, veel airco) — puur
+    // fictief, maar bewust zo gekozen dat het seizoenspatroon op de tijdslijn zichtbaar is.
     const DUMMY_BOOKING_CONSUMPTION = [
-      { name: "Jan & Marie", dateFrom: "2026-05-01", dateTo: "2026-05-08", nights: 7, avgKwhPerDay: 14.2 },
-      { name: "Familie Peeters", dateFrom: "2026-05-10", dateTo: "2026-05-17", nights: 7, avgKwhPerDay: 9.8 },
-      { name: "Tom & Sophie", dateFrom: "2026-05-20", dateTo: "2026-05-24", nights: 4, avgKwhPerDay: 18.5 },
-      { name: "Erik Janssens", dateFrom: "2026-06-01", dateTo: "2026-06-10", nights: 9, avgKwhPerDay: 11.1 },
-      { name: "De Clercq", dateFrom: "2026-06-15", dateTo: "2026-06-22", nights: 7, avgKwhPerDay: 21.3 },
-      { name: "Anna & Piet", dateFrom: "2026-07-01", dateTo: "2026-07-05", nights: 4, avgKwhPerDay: 8.4 },
-      { name: "Vrienden (Marc)", dateFrom: "2026-07-10", dateTo: "2026-07-20", nights: 10, avgKwhPerDay: 16.7 },
-      { name: "Nadia + gasten", dateFrom: "2026-07-25", dateTo: "2026-08-01", nights: 7, avgKwhPerDay: 19.9 },
+      { name: "Jan & Marie", dateFrom: "2026-05-01", dateTo: "2026-05-08", nights: 7, avgKwhPerDay: 7.5 },
+      { name: "Familie Peeters", dateFrom: "2026-05-10", dateTo: "2026-05-17", nights: 7, avgKwhPerDay: 8.2 },
+      { name: "Tom & Sophie", dateFrom: "2026-05-20", dateTo: "2026-05-24", nights: 4, avgKwhPerDay: 9.0 },
+      { name: "Erik Janssens", dateFrom: "2026-06-01", dateTo: "2026-06-10", nights: 9, avgKwhPerDay: 11.5 },
+      { name: "De Clercq", dateFrom: "2026-06-15", dateTo: "2026-06-22", nights: 7, avgKwhPerDay: 14.0 },
+      { name: "Anna & Piet", dateFrom: "2026-07-01", dateTo: "2026-07-05", nights: 4, avgKwhPerDay: 19.5 },
+      { name: "Vrienden (Marc)", dateFrom: "2026-07-10", dateTo: "2026-07-20", nights: 10, avgKwhPerDay: 22.0 },
+      { name: "Nadia + gasten", dateFrom: "2026-07-25", dateTo: "2026-08-01", nights: 7, avgKwhPerDay: 24.5 },
     ];
 
     let verbruikDemoBarChart = null;
-    let verbruikDemoRankChart = null;
 
     async function renderVerbruikDemo() {
       const rows = DUMMY_BOOKING_CONSUMPTION;
@@ -3875,66 +3822,48 @@
 
       const { Chart } = await loadNutsChartJs();
 
-      // Optie A: staafdiagram, chronologisch (volgorde van dateFrom, zoals in de array).
+      // Tijdslijn i.p.v. gelijk verdeelde categorieën: elke balk staat op haar échte
+      // aankomstdatum (numerieke lineaire x-as, dag-offset t.o.v. de eerste boeking), zodat
+      // de afstand tussen balken de werkelijke tijd tussen boekingen weerspiegelt — zo
+      // vallen seizoenspatronen (bv. meer airco-verbruik in de zomer) meteen op.
+      const originMs = new Date(rows[0].dateFrom + "T00:00:00").getTime();
+      const dayOffset = (dateStr) => (new Date(dateStr + "T00:00:00").getTime() - originMs) / 86400000;
+
       if (verbruikDemoBarChart) verbruikDemoBarChart.destroy();
       verbruikDemoBarChart = new Chart(document.getElementById("verbruik-demo-bar"), {
         type: "bar",
         data: {
-          labels: rows.map((r) => r.name),
           datasets: [{
             label: "Gem. kWh/dag",
-            data: rows.map((r) => r.avgKwhPerDay),
+            data: rows.map((r) => ({ x: dayOffset(r.dateFrom), y: r.avgKwhPerDay, name: r.name, dateFrom: r.dateFrom, dateTo: r.dateTo })),
             backgroundColor: rows.map((r) => colorFor(r.avgKwhPerDay)),
+            barThickness: 22,
           }],
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.y} kWh/dag` } } },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                title: (items) => items[0].raw.name,
+                label: (ctx) => `${formatBookingDateRange(ctx.raw.dateFrom, ctx.raw.dateTo)} — ${ctx.parsed.y} kWh/dag`,
+              },
+            },
+          },
           scales: {
             y: { beginAtZero: true, ticks: { callback: (v) => v + " kWh" } },
-            x: { grid: { display: false } },
-          },
-        },
-      });
-
-      // Optie B: tabel, zelfde volgorde als optie A.
-      const tbody = document.getElementById("verbruik-demo-table-body");
-      tbody.innerHTML = rows.map((r) => {
-        const diffPct = ((r.avgKwhPerDay - overallAvg) / overallAvg) * 100;
-        const above = diffPct > 0;
-        return `
-          <tr>
-            <td>${r.name}</td>
-            <td>${formatBookingDateRange(r.dateFrom, r.dateTo)}</td>
-            <td class="num">${r.nights}</td>
-            <td class="num">${r.avgKwhPerDay.toFixed(1)}</td>
-            <td><span class="vs-avg ${above ? "above" : "below"}">${above ? "+" : ""}${diffPct.toFixed(0)}%</span></td>
-          </tr>
-        `;
-      }).join("");
-
-      // Optie C: ranglijst, hoogste verbruik bovenaan (horizontale balken).
-      const ranked = [...rows].sort((a, b) => b.avgKwhPerDay - a.avgKwhPerDay);
-      if (verbruikDemoRankChart) verbruikDemoRankChart.destroy();
-      verbruikDemoRankChart = new Chart(document.getElementById("verbruik-demo-rank"), {
-        type: "bar",
-        data: {
-          labels: ranked.map((r) => r.name),
-          datasets: [{
-            label: "Gem. kWh/dag",
-            data: ranked.map((r) => r.avgKwhPerDay),
-            backgroundColor: ranked.map((r) => colorFor(r.avgKwhPerDay)),
-          }],
-        },
-        options: {
-          indexAxis: "y",
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.x} kWh/dag` } } },
-          scales: {
-            x: { beginAtZero: true, ticks: { callback: (v) => v + " kWh" } },
-            y: { grid: { display: false } },
+            x: {
+              type: "linear",
+              grid: { display: false },
+              ticks: {
+                callback: (v) => {
+                  const d = new Date(originMs + v * 86400000);
+                  return `${d.getDate()} ${MONTH_NAMES[d.getMonth()].slice(0, 3)}`;
+                },
+              },
+            },
           },
         },
       });

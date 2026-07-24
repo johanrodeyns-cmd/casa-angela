@@ -596,7 +596,9 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 **Technische notities:** `DUMMY_BOOKING_CONSUMPTION` (8 fictieve boekingen) + `renderVerbruikDemo()` in `index.html`, lazy geladen bij eerste keer wisselen naar de sub-tab (`verbruikDemoLoaded`-guard, zelfde patroon als Netstroom). Kleurlogica (`colorFor`) vergelijkt elke boeking met het gemiddelde van de volledige dummy-set. Geen nieuwe `logic.js`-functies — dit is bewust een wegwerp-prototype; zodra Johan een voorstel kiest, wordt de dummy-array vervangen door `logic.averageDailyConsumption(booking, docsByMonth)` per boeking uit `bookings` + de al geladen `energyHistoryDocs` (US-6.12), en krijgt de rendering pas dan een TDD-pure-functie voor de dataopbouw.
 
-**Nog open**: welk van de drie voorstellen Johan kiest (of een combinatie); daarna pas de echte data + eventueel de baseline-aftrek-vraag uit US-6.12's backlog-notitie hieronder.
+> Vervolg in v0.49.1: Johan koos voor het staafdiagram (optie A) — de tabel en ranglijst (opties B/C) zijn verwijderd, inclusief hun nu ongebruikte CSS (`.verbruik-table*`). Op zijn vraag staan de balken voortaan op een echte tijdslijn: een lineaire numerieke x-as (dag-offset t.o.v. de eerste boeking, `dayOffset()`) i.p.v. gelijk verdeelde categorieën, met een tick-formatter die de dag-offset terugvertaalt naar "d MMM" via het bestaande `MONTH_NAMES`. Zo weerspiegelt de horizontale afstand tussen balken de werkelijke tijd tussen boekingen, en vallen seizoenspatronen (bv. hoger verbruik in hoogzomer door airco) meteen op. Dummy-cijfers zelf aangepast naar een oplopende lente→hoogzomer-trend om dat effect te demonstreren. Geen `chartjs-adapter-date-fns` nodig — de as blijft `type: "linear"`, niet `"time"`.
+
+**Nog open**: de echte data koppelen (`logic.averageDailyConsumption` + `bookings`/`energyHistoryDocs`) en eventueel de baseline-aftrek-vraag uit US-6.12's backlog-notitie hieronder.
 
 ---
 
