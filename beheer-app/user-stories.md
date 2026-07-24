@@ -585,7 +585,7 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
-### US-6.13 🚧 Gemiddeld verbruik per boeking — visualisatiekeuze (S) — v0.49.0
+### US-6.13 ☑ Gemiddeld verbruik per boeking — visualisatiekeuze (S) — v0.49.0
 
 **Als** Johan **wil ik** eerst drie visualisatievoorstellen naast elkaar zien met fictieve cijfers **zodat** ik een weloverwogen keuze kan maken vóór de echte archiefdata erin verwerkt wordt.
 
@@ -598,14 +598,13 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 > Vervolg in v0.49.1: Johan koos voor het staafdiagram (optie A) — de tabel en ranglijst (opties B/C) zijn verwijderd, inclusief hun nu ongebruikte CSS (`.verbruik-table*`). Op zijn vraag staan de balken voortaan op een echte tijdslijn: een lineaire numerieke x-as (dag-offset t.o.v. de eerste boeking, `dayOffset()`) i.p.v. gelijk verdeelde categorieën, met een tick-formatter die de dag-offset terugvertaalt naar "d MMM" via het bestaande `MONTH_NAMES`. Zo weerspiegelt de horizontale afstand tussen balken de werkelijke tijd tussen boekingen, en vallen seizoenspatronen (bv. hoger verbruik in hoogzomer door airco) meteen op. Dummy-cijfers zelf aangepast naar een oplopende lente→hoogzomer-trend om dat effect te demonstreren. Geen `chartjs-adapter-date-fns` nodig — de as blijft `type: "linear"`, niet `"time"`.
 > Vervolg in v0.49.2: op vraag van Johan liggen de balken nu horizontaal (`indexAxis: "y"`) — de breedte toont het effectieve verbruik (x-as), de tijdlijn (dag-offset) loopt nu verticaal op de y-as (`reverse: true` zodat de vroegste boeking bovenaan staat, zoals je een tijdlijn van boven naar onder leest). De boekingsnaam staat verticaal (90° gedraaid) gecentreerd in elke balk, getekend door een kleine custom Chart.js-plugin (`verbruikBarNamePlugin`, `afterDatasetsDraw`) — er bestaat geen ingebouwde Chart.js-optie voor tekst-in-balk, en `chartjs-plugin-datalabels` was nog niet ingeladen, dus een eigen plugin was eenvoudiger dan een nieuwe dependency toevoegen. `barThickness` verhoogd naar 26px (was 22) voor wat meer leesruimte; de chart-wrapper kreeg een eigen `.verbruik-timeline-wrap`-klasse (420px hoog i.p.v. de standaard 240px) omdat de balken nu verticaal verspreid staan i.p.v. gestapeld in een vaste rij.
-
-**Nog open**: de echte data koppelen (`logic.averageDailyConsumption` + `bookings`/`energyHistoryDocs`) en eventueel de baseline-aftrek-vraag uit US-6.12's backlog-notitie hieronder.
+> Vervolg in v0.50.0: echte data gekoppeld — `renderVerbruikDemo()` hernoemd naar `renderVerbruikPerBoeking()`, `DUMMY_BOOKING_CONSUMPTION` verwijderd. Per boeking uit `bookings` wordt `logic.averageDailyConsumption(booking, docsByMonth)` berekend uit de al geladen `energyHistoryDocs` (US-6.12); enkel boekingen met `avgKwhPerDay !== null` **en** `dateTo <= energyHistoryThroughDate` (volledig gearchiveerd verblijf) worden getoond — anders zou `sumArchiveDateRange`'s "ontbrekende dag telt als 0"-gedrag een nog niet (volledig) gearchiveerde boeking een misleidend laag verbruik laten tonen. Lege staat (`#verbruik-empty`) als er nog geen enkele boeking voldoet. Op vraag van Johan staat de naam nu horizontaal i.p.v. verticaal (leesbaarder): `verbruikBarNamePlugin` meet met `ctx.measureText` of de naam in de balk past — past ze, dan lichte tekst binnenin de balk; past ze niet (korte balk, weinig verbruik), dan donkere tekst net na het balkeinde op de achtergrond, i.p.v. onleesbare tekst die over de balkrand heen loopt.
 
 ---
 
 ## Nog te bevestigen / open punten
 
-- **Gemiddeld elektriciteitsverbruik per gast/boeking**: berekeningslaag klaar sinds v0.46.0 (US-6.12, `logic.averageDailyConsumption`); drie visualisatievoorstellen met dummy-data klaar sinds v0.49.0 (US-6.13). Nog te beslissen: (1) welk voorstel (of combinatie) Johan kiest; (2) of het baseline-verbruik tijdens lege periodes (koelkast, stand-by) afgetrokken wordt om een eerlijkere "marginale" vergelijking tussen gasten te krijgen, of dat het ruwe totaalverbruik volstaat. Wisseldag-vraag al beantwoord: telt bij geen van beide boekingen mee, consistent met `nightsBetween`.
+- **Gemiddeld elektriciteitsverbruik per gast/boeking**: volledig opgeleverd sinds v0.50.0 (US-6.12/US-6.13) — "Verbruik/boeking"-tab toont het echte gemiddeld netstroomverbruik per dag per boeking op een horizontale tijdslijn. Nog te beslissen (optioneel, niet blokkerend): of het baseline-verbruik tijdens lege periodes (koelkast, stand-by) afgetrokken wordt om een eerlijkere "marginale" vergelijking tussen gasten te krijgen, of dat het ruwe totaalverbruik volstaat. Wisseldag-vraag al beantwoord: telt bij geen van beide boekingen mee, consistent met `nightsBetween`.
 
 - Excel-voorbeeld met bestaande boekingsdata: nog te ontvangen indien gewenst als aanvulling op de hierboven afgesproken velden.
 - **Nuts (Epic 6)**: pas de "Casa Angela"-tab in de Huishouden-app verwijderen zodra deze hier volledig getest en werkend bevonden is (met échte APsystems-credentials en een échte testmail/forceer-check).

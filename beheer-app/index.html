@@ -1643,8 +1643,9 @@
 
           <div id="nuts-view-verbruik" hidden>
             <h3 class="nuts-section-title">Gemiddeld verbruik per boeking</h3>
-            <p class="empty-state">Nog met <strong>fictieve (dummy) cijfers</strong> — nog niet gekoppeld aan je echte archiefdata. Elke balk is één boeking, gepositioneerd op haar échte aankomstdatum (geen gelijke afstanden) zodat seizoenspatronen (bv. meer airco-verbruik in de zomer) meteen zichtbaar zijn. Kleur geeft aan of het verbruik boven (rood) of onder (groen) het gemiddelde van alle boekingen ligt.</p>
-            <div class="nuts-chart-wrap verbruik-timeline-wrap"><canvas id="verbruik-demo-bar"></canvas></div>
+            <p class="empty-state">Elke balk is één boeking, gepositioneerd op haar échte aankomstdatum, met de balkbreedte gelijk aan het gemiddeld netstroomverbruik per dag tijdens dat verblijf. Kleur geeft aan of het verbruik boven (rood) of onder (groen) het gemiddelde van alle getoonde boekingen ligt. Enkel boekingen waarvan het volledige verblijf al gearchiveerd is (US-6.11) worden getoond.</p>
+            <p id="verbruik-empty" class="empty-state" hidden>Nog geen boekingen waarvan het volledige verblijf al gearchiveerd is.</p>
+            <div id="verbruik-chart-wrap" class="nuts-chart-wrap verbruik-timeline-wrap"><canvas id="verbruik-bar"></canvas></div>
           </div>
         </div>
       </div>
@@ -1693,6 +1694,7 @@
     const ALLOWED_EMAILS = ["johan.rodeyns@gmail.com", "tinbogaerts@gmail.com"];
 
     const CHANGELOG = [
+      { version: "0.50.0", date: "2026-07-24", description: "Verbruik/boeking: draait nu op echte data i.p.v. voorbeeldcijfers — toont het werkelijke gemiddeld netstroomverbruik per dag van elke boeking waarvan het volledige verblijf al gearchiveerd is. De boekingsnaam staat nu horizontaal (leesbaarder dan verticaal) in of net na de balk." },
       { version: "0.49.2", date: "2026-07-24", description: "Verbruik/boeking: balken liggen nu horizontaal — de breedte toont het effectieve verbruik, de boekingsnaam staat verticaal in de balk. De tijdlijn zelf loopt nu verticaal (vroegste boeking bovenaan). Nog steeds fictieve voorbeeldcijfers." },
       { version: "0.49.1", date: "2026-07-24", description: "Verbruik/boeking: keuze gemaakt voor het staafdiagram — de tabel en ranglijst zijn eraf gehaald. De balken staan nu op hun échte aankomstdatum op een tijdslijn (i.p.v. gelijke afstanden), zodat seizoenspatronen zoals meer airco-verbruik in de zomer meteen zichtbaar zijn. Nog steeds fictieve voorbeeldcijfers." },
       { version: "0.49.0", date: "2026-07-24", description: "Nuts: nieuwe 5e sub-tab 'Verbruik/boeking' met drie voorstellen om het gemiddeld netstroomverbruik per boeking visueel te maken (staafdiagram, tabel, ranglijst) — voorlopig met fictieve voorbeeldcijfers, in afwachting van een keuze voor de echte data." },
@@ -1858,14 +1860,14 @@
           renderNetstroomHistory("monthly");
           renderNetstroomTodayChart();
         }
-        if (btn.dataset.nutsView === "verbruik" && !verbruikDemoLoaded) {
-          verbruikDemoLoaded = true;
-          renderVerbruikDemo();
+        if (btn.dataset.nutsView === "verbruik" && !verbruikLoaded) {
+          verbruikLoaded = true;
+          renderVerbruikPerBoeking();
         }
       });
     });
     let netstroomHistoryLoaded = false;
-    let verbruikDemoLoaded = false;
+    let verbruikLoaded = false;
 
     const MONTH_NAMES = [
       "januari", "februari", "maart", "april", "mei", "juni",
@@ -3799,68 +3801,79 @@
       });
     }
 
-    // "Verbruik per boeking" — voorbeeldpagina met 3 visualisatievoorstellen (US-6.12-
-    // vervolg), voorlopig op FICTIEVE data. Zodra Johan een voorkeur kiest, vervangen we
-    // deze DUMMY_BOOKING_CONSUMPTION-array door echte cijfers via logic.averageDailyConsumption
-    // (bookings + energyHistory, al aanwezig sinds v0.46.0) — de rendering hieronder blijft
-    // dan grotendeels hetzelfde, enkel de databron verandert.
-    // Oplopend van lente (mild, weinig airco) naar hoogzomer (warm, veel airco) — puur
-    // fictief, maar bewust zo gekozen dat het seizoenspatroon op de tijdslijn zichtbaar is.
-    const DUMMY_BOOKING_CONSUMPTION = [
-      { name: "Jan & Marie", dateFrom: "2026-05-01", dateTo: "2026-05-08", nights: 7, avgKwhPerDay: 7.5 },
-      { name: "Familie Peeters", dateFrom: "2026-05-10", dateTo: "2026-05-17", nights: 7, avgKwhPerDay: 8.2 },
-      { name: "Tom & Sophie", dateFrom: "2026-05-20", dateTo: "2026-05-24", nights: 4, avgKwhPerDay: 9.0 },
-      { name: "Erik Janssens", dateFrom: "2026-06-01", dateTo: "2026-06-10", nights: 9, avgKwhPerDay: 11.5 },
-      { name: "De Clercq", dateFrom: "2026-06-15", dateTo: "2026-06-22", nights: 7, avgKwhPerDay: 14.0 },
-      { name: "Anna & Piet", dateFrom: "2026-07-01", dateTo: "2026-07-05", nights: 4, avgKwhPerDay: 19.5 },
-      { name: "Vrienden (Marc)", dateFrom: "2026-07-10", dateTo: "2026-07-20", nights: 10, avgKwhPerDay: 22.0 },
-      { name: "Nadia + gasten", dateFrom: "2026-07-25", dateTo: "2026-08-01", nights: 7, avgKwhPerDay: 24.5 },
-    ];
+    // "Verbruik per boeking" (US-6.12/US-6.13): gemiddeld netstroomverbruik per dag per
+    // boeking, uit de energyHistory-archivering (US-6.11) — geen APsystems-call. Enkel
+    // boekingen waarvan het volledige verblijf al gearchiveerd is (dateTo <= de laatst
+    // gearchiveerde dag) tellen mee; anders zou een nog niet (volledig) gearchiveerde
+    // boeking een misleidend laag/nul verbruik tonen (sumArchiveDateRange telt ontbrekende
+    // dagen als 0).
+    let verbruikBarChart = null;
 
-    let verbruikDemoBarChart = null;
-
-    // Tekent de boekingsnaam verticaal (90° gedraaid), gecentreerd in elke horizontale balk.
+    // Tekent de boekingsnaam horizontaal (leesbaar): binnen de balk in lichte tekst als
+    // ze past, anders net na het balkeinde in donkere tekst op de achtergrond — voorkomt
+    // onleesbare tekst bij een korte balk (weinig verbruik) met een lange naam.
     const verbruikBarNamePlugin = {
       id: "verbruikBarNames",
       afterDatasetsDraw(chart) {
         const meta = chart.getDatasetMeta(0);
         const { ctx } = chart;
         ctx.save();
-        ctx.fillStyle = "#FFFBF5";
         ctx.font = "600 11px system-ui, sans-serif";
-        ctx.textAlign = "center";
+        ctx.textAlign = "left";
         ctx.textBaseline = "middle";
+        const padding = 6;
         meta.data.forEach((bar, i) => {
           const name = chart.data.datasets[0].data[i].name;
-          const centerX = (bar.x + bar.base) / 2;
-          ctx.save();
-          ctx.translate(centerX, bar.y);
-          ctx.rotate(-Math.PI / 2);
-          ctx.fillText(name, 0, 0);
-          ctx.restore();
+          const barWidth = Math.abs(bar.x - bar.base);
+          const fits = ctx.measureText(name).width + padding * 2 <= barWidth;
+          ctx.fillStyle = fits ? "#FFFBF5" : "#2C2C2C";
+          ctx.fillText(name, (fits ? bar.base : bar.x) + padding, bar.y);
         });
         ctx.restore();
       },
     };
 
-    async function renderVerbruikDemo() {
-      const rows = DUMMY_BOOKING_CONSUMPTION;
+    async function renderVerbruikPerBoeking() {
+      const emptyEl = document.getElementById("verbruik-empty");
+      const chartWrap = document.getElementById("verbruik-chart-wrap");
+      await loadEnergyHistory();
+      const docsByMonth = energyHistoryDocs || {};
+      const throughDate = energyHistoryThroughDate || "";
+
+      const rows = bookings
+        .map((b) => ({
+          name: b.name,
+          dateFrom: b.dateFrom,
+          dateTo: b.dateTo,
+          avgKwhPerDay: averageDailyConsumption(b, docsByMonth),
+        }))
+        .filter((r) => r.avgKwhPerDay !== null && r.dateTo <= throughDate)
+        .sort((a, b) => a.dateFrom.localeCompare(b.dateFrom));
+
+      if (!rows.length) {
+        emptyEl.hidden = false;
+        chartWrap.hidden = true;
+        if (verbruikBarChart) { verbruikBarChart.destroy(); verbruikBarChart = null; }
+        return;
+      }
+      emptyEl.hidden = true;
+      chartWrap.hidden = false;
+
       const overallAvg = rows.reduce((sum, r) => sum + r.avgKwhPerDay, 0) / rows.length;
       const colorFor = (v) => (v > overallAvg ? "#C0392B" : "#5A6B3C");
 
       const { Chart } = await loadNutsChartJs();
 
       // Tijdslijn i.p.v. gelijk verdeelde categorieën: elke balk staat op haar échte
-      // aankomstdatum (numerieke lineaire as, dag-offset t.o.v. de eerste boeking), zodat
-      // de afstand tussen balken de werkelijke tijd tussen boekingen weerspiegelt — zo
+      // aankomstdatum (lineaire y-as, dag-offset t.o.v. de eerste boeking), zodat de
+      // afstand tussen balken de werkelijke tijd tussen boekingen weerspiegelt — zo
       // vallen seizoenspatronen (bv. meer airco-verbruik in de zomer) meteen op. Balken
-      // liggen horizontaal (indexAxis 'y'): de breedte is het effectieve verbruik, de
-      // boekingsnaam staat verticaal in de balk (verbruikBarNamePlugin hierboven).
+      // liggen horizontaal (indexAxis 'y'): de breedte is het effectieve verbruik.
       const originMs = new Date(rows[0].dateFrom + "T00:00:00").getTime();
       const dayOffset = (dateStr) => (new Date(dateStr + "T00:00:00").getTime() - originMs) / 86400000;
 
-      if (verbruikDemoBarChart) verbruikDemoBarChart.destroy();
-      verbruikDemoBarChart = new Chart(document.getElementById("verbruik-demo-bar"), {
+      if (verbruikBarChart) verbruikBarChart.destroy();
+      verbruikBarChart = new Chart(document.getElementById("verbruik-bar"), {
         type: "bar",
         plugins: [verbruikBarNamePlugin],
         data: {
@@ -3880,7 +3893,7 @@
             tooltip: {
               callbacks: {
                 title: (items) => items[0].raw.name,
-                label: (ctx) => `${formatBookingDateRange(ctx.raw.dateFrom, ctx.raw.dateTo)} — ${ctx.parsed.x} kWh/dag`,
+                label: (ctx) => `${formatBookingDateRange(ctx.raw.dateFrom, ctx.raw.dateTo)} — ${ctx.parsed.x.toFixed(1)} kWh/dag`,
               },
             },
           },
