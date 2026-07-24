@@ -585,9 +585,24 @@ Implementatievolgorde wordt aanbevolen van boven naar onder per epic, en epic pe
 
 ---
 
+### US-6.13 🚧 Gemiddeld verbruik per boeking — visualisatiekeuze (S) — v0.49.0
+
+**Als** Johan **wil ik** eerst drie visualisatievoorstellen naast elkaar zien met fictieve cijfers **zodat** ik een weloverwogen keuze kan maken vóór de echte archiefdata erin verwerkt wordt.
+
+**Acceptatiecriteria:**
+- Given de Nuts-tab, when ik op de 5e sub-tab "Verbruik/boeking" klik, then zie ik drie voorstellen: (A) een staafdiagram per boeking in chronologische volgorde, (B) een tabel met exacte cijfers + percentage t.o.v. het gemiddelde, (C) een ranglijst (horizontale balken) van hoogste naar laagste verbruiker.
+- Given alle drie voorstellen, then is met kleur (rood/groen) meteen zichtbaar of een boeking boven of onder het gemiddelde van alle boekingen zit.
+- Given deze versie, then staat er expliciet vermeld dat de cijfers fictief zijn, nog niet gekoppeld aan de echte archiefdata.
+
+**Technische notities:** `DUMMY_BOOKING_CONSUMPTION` (8 fictieve boekingen) + `renderVerbruikDemo()` in `index.html`, lazy geladen bij eerste keer wisselen naar de sub-tab (`verbruikDemoLoaded`-guard, zelfde patroon als Netstroom). Kleurlogica (`colorFor`) vergelijkt elke boeking met het gemiddelde van de volledige dummy-set. Geen nieuwe `logic.js`-functies — dit is bewust een wegwerp-prototype; zodra Johan een voorstel kiest, wordt de dummy-array vervangen door `logic.averageDailyConsumption(booking, docsByMonth)` per boeking uit `bookings` + de al geladen `energyHistoryDocs` (US-6.12), en krijgt de rendering pas dan een TDD-pure-functie voor de dataopbouw.
+
+**Nog open**: welk van de drie voorstellen Johan kiest (of een combinatie); daarna pas de echte data + eventueel de baseline-aftrek-vraag uit US-6.12's backlog-notitie hieronder.
+
+---
+
 ## Nog te bevestigen / open punten
 
-- **Gemiddeld elektriciteitsverbruik per gast/boeking**: berekeningslaag klaar sinds v0.46.0 (US-6.12, `logic.averageDailyConsumption`). Nog te beslissen: (1) of het baseline-verbruik tijdens lege periodes (koelkast, stand-by) afgetrokken wordt om een eerlijkere "marginale" vergelijking tussen gasten te krijgen, of dat het ruwe totaalverbruik volstaat; (2) visualisatie/plaats in de UI — nog te bespreken met Johan. Wisseldag-vraag al beantwoord: telt bij geen van beide boekingen mee, consistent met `nightsBetween`.
+- **Gemiddeld elektriciteitsverbruik per gast/boeking**: berekeningslaag klaar sinds v0.46.0 (US-6.12, `logic.averageDailyConsumption`); drie visualisatievoorstellen met dummy-data klaar sinds v0.49.0 (US-6.13). Nog te beslissen: (1) welk voorstel (of combinatie) Johan kiest; (2) of het baseline-verbruik tijdens lege periodes (koelkast, stand-by) afgetrokken wordt om een eerlijkere "marginale" vergelijking tussen gasten te krijgen, of dat het ruwe totaalverbruik volstaat. Wisseldag-vraag al beantwoord: telt bij geen van beide boekingen mee, consistent met `nightsBetween`.
 
 - Excel-voorbeeld met bestaande boekingsdata: nog te ontvangen indien gewenst als aanvulling op de hierboven afgesproken velden.
 - **Nuts (Epic 6)**: pas de "Casa Angela"-tab in de Huishouden-app verwijderen zodra deze hier volledig getest en werkend bevonden is (met échte APsystems-credentials en een échte testmail/forceer-check).
